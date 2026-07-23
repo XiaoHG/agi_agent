@@ -20,3 +20,19 @@ agent/
   week5-observability/
 ```
 
+## 当前实现
+
+Week 1 的实际 Python 包使用下划线命名：
+
+```text
+agent/week1_basic_agent/
+```
+
+原因：Python import 不支持带连字符的包名。`agent/week1-basic-agent/` 保留为学习说明目录。
+
+核心文件：
+
+- `core.py`：Agent 主流程。
+- `router.py`：判断是否调用工具。
+- `tools.py`：本地工具实现。
+- `prompts.py`：加载 prompt 文件。

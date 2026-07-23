@@ -123,6 +123,40 @@ agi_agent/
 - 涉及代码评审时，Coding Agent 给出实现判断，Teacher Agent 补充学习角度的解释。
 - 两个 Agent 都必须遵守项目目录规范、评估规范和安全边界。
 
+## 当前可运行 Demo
+
+当前已完成 Week 1 最小 CLI Agent。
+
+运行直接回答：
+
+```bash
+python -m cli.week1_basic_agent --input "请解释 Agent 和普通聊天机器人的区别。"
+```
+
+运行文件读取：
+
+```bash
+python -m cli.week1_basic_agent --input "请读取 README.md，并总结这个项目的学习目标。"
+```
+
+运行目录查看：
+
+```bash
+python -m cli.week1_basic_agent --input "请查看当前项目有哪些主要目录，并说明它们分别负责什么。"
+```
+
+查看 trace：
+
+```bash
+python -m cli.week1_basic_agent --input "请读取 README.md，并总结这个项目的学习目标。" --trace
+```
+
+运行测试：
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 ## 六周总览
 
 | 周次 | 主题 | 核心目标 | 主要产出 |
@@ -465,10 +499,8 @@ project/
 - 第 4 周开始沉淀 `skills/` 和 `subagent/`
 - 第 6 周把所有内容整合成一个完整项目
 
-建议优先做下面三件事：
+当前建议优先做下面三件事：
 
-1. 在 `agent/week1-basic-agent/` 实现最小 CLI Agent。
-2. 在 `prompts/` 保存第一版 system prompt 和工具选择 prompt。
-3. 在 `evals/week1-basic-agent/` 固化 3-5 个输入输出样例，后续每周都复用这些样例做回归。
-
-如果后面继续推进，可以直接在这个仓库中搭第 1 周的最小 Agent 脚手架。
+1. 先理解 Week 1 代码：`core.py`、`router.py`、`tools.py`、`cli/week1_basic_agent.py`。
+2. 补 Week 1 复盘，记录这版 Agent 的能力边界。
+3. 再进入 Week 2：状态、记忆与工作流。
