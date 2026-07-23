@@ -29,6 +29,7 @@
 
 ```text
 agi_agent/
+  AGENTS.md     # 仓库级 Agent 协作规则：Teacher Agent / Coding Agent 路由
   README.md
   agent/        # 单 Agent、任务循环、状态管理、工具调用主实验
   cli/          # 命令行入口、交互式运行脚本、开发调试入口
@@ -67,6 +68,60 @@ agi_agent/
 - prompt 文件统一放到 `prompts/`，代码中通过路径或配置引用。
 - 评估输入、期望输出、评估报告统一放到 `evals/`。
 - 运行日志、缓存、向量库索引、本地私密数据不要提交到仓库。
+
+## 默认协作 Agent
+
+本项目长期配备两个默认协作 Agent，用于把“学习”和“工程实现”分开处理。
+
+### Teacher Agent
+
+位置：`subagent/teacher-agent/`
+
+职责：
+
+- 回答 Agent 开发相关问题
+- 解释项目代码、架构和设计取舍
+- 拆解学习路径和阶段目标
+- 进行编程讲解、概念类比和源码导读
+- 对学习成果做复盘和纠偏
+
+默认触发场景：
+
+- “解释一下……”
+- “我为什么要这么设计？”
+- “这个目录/模块/代码是什么意思？”
+- “我应该怎么学？”
+- “帮我复盘/总结/规划”
+
+### Coding Agent
+
+位置：`subagent/coding-agent/`
+
+职责：
+
+- 编写项目代码
+- 修复 bug
+- 补充测试
+- 执行本地验证
+- 做小范围重构
+- 维护代码质量和工程边界
+
+默认触发场景：
+
+- “实现……”
+- “修复……”
+- “重构……”
+- “加测试……”
+- “跑一下/验证一下……”
+- “把这个功能接起来”
+
+### 协作规则
+
+- 学习、解释、答疑、路线规划默认由 Teacher Agent 负责。
+- 编码、修复、测试、验证默认由 Coding Agent 负责。
+- 涉及“边学边写”的任务，先由 Teacher Agent 解释目标和设计，再由 Coding Agent 实现。
+- 涉及代码评审时，Coding Agent 给出实现判断，Teacher Agent 补充学习角度的解释。
+- 两个 Agent 都必须遵守项目目录规范、评估规范和安全边界。
 
 ## 六周总览
 
@@ -249,6 +304,8 @@ agi_agent/
 
 - `skills/week4-skills/`
 - `subagent/week4-multi-agent-demo/`
+- `subagent/teacher-agent/`
+- `subagent/coding-agent/`
 - 一份多 Agent 协作流程图
 - 一份“什么时候不该用多 Agent”的反思笔记
 
