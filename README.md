@@ -130,25 +130,25 @@ agi_agent/
 运行直接回答：
 
 ```bash
-python -m cli.main --input "请解释 Agent 和普通聊天机器人的区别。"
+python -m cli.main --input "Explain the difference between an agent and a chatbot."
 ```
 
 运行文件读取：
 
 ```bash
-python -m cli.main --input "请读取 README.md，并总结这个项目的学习目标。"
+python -m cli.main --input "Read README.md and summarize the project learning goals."
 ```
 
 运行目录查看：
 
 ```bash
-python -m cli.main --input "请查看当前项目有哪些主要目录，并说明它们分别负责什么。"
+python -m cli.main --input "List the main project directories and explain what they are responsible for."
 ```
 
 查看 trace：
 
 ```bash
-python -m cli.main --input "请读取 README.md，并总结这个项目的学习目标。" --trace
+python -m cli.main --input "Read README.md and summarize the project learning goals." --trace
 ```
 
 运行测试：

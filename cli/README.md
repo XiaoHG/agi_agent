@@ -1,26 +1,27 @@
 # cli/
 
-放命令行入口和本地调试入口。
+This directory contains command-line entrypoints and local debugging entrypoints.
 
-适合放：
+Appropriate contents:
 
-- `python -m ...` 或 `node ...` 的入口封装
-- 交互式 CLI
-- demo runner
-- 本地调试命令
+- `python -m ...` or `node ...` wrappers
+- Interactive CLI entrypoints
+- Demo runners
+- Local debugging commands
 
-不要在这里放核心业务逻辑。CLI 应该只负责解析参数、加载配置、调用 `agent/` 中的能力。
+Do not put core business logic here. CLI modules should only parse arguments, load configuration, and call capabilities from `agent/`.
 
-## 当前入口
+## Current entrypoint
 
-当前入口：
-
-```bash
-python -m cli.main --input "请解释 Agent 和普通聊天机器人的区别。"
-```
-
-带 trace：
+Run the agent:
 
 ```bash
-python -m cli.main --input "请读取 README.md，并总结这个项目的学习目标。" --trace
+python -m cli.main --input "Explain the difference between an agent and a chatbot."
 ```
+
+Run with trace output:
+
+```bash
+python -m cli.main --input "Read README.md and summarize the project learning goals." --trace
+```
+

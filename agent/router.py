@@ -26,14 +26,13 @@ def _looks_like_directory_question(text: str) -> bool:
     """Return True when the user is likely asking about directories."""
 
     keywords = [
-        "目录",
-        "文件夹",
-        "项目结构",
-        "有哪些主要目录",
-        "列出目录",
-        "查看目录",
         "list dir",
         "list directory",
+        "directory",
+        "directories",
+        "folder",
+        "folders",
+        "project structure",
     ]
     lowered = text.lower()
     return any(keyword.lower() in lowered for keyword in keywords)
@@ -42,7 +41,7 @@ def _looks_like_directory_question(text: str) -> bool:
 def _looks_like_file_question(text: str) -> bool:
     """Return True when the user is likely asking about a file."""
 
-    keywords = ["读取", "查看", "打开", "总结", "阅读", "read", "show", "summarize", "summarise"]
+    keywords = ["read", "show", "open", "summarize", "summarise", "inspect"]
     lowered = text.lower()
     return any(keyword.lower() in lowered for keyword in keywords) or bool(FILE_PATTERN.search(text))
 
@@ -62,7 +61,7 @@ def route_intent(user_input: str) -> ToolRoute:
             action="use_tool",
             tool_name="list_dir",
             tool_input=".",
-            reason="用户在询问目录结构或项目结构。",
+            reason="The user is asking about the directory or project structure.",
         )
 
     if match and _looks_like_file_question(text):
@@ -70,7 +69,7 @@ def route_intent(user_input: str) -> ToolRoute:
             action="use_tool",
             tool_name="read_file",
             tool_input=match.group("path"),
-            reason="用户明确提到了文件名或文档名。",
+            reason="The user mentioned a file or document path.",
         )
 
     if "README" in text.upper() and _looks_like_file_question(text):
@@ -78,8 +77,7 @@ def route_intent(user_input: str) -> ToolRoute:
             action="use_tool",
             tool_name="read_file",
             tool_input="README.md",
-            reason="用户提到了 README，通常需要读取文档。",
+            reason="The user mentioned README, so the agent should read that document.",
         )
 
-    return ToolRoute(action="direct_answer", reason="当前问题不需要本地工具。")
-
+    return ToolRoute(action="direct_answer", reason="The current request does not require a local tool.")

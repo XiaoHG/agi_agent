@@ -1,140 +1,130 @@
-# Week 1 Eval Cases：最小 CLI Agent
+# Week 1 Eval Cases: Minimal CLI Agent
 
-状态：已实现，待后续继续扩充
+Status: implemented; extend as the agent evolves.
 
-## Case 1：直接回答
+## Case 1: direct answer
 
-目标能力：判断不需要工具时直接回答。
+Target capability: answer directly when no tool is needed.
 
-输入：
-
-```text
-请解释 Agent 和普通聊天机器人的区别。
-```
-
-期望行为：
-
-- 不调用文件工具。
-- 解释 Agent 的核心区别：目标导向、可调用工具、可多步执行、可维护状态。
-- 输出清晰。
-
-不接受行为：
-
-- 强行调用文件工具。
-- 只回答“Agent 更智能”这类空泛表述。
-
-实际输出记录：
+Input:
 
 ```text
-结论：Agent 和普通聊天机器人最大的区别，是 Agent 会围绕目标主动做决策，并且可以调用工具、维护状态、分步骤完成任务。
+Explain the difference between an agent and a chatbot.
 ```
 
-结论：通过
+Expected behavior:
 
-## Case 2：读取 README
+- Do not call file tools.
+- Explain the core difference: task orientation, tool use, multi-step execution, and state.
+- Produce a clear response.
 
-目标能力：根据任务选择 `read_file`。
+Rejected behavior:
 
-输入：
+- Force a file-tool call.
+- Give a vague answer such as "agents are smarter."
+
+Actual output record:
 
 ```text
-请读取 README.md，并总结这个项目的学习目标。
+The main difference is that an agent makes task-oriented decisions, can call tools, can keep state, and can complete work through multiple steps.
 ```
 
-期望行为：
+Result: pass
 
-- 调用 `read_file`。
-- 总结内容来自 README。
-- 不编造 README 中不存在的目标。
+## Case 2: read README
 
-不接受行为：
+Target capability: select `read_file` when the user asks for a file.
 
-- 不读文件直接编造。
-- 读取失败后仍然假装成功。
-
-实际输出记录：
+Input:
 
 ```text
-结论：我已经读取了 README.md。
-
-项目学习目标包括：
-6 周结束后，应该具备以下能力：
-- 理解 Agent 和普通聊天问答程序的区别
-- 能设计一个带工具调用的单 Agent 系统
-- 能实现多步任务执行、状态管理和记忆
-- 能接入 MCP、RAG、Skills、Subagent 等常见能力
-- 能读懂大型 Agent 项目的主链路
-- 能独立完成一个小型 Agent 应用并进行基本评估
+Read README.md and summarize the project learning goals.
 ```
 
-结论：通过
+Expected behavior:
 
-## Case 3：列出项目目录
+- Call `read_file`.
+- Base the answer on README.md.
+- Do not invent content that is not in the file.
 
-目标能力：根据任务选择 `list_dir`。
+Rejected behavior:
 
-输入：
+- Invent content without reading the file.
+- Pretend the read succeeded after a tool failure.
+
+Actual output record:
 
 ```text
-请查看当前项目有哪些主要目录，并说明它们分别负责什么。
+Result: read README.md.
+Key content:
+[read_file] README.md
+# agi_agent
+...
 ```
 
-期望行为：
+Result: pass
 
-- 调用 `list_dir`。
-- 能列出主要目录。
-- 能结合 README 或目录说明解释用途。
+## Case 3: list project directories
 
-不接受行为：
+Target capability: select `list_dir` for project structure questions.
 
-- 只凭记忆回答。
-- 漏掉关键目录。
-
-实际输出记录：
+Input:
 
 ```text
-结论：我已经查看了当前目录结构。
-
-核心职责：
-- agent/：Agent 主链路实验，包括最小 Agent、workflow、状态和工具调用。
-- cli/：命令行入口，用于本地运行和调试 Agent。
-- prompts/：system prompt、工具路由 prompt 和角色 prompt 的版本化存放位置。
-- evals/：评估用例、期望行为和实际输出记录。
-- tests/：自动化测试，用于验证工具、路由和 Agent 行为。
+List the main project directories and explain what they are responsible for.
 ```
 
-结论：通过
+Expected behavior:
 
-## Case 4：文件不存在
+- Call `list_dir`.
+- List the main project directories.
+- Explain known directory responsibilities.
 
-目标能力：工具失败处理。
+Rejected behavior:
 
-输入：
+- Answer only from memory.
+- Omit key directories.
+
+Actual output record:
 
 ```text
-请读取 not-exist.md。
+Result: inspected the current directory structure.
+Responsibilities:
+- agent/: Core agent loop experiments, including workflow, state, and tool calling.
+- cli/: Command-line entrypoints for running and debugging the agent locally.
+...
 ```
 
-期望行为：
+Result: pass
 
-- 调用 `read_file`。
-- 明确说明文件不存在。
-- Agent 不崩溃。
-- 不编造文件内容。
+## Case 4: missing file
 
-不接受行为：
+Target capability: handle tool failure.
 
-- 报错栈直接暴露给用户。
-- 编造不存在文件的内容。
-
-实际输出记录：
+Input:
 
 ```text
-结论：工具调用失败，任务没有完成。
-
-失败原因：文件不存在：not-exist.md
-
-下一步：请检查文件或目录是否存在，或者换一个项目内的相对路径。
+Read not-exist.md.
 ```
 
-结论：通过
+Expected behavior:
+
+- Call `read_file`.
+- Clearly report that the file does not exist.
+- Do not crash.
+- Do not invent file content.
+
+Rejected behavior:
+
+- Expose a raw traceback to the user.
+- Invent content for the missing file.
+
+Actual output record:
+
+```text
+Result: the tool call failed, so the task was not completed.
+Reason: File does not exist: not-exist.md
+```
+
+Result: pass
+

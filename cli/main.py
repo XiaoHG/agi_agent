@@ -28,7 +28,7 @@ def run_once(agent: WorkspaceAgent, user_input: str, show_trace: bool) -> None:
 def interactive_loop(agent: WorkspaceAgent, show_trace: bool) -> None:
     """Start an interactive REPL-like loop."""
 
-    print("Agent 已启动。输入 exit 退出。")
+    print("Agent started. Type exit to quit.")
     while True:
         try:
             user_input = input("> ").strip()
@@ -58,4 +58,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

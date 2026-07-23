@@ -11,13 +11,13 @@ class WorkspaceAgentTests(unittest.TestCase):
     """Verify routing, tools, and user-facing behaviors."""
 
     def test_route_to_read_file(self) -> None:
-        route = route_intent("请读取 README.md，并总结这个项目的学习目标。")
+        route = route_intent("Read README.md and summarize the project learning goals.")
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "read_file")
         self.assertEqual(route.tool_input, "README.md")
 
     def test_route_to_list_dir(self) -> None:
-        route = route_intent("请查看当前项目有哪些主要目录，并说明它们分别负责什么。")
+        route = route_intent("List the main project directories and explain what they are responsible for.")
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "list_dir")
 
@@ -40,29 +40,28 @@ class WorkspaceAgentTests(unittest.TestCase):
 
     def test_agent_direct_answer(self) -> None:
         agent = WorkspaceAgent(Path("."))
-        run = agent.run("请解释 Agent 和普通聊天机器人的区别。")
-        self.assertIn("Agent 和普通聊天机器人最大的区别", run.answer)
+        run = agent.run("Explain the difference between an agent and a chatbot.")
+        self.assertIn("main difference", run.answer)
         self.assertEqual(run.route.action, "direct_answer")
 
     def test_agent_handles_missing_file(self) -> None:
         agent = WorkspaceAgent(Path("."))
-        run = agent.run("请读取 not-exist.md。")
-        self.assertIn("工具调用失败", run.answer)
-        self.assertIn("文件不存在", run.tool_error or "")
+        run = agent.run("Read not-exist.md.")
+        self.assertIn("tool call failed", run.answer)
+        self.assertIn("File does not exist", run.tool_error or "")
 
     def test_agent_summarizes_readme_learning_goals(self) -> None:
         agent = WorkspaceAgent(Path("."))
-        run = agent.run("请读取 README.md，并总结这个项目的学习目标。")
-        self.assertIn("项目学习目标包括", run.answer)
-        self.assertIn("理解 Agent", run.answer)
+        run = agent.run("Read README.md and summarize the project learning goals.")
+        self.assertIn("Result: read README.md", run.answer)
+        self.assertIn("agi_agent", run.answer)
 
     def test_agent_describes_project_dirs(self) -> None:
         agent = WorkspaceAgent(Path("."))
-        run = agent.run("请查看当前项目有哪些主要目录，并说明它们分别负责什么。")
-        self.assertIn("核心职责", run.answer)
+        run = agent.run("List the main project directories and explain what they are responsible for.")
+        self.assertIn("Responsibilities", run.answer)
         self.assertIn("`agent/`", run.answer)
 
 
 if __name__ == "__main__":
     unittest.main()
-

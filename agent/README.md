@@ -1,17 +1,17 @@
 # agent/
 
-放 Agent 主链路实验。
+This directory contains the core agent implementation.
 
-适合放：
+Appropriate contents:
 
-- 最小 Agent loop
-- tool calling
-- 多步 workflow
-- 状态管理
-- memory 机制
-- observability 和错误处理
+- Minimal agent loop
+- Tool calling
+- Multi-step workflow
+- State management
+- Memory mechanisms
+- Observability and error handling
 
-后续按能力模块迭代，不按周创建运行代码目录：
+The runtime code should evolve by capability module, not by weekly folders:
 
 ```text
 agent/
@@ -19,13 +19,13 @@ agent/
   router.py
   tools.py
   prompts.py
-  state.py      # 后续需要状态管理时再添加
-  memory.py     # 后续需要记忆能力时再添加
+  state.py      # Add later when state management is needed.
+  memory.py     # Add later when memory is needed.
 ```
 
-## 当前实现
+## Current implementation
 
-当前 Python 包采用标准模块命名，保持代码层简洁：
+The current Python package uses standard module names and keeps the runtime code simple:
 
 ```text
 agent/core.py
@@ -34,9 +34,10 @@ agent/tools.py
 agent/prompts.py
 ```
 
-核心文件：
+Core files:
 
-- `core.py`：Agent 主流程。
-- `router.py`：判断是否调用工具。
-- `tools.py`：本地工具实现。
-- `prompts.py`：加载 prompt 文件。
+- `core.py`: agent orchestration.
+- `router.py`: tool-routing decision logic.
+- `tools.py`: local tool implementations.
+- `prompts.py`: prompt loading helpers.
+

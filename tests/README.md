@@ -1,14 +1,14 @@
 # tests/
 
-放自动化测试。
+This directory contains automated tests.
 
-适合放：
+Appropriate contents:
 
-- 工具函数单元测试
-- RAG pipeline 测试
-- MCP client/server 集成测试
-- Agent loop 回归测试
-- 权限和错误处理测试
+- Unit tests for tool functions
+- RAG pipeline tests
+- MCP client/server integration tests
+- Agent loop regression tests
+- Permission and error-handling tests
 
-建议优先测试确定性逻辑。涉及模型输出的部分，可测试结构、工具选择、错误处理和关键约束。
+Prioritize deterministic logic first. For model-related behavior, test structure, tool selection, error handling, and key constraints.
 
