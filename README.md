@@ -63,7 +63,7 @@ agi_agent/
 
 ### 推荐放置规则
 
-- 阶段 Demo 放在对应能力目录下，例如 `agent/week1-basic-agent/`。
+- 阶段 Demo 放在对应能力目录下，例如 `docs/`、`examples/` 或独立实验目录。
 - 跨模块综合项目可以放在 `examples/final-project/` 或独立新仓库。
 - prompt 文件统一放到 `prompts/`，代码中通过路径或配置引用。
 - 评估输入、期望输出、评估报告统一放到 `evals/`。
@@ -130,25 +130,25 @@ agi_agent/
 运行直接回答：
 
 ```bash
-python -m cli.week1_basic_agent --input "请解释 Agent 和普通聊天机器人的区别。"
+python -m cli.main --input "请解释 Agent 和普通聊天机器人的区别。"
 ```
 
 运行文件读取：
 
 ```bash
-python -m cli.week1_basic_agent --input "请读取 README.md，并总结这个项目的学习目标。"
+python -m cli.main --input "请读取 README.md，并总结这个项目的学习目标。"
 ```
 
 运行目录查看：
 
 ```bash
-python -m cli.week1_basic_agent --input "请查看当前项目有哪些主要目录，并说明它们分别负责什么。"
+python -m cli.main --input "请查看当前项目有哪些主要目录，并说明它们分别负责什么。"
 ```
 
 查看 trace：
 
 ```bash
-python -m cli.week1_basic_agent --input "请读取 README.md，并总结这个项目的学习目标。" --trace
+python -m cli.main --input "请读取 README.md，并总结这个项目的学习目标。" --trace
 ```
 
 运行测试：
@@ -196,7 +196,6 @@ python -m unittest discover -s tests -v
 
 ### 交付物
 
-- `agent/week1-basic-agent/`
 - 一个可运行的 `README` 或启动脚本
 - 一份最小架构图
 - 3 个测试输入和输出样例
@@ -238,7 +237,7 @@ python -m unittest discover -s tests -v
 
 ### 交付物
 
-- `agent/week2-workflow-agent/`
+- 在 `agent/` 中扩展状态和工作流模块
 - 一个状态流转图
 - 5 个失败案例记录
 - 一份你自己总结的“什么时候需要工作流”的笔记
@@ -285,8 +284,8 @@ python -m unittest discover -s tests -v
 
 ### 交付物
 
-- `rag/week3-rag-demo/`
-- `mcp/week3-mcp-demo/`
+- 在 `rag/` 中实现本地文档问答能力
+- 在 `mcp/` 中实现 MCP 接入能力
 - 一个统一入口的 Agent Demo
 - 一份“什么时候该用 RAG，什么时候该直接用工具”的总结
 
@@ -336,8 +335,8 @@ python -m unittest discover -s tests -v
 
 ### 交付物
 
-- `skills/week4-skills/`
-- `subagent/week4-multi-agent-demo/`
+- 在 `skills/` 中沉淀可复用技能
+- 在 `subagent/` 中实现多 Agent 协作实验
 - `subagent/teacher-agent/`
 - `subagent/coding-agent/`
 - 一份多 Agent 协作流程图
@@ -375,9 +374,9 @@ python -m unittest discover -s tests -v
 
 ### 交付物
 
-- `evals/week5-eval-cases/`
-- `agent/week5-observability/`
-- `tests/week5-regression/`
+- `evals/` 中的阶段性评估用例
+- `agent/` 中的日志、trace、错误处理能力
+- `tests/` 中的回归测试
 - 一份评估报告
 - 一份问题清单，列出最容易失败的 5 类场景
 
@@ -501,6 +500,6 @@ project/
 
 当前建议优先做下面三件事：
 
-1. 先理解 Week 1 代码：`core.py`、`router.py`、`tools.py`、`cli/week1_basic_agent.py`。
+1. 先理解当前代码：`agent/core.py`、`agent/router.py`、`agent/tools.py`、`cli/main.py`。
 2. 补 Week 1 复盘，记录这版 Agent 的能力边界。
 3. 再进入 Week 2：状态、记忆与工作流。

@@ -1,11 +1,15 @@
+"""Tests for the minimal workspace agent."""
+
 from pathlib import Path
 import tempfile
 import unittest
 
-from agent.week1_basic_agent import Week1Agent, list_dir, read_file, route_intent
+from agent import WorkspaceAgent, list_dir, read_file, route_intent
 
 
-class Week1AgentTests(unittest.TestCase):
+class WorkspaceAgentTests(unittest.TestCase):
+    """Verify routing, tools, and user-facing behaviors."""
+
     def test_route_to_read_file(self) -> None:
         route = route_intent("请读取 README.md，并总结这个项目的学习目标。")
         self.assertEqual(route.action, "use_tool")
@@ -35,25 +39,25 @@ class Week1AgentTests(unittest.TestCase):
             self.assertIn("- dir/", result.output)
 
     def test_agent_direct_answer(self) -> None:
-        agent = Week1Agent(Path("."))
+        agent = WorkspaceAgent(Path("."))
         run = agent.run("请解释 Agent 和普通聊天机器人的区别。")
         self.assertIn("Agent 和普通聊天机器人最大的区别", run.answer)
         self.assertEqual(run.route.action, "direct_answer")
 
     def test_agent_handles_missing_file(self) -> None:
-        agent = Week1Agent(Path("."))
+        agent = WorkspaceAgent(Path("."))
         run = agent.run("请读取 not-exist.md。")
         self.assertIn("工具调用失败", run.answer)
         self.assertIn("文件不存在", run.tool_error or "")
 
     def test_agent_summarizes_readme_learning_goals(self) -> None:
-        agent = Week1Agent(Path("."))
+        agent = WorkspaceAgent(Path("."))
         run = agent.run("请读取 README.md，并总结这个项目的学习目标。")
         self.assertIn("项目学习目标包括", run.answer)
         self.assertIn("理解 Agent", run.answer)
 
     def test_agent_describes_project_dirs(self) -> None:
-        agent = Week1Agent(Path("."))
+        agent = WorkspaceAgent(Path("."))
         run = agent.run("请查看当前项目有哪些主要目录，并说明它们分别负责什么。")
         self.assertIn("核心职责", run.answer)
         self.assertIn("`agent/`", run.answer)
@@ -61,3 +65,4 @@ class Week1AgentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

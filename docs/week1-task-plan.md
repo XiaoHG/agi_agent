@@ -21,14 +21,14 @@
 目录建议：
 
 ```text
-agent/week1-basic-agent/
-  README.md
-  main.py
-  agent.py
+agent/
+  core.py
+  router.py
   tools.py
+  prompts.py
 
 cli/
-  week1_basic_agent.py
+  main.py
 
 evals/week1-basic-agent/
   cases.md
@@ -178,7 +178,7 @@ while not done:
 
 只有满足以下条件，Week 1 才算完成：
 
-- `agent/week1-basic-agent/` 有可运行代码。
+- `agent/` 有可运行代码。
 - 有明确启动方式。
 - 至少有 2 个工具。
 - 至少有 3 个 eval case。
@@ -193,4 +193,3 @@ while not done:
 - 不做多 Agent。
 - 不接复杂 RAG。
 - 不引入大型框架，除非最小闭环已经完成。
-

@@ -1,2 +1,2 @@
-"""CLI entrypoints for the learning workspace."""
+"""CLI entrypoints for the workspace agent."""
 

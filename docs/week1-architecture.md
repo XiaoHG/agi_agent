@@ -12,10 +12,10 @@
 用户输入
    │
    ▼
-CLI 入口（cli/week1_basic_agent.py）
+CLI 入口（cli/main.py）
    │
    ▼
-Week1Agent（agent/week1_basic_agent/core.py）
+WorkspaceAgent（agent/core.py）
    │
    ├── 加载提示词（prompts/agent-system.v1.md）
    ├── 加载路由提示词（prompts/tool-router.v1.md）
@@ -35,17 +35,17 @@ Week1Agent（agent/week1_basic_agent/core.py）
 
 ## 模块职责
 
-- `cli/week1_basic_agent.py`
+- `cli/main.py`
   - 负责命令行参数、交互输入和输出展示。
 
-- `agent/week1_basic_agent/core.py`
+- `agent/core.py`
   - 负责 Agent 主流程编排。
   - 负责把输入、路由、工具、错误和最终回答串起来。
 
-- `agent/week1_basic_agent/router.py`
+- `agent/router.py`
   - 负责判断任务是否需要工具。
 
-- `agent/week1_basic_agent/tools.py`
+- `agent/tools.py`
   - 负责安全地读取文件和列出目录。
   - 负责限制路径必须在工作区内。
 
@@ -66,4 +66,3 @@ Week1Agent（agent/week1_basic_agent/core.py）
 - 有评估样例
 
 这就足够作为后续 Week 2、Week 3 的基础。
-

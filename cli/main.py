@@ -1,30 +1,34 @@
+"""Command-line entrypoint for the workspace agent."""
+
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import sys
 
-from agent.week1_basic_agent import Week1Agent
+from agent import WorkspaceAgent
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Week 1 minimal CLI Agent")
+    """Build the CLI parser for the agent."""
+
+    parser = argparse.ArgumentParser(description="Minimal workspace agent")
     parser.add_argument("--root", default=".", help="workspace root")
     parser.add_argument("--input", help="single user input")
     parser.add_argument("--trace", action="store_true", help="print reasoning trace")
     return parser
 
 
-def run_once(agent: Week1Agent, user_input: str, show_trace: bool) -> None:
+def run_once(agent: WorkspaceAgent, user_input: str, show_trace: bool) -> None:
+    """Run one input through the agent and print the result."""
+
     run = agent.run(user_input)
-    if show_trace:
-        print(agent.format_trace(run))
-    else:
-        print(run.answer)
+    print(agent.format_trace(run) if show_trace else run.answer)
 
 
-def interactive_loop(agent: Week1Agent, show_trace: bool) -> None:
-    print("Week 1 CLI Agent 已启动。输入 exit 退出。")
+def interactive_loop(agent: WorkspaceAgent, show_trace: bool) -> None:
+    """Start an interactive REPL-like loop."""
+
+    print("Agent 已启动。输入 exit 退出。")
     while True:
         try:
             user_input = input("> ").strip()
@@ -40,9 +44,11 @@ def interactive_loop(agent: Week1Agent, show_trace: bool) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Program entrypoint."""
+
     parser = build_parser()
     args = parser.parse_args(argv)
-    agent = Week1Agent(Path(args.root))
+    agent = WorkspaceAgent(Path(args.root))
     if args.input:
         run_once(agent, args.input, args.trace)
         return 0

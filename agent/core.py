@@ -1,8 +1,9 @@
+"""Core orchestration for the workspace agent."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 from uuid import uuid4
 
 from .prompts import load_system_prompt, load_tool_router_prompt
@@ -12,12 +13,16 @@ from .tools import ToolError, ToolResult, list_dir, read_file
 
 @dataclass(frozen=True)
 class AgentStep:
+    """One recorded step in a run trace."""
+
     title: str
     detail: str
 
 
 @dataclass
 class AgentRun:
+    """In-memory record of one agent execution."""
+
     run_id: str
     user_input: str
     route: ToolRoute
@@ -27,13 +32,17 @@ class AgentRun:
     answer: str = ""
 
 
-class Week1Agent:
+class WorkspaceAgent:
+    """Minimal agent that can answer directly or call local tools."""
+
     def __init__(self, workspace_root: Path | str = ".") -> None:
         self.workspace_root = Path(workspace_root).resolve()
         self.system_prompt = load_system_prompt()
         self.tool_router_prompt = load_tool_router_prompt()
 
     def run(self, user_input: str) -> AgentRun:
+        """Execute one turn and return a structured run record."""
+
         run = AgentRun(
             run_id=uuid4().hex[:8],
             user_input=user_input,
@@ -61,6 +70,8 @@ class Week1Agent:
         return run
 
     def _call_tool(self, route: ToolRoute) -> ToolResult:
+        """Dispatch tool calls based on the router decision."""
+
         if route.tool_name == "read_file":
             return read_file(self.workspace_root, route.tool_input or ".")
         if route.tool_name == "list_dir":
@@ -68,6 +79,8 @@ class Week1Agent:
         raise ToolError(f"未知工具：{route.tool_name}")
 
     def _compose_tool_error_answer(self, run: AgentRun) -> str:
+        """Convert a tool failure into a user-facing answer."""
+
         return (
             "结论：工具调用失败，任务没有完成。\n\n"
             f"失败原因：{run.tool_error}\n\n"
@@ -75,28 +88,31 @@ class Week1Agent:
         )
 
     def _compose_tool_answer(self, run: AgentRun) -> str:
+        """Turn tool output into a concise answer."""
+
         assert run.tool_result is not None
-        title = "结论"
         if run.tool_result.tool_name == "read_file":
             return (
-                f"{title}：我已经读取了 {run.route.tool_input}。\n\n"
+                f"结论：我已经读取了 {run.route.tool_input}。\n\n"
                 f"关键内容：\n{self._summarize_text(run.tool_result.output)}"
             )
         if run.tool_result.tool_name == "list_dir":
             return (
-                f"{title}：我已经查看了当前目录结构。\n\n"
+                "结论：我已经查看了当前目录结构。\n\n"
                 f"目录概览：\n{run.tool_result.output}\n\n"
                 f"核心职责：\n{self._describe_known_project_dirs(run.tool_result.output)}"
             )
         return run.tool_result.output
 
     def _compose_direct_answer(self, user_input: str) -> str:
+        """Provide a structured direct answer for non-tool requests."""
+
         text = user_input.lower()
         if "agent" in text and ("聊天" in user_input or "chat" in text) and ("区别" in user_input or "difference" in text):
             return (
                 "结论：Agent 和普通聊天机器人最大的区别，是 Agent 会围绕目标主动做决策，并且可以调用工具、维护状态、分步骤完成任务。\n\n"
                 "原因：普通聊天机器人更像回答器，重点是生成文本；Agent 更像执行器，重点是把任务推进到结果。\n\n"
-                "在本项目中怎么落地：Week 1 先做最小闭环，后续再加状态、RAG、MCP 和 Subagent。\n\n"
+                "在本项目中怎么落地：先做最小闭环，后续再加状态、RAG、MCP 和 Subagent。\n\n"
                 "你下一步应该做什么：先运行本地 CLI Agent，再看一次它的 trace 输出。"
             )
         if "为什么" in user_input or "why" in text:
@@ -108,12 +124,14 @@ class Week1Agent:
             )
         return (
             "结论：当前问题不需要本地工具，先做直接回答。\n\n"
-            "原因：Week 1 的核心不是覆盖所有知识，而是让你理解 Agent 闭环。\n\n"
+            "原因：当前版本的核心不是覆盖所有知识，而是让你理解 Agent 闭环。\n\n"
             "在本项目中怎么落地：当问题涉及项目文件、目录结构或具体文档时，再切换到工具调用。\n\n"
             "你下一步应该做什么：如果想看项目内容，直接要求读取 README 或列出目录。"
         )
 
     def _summarize_text(self, text: str, limit: int = 20) -> str:
+        """Summarize read_file output while keeping the result deterministic."""
+
         lines = text.splitlines()
         learning_goal_summary = self._extract_markdown_section(lines, "## 学习目标")
         if learning_goal_summary:
@@ -125,6 +143,8 @@ class Week1Agent:
         return "\n".join(head)
 
     def _extract_markdown_section(self, lines: list[str], heading: str) -> str:
+        """Extract a Markdown section until the next heading."""
+
         try:
             start = lines.index(heading)
         except ValueError:
@@ -138,6 +158,8 @@ class Week1Agent:
         return "\n".join(collected).strip()
 
     def _describe_known_project_dirs(self, listing: str) -> str:
+        """Explain the purpose of directories shown by list_dir."""
+
         descriptions: dict[str, str] = {
             "agent/": "Agent 主链路实验，包括最小 Agent、workflow、状态和工具调用。",
             "cli/": "命令行入口，用于本地运行和调试 Agent。",
@@ -162,6 +184,8 @@ class Week1Agent:
         return "\n".join(result) if result else "- 当前目录未匹配到已知项目目录。"
 
     def format_trace(self, run: AgentRun) -> str:
+        """Render the run as a human-readable execution trace."""
+
         parts: list[str] = [f"Run ID: {run.run_id}"]
         for index, step in enumerate(run.steps, start=1):
             parts.append(f"{index}. {step.title}: {step.detail}")
@@ -177,3 +201,4 @@ class Week1Agent:
         parts.append("[Final Answer]")
         parts.append(run.answer)
         return "\n".join(parts)
+

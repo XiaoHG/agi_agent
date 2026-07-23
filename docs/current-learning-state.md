@@ -100,10 +100,9 @@ Week 1：Agent 基础 / 最小 CLI Agent。
 
 先不要马上接复杂框架。下一步优先让 Teacher Agent 讲解这次新增代码：
 
-- `agent/week1_basic_agent/core.py`
-- `agent/week1_basic_agent/router.py`
-- `agent/week1_basic_agent/tools.py`
-- `cli/week1_basic_agent.py`
+- `agent/core.py`
+- `agent/router.py`
+- `agent/tools.py`
+- `cli/main.py`
 
 理解后再进入 Week 2。
-

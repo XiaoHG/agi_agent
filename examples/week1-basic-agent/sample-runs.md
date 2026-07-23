@@ -7,7 +7,7 @@
 命令：
 
 ```bash
-python -m cli.week1_basic_agent --input "请解释 Agent 和普通聊天机器人的区别。"
+python -m cli.main --input "请解释 Agent 和普通聊天机器人的区别。"
 ```
 
 输入：
@@ -27,7 +27,7 @@ Agent 会围绕目标主动做决策，并且可以调用工具、维护状态�
 命令：
 
 ```bash
-python -m cli.week1_basic_agent --input "请读取 README.md，并总结这个项目的学习目标。"
+python -m cli.main --input "请读取 README.md，并总结这个项目的学习目标。"
 ```
 
 输入：
@@ -47,7 +47,7 @@ python -m cli.week1_basic_agent --input "请读取 README.md，并总结这个�
 命令：
 
 ```bash
-python -m cli.week1_basic_agent --input "请查看当前项目有哪些主要目录，并说明它们分别负责什么。"
+python -m cli.main --input "请查看当前项目有哪些主要目录，并说明它们分别负责什么。"
 ```
 
 输入：
@@ -67,7 +67,7 @@ agent/ 是 Agent 主链路实验目录，cli/ 是命令行入口，prompts/ 是 
 命令：
 
 ```bash
-python -m cli.week1_basic_agent --input "请读取 not-exist.md。"
+python -m cli.main --input "请读取 not-exist.md。"
 ```
 
 输入：
@@ -81,4 +81,3 @@ python -m cli.week1_basic_agent --input "请读取 not-exist.md。"
 ```text
 工具调用失败，原因是文件不存在：not-exist.md。
 ```
-

@@ -11,24 +11,28 @@
 - memory 机制
 - observability 和错误处理
 
-建议按周拆分，例如：
+后续按能力模块迭代，不按周创建运行代码目录：
 
 ```text
 agent/
-  week1-basic-agent/
-  week2-workflow-agent/
-  week5-observability/
+  core.py
+  router.py
+  tools.py
+  prompts.py
+  state.py      # 后续需要状态管理时再添加
+  memory.py     # 后续需要记忆能力时再添加
 ```
 
 ## 当前实现
 
-Week 1 的实际 Python 包使用下划线命名：
+当前 Python 包采用标准模块命名，保持代码层简洁：
 
 ```text
-agent/week1_basic_agent/
+agent/core.py
+agent/router.py
+agent/tools.py
+agent/prompts.py
 ```
-
-原因：Python import 不支持带连字符的包名。`agent/week1-basic-agent/` 保留为学习说明目录。
 
 核心文件：
 

@@ -13,14 +13,14 @@
 
 ## 当前入口
 
-Week 1 CLI：
+当前入口：
 
 ```bash
-python -m cli.week1_basic_agent --input "请解释 Agent 和普通聊天机器人的区别。"
+python -m cli.main --input "请解释 Agent 和普通聊天机器人的区别。"
 ```
 
 带 trace：
 
 ```bash
-python -m cli.week1_basic_agent --input "请读取 README.md，并总结这个项目的学习目标。" --trace
+python -m cli.main --input "请读取 README.md，并总结这个项目的学习目标。" --trace
 ```

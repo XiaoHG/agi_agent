@@ -26,7 +26,7 @@
 
 产出：
 
-- `agent/week1-basic-agent/`
+- `agent/`
 - 一个可运行 CLI Agent
 - 至少 3 个 eval case
 
@@ -63,7 +63,7 @@
 
 产出：
 
-- `agent/week2-workflow-agent/`
+- 在 `agent/` 中扩展状态和工作流模块
 - 状态流转图
 - 多步任务样例
 
@@ -84,7 +84,7 @@
 
 产出：
 
-- `rag/week3-rag-demo/`
+- 在 `rag/` 中实现本地文档问答能力
 - 本地文档问答 Demo
 - 检索失败案例分析
 
@@ -102,7 +102,7 @@
 
 产出：
 
-- `mcp/week3-mcp-demo/`
+- 在 `mcp/` 中实现 MCP 接入能力
 - 一个自定义 MCP Server
 - Agent 通过 MCP 调用工具
 
@@ -120,7 +120,7 @@
 
 产出：
 
-- `skills/week4-skills/`
+- 在 `skills/` 中沉淀可复用技能
 - 2-3 个可复用 Skill
 
 ### L7：Subagent / 多 Agent 协作
@@ -139,7 +139,7 @@
 
 产出：
 
-- `subagent/week4-multi-agent-demo/`
+- 在 `subagent/` 中实现多 Agent 协作实验
 - 多角色协作 Demo
 
 ### L8：工程化、评估与产品原型
@@ -160,7 +160,7 @@
 
 产出：
 
-- `evals/week5-regression/`
+- 在 `evals/` 中维护阶段性回归评估
 - `tests/`
 - 综合项目 Demo
 
@@ -197,4 +197,3 @@
 - 一开始就读大型源码
 
 原因：这些都会掩盖 Agent 最核心的运行机制。
-
