@@ -29,6 +29,17 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(route.tool_name, "count_lines")
         self.assertEqual(route.tool_input, re.search(r'([\w-]+\.\w+)', text).group(1) if re.search(r'([\w-]+\.\w+)', text) else ".")
 
+    def test_route_to_workflow(self) -> None:
+        text = "Read README.md and then count lines."
+        route = route_intent(text)
+        self.assertEqual(route.action, "workflow")
+
+    def test_workflow_run(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("Read README.md and then count lines.")
+        self.assertIn("workflow completed", run.answer)
+        self.assertIn("count_lines", run.answer)
+
     def test_read_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -77,6 +77,23 @@ def _looks_like_file_count_lines(text: str) -> bool:
     return any(keyword.lower() in lowered for keyword in keywords) or bool(FILE_PATTERN.search(text))
 
 
+def _looks_like_workflow_request(text: str) -> bool:
+    """Return True when the request looks like an ordered multi-step task."""
+
+    lowered = f" {text.lower()} "
+    markers = [
+        " and then ",
+        " then ",
+        " after that ",
+        " first ",
+        " next ",
+        "step by step",
+        "workflow",
+        "multiple steps",
+    ]
+    return any(marker in lowered for marker in markers)
+
+
 def route_intent(user_input: str) -> ToolRoute:
     """Choose the simplest safe action for the current input.
 
@@ -93,6 +110,12 @@ def route_intent(user_input: str) -> ToolRoute:
             tool_name="list_dir",
             tool_input=".",
             reason="The user is asking about the directory or project structure.",
+        )
+
+    if _looks_like_workflow_request(text):
+        return ToolRoute(
+            action="workflow",
+            reason="The request contains ordered actions and should be handled as a workflow.",
         )
 
     if "lines" in text.lower() and _looks_like_file_count_lines(text):

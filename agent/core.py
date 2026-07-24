@@ -8,13 +8,8 @@ from uuid import uuid4  # 生成唯一运行ID
 from .prompts import load_system_prompt, load_tool_router_prompt  # 加载提示词
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tools import ToolError, ToolResult, list_dir, read_file, count_lines  # 工具定义与异常
-
-
-@dataclass(frozen=True)  # frozen=True：不可变，确保轨迹不可篡改
-class AgentStep:
-    """One recorded step in a run trace."""
-    title: str    # 步骤标题（如"Receive input"）
-    detail: str   # 步骤详情（如用户输入内容）
+from .state import AgentState, AgentStep  # 运行状态与轨迹记录
+from .workflow import WorkflowPlan, build_workflow_plan, build_workflow_summary  # 工作流规划与汇总
 
 
 @dataclass
@@ -52,6 +47,20 @@ class WorkspaceAgent:
         run.steps.append(AgentStep("Load prompts", "system prompt and tool-router prompt loaded"))
         run.steps.append(AgentStep("Route request", f"{run.route.action} / {run.route.tool_name or 'none'}"))
 
+        # 3.5 如果是工作流请求，则进入多步执行路径
+        if run.route.action == "workflow":
+            workflow_plan = build_workflow_plan(user_input)
+            run.steps.append(AgentStep("Build workflow", workflow_plan.describe()))
+            workflow_state = AgentState(
+                run_id=run.run_id,
+                user_input=user_input,
+                route=run.route,
+                steps=run.steps,
+            )
+            run.answer = self._run_workflow(workflow_state, workflow_plan)
+            run.steps = workflow_state.steps
+            return run
+
         # 3. 分支逻辑：根据路由结果执行不同策略
         if run.route.action == "use_tool":
             # 分支A：需要调用工具
@@ -72,6 +81,51 @@ class WorkspaceAgent:
         # 4. 记录完成步骤并返回完整会话
         run.steps.append(AgentStep("Complete", "final answer generated"))
         return run
+
+    def _run_workflow(self, state: AgentState, plan: WorkflowPlan) -> str:
+        """Execute a simple multi-step workflow and build the final answer."""
+
+        # 1. 记录工作流开始
+        state.add_step("Start workflow", f"{plan.objective}")
+
+        # 2. 逐步执行计划中的每个步骤
+        for index, step in enumerate(plan.steps, start=1):
+            state.add_step("Workflow step", f"{index}. {step.title} -> {step.kind}")
+
+            if step.kind == "tool":
+                try:
+                    result = self._call_tool(
+                        ToolRoute(
+                            action="use_tool",
+                            tool_name=step.tool_name,
+                            tool_input=step.tool_input,
+                            reason=step.note,
+                        )
+                    )
+                    state.add_tool_result(result)
+                    state.add_step("Step completed", f"{result.tool_name} completed")
+                except ToolError as error:
+                    state.tool_error = str(error)
+                    state.add_step("Step failed", state.tool_error)
+                    state.answer = self._compose_tool_error_answer_for_workflow(state)
+                    return state.answer
+
+            if step.kind == "synthesize":
+                state.workflow_summary = "Synthesis step completed."
+
+        # 3. 汇总所有步骤结果，生成最终答案
+        state.answer = build_workflow_summary(state, plan)
+        state.add_step("Complete workflow", "final answer generated")
+        return state.answer
+
+    def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
+        """Convert a workflow failure into a user-facing answer."""
+
+        return (
+            "Result: the workflow failed before completion.\n\n"
+            f"Reason: {state.tool_error}\n\n"
+            "Next step: inspect the requested file or directory path and try again."
+        )
 
     def _call_tool(self, route: ToolRoute) -> ToolResult:
         """Dispatch tool calls based on the router decision."""
