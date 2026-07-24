@@ -1,10 +1,11 @@
 """Tests for the minimal workspace agent."""
 
 from pathlib import Path
-import tempfile
-import unittest
+import tempfile  # 临时文件夹，测试完自动删，不污染环境
+import unittest  # Python 官方测试框架
+import re
 
-from agent import WorkspaceAgent, list_dir, read_file, route_intent
+from agent import WorkspaceAgent, list_dir, read_file, count_lines, route_intent
 
 
 class WorkspaceAgentTests(unittest.TestCase):
@@ -20,6 +21,13 @@ class WorkspaceAgentTests(unittest.TestCase):
         route = route_intent("List the main project directories and explain what they are responsible for.")
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "list_dir")
+
+    def test_route_to_file_count_lines(self) -> None:
+        text = "Count lines in README.md."
+        route = route_intent(text)
+        self.assertEqual(route.action, "use_tool")
+        self.assertEqual(route.tool_name, "count_lines")
+        self.assertEqual(route.tool_input, re.search(r'([\w-]+\.\w+)', text).group(1) if re.search(r'([\w-]+\.\w+)', text) else ".")
 
     def test_read_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

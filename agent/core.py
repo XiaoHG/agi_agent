@@ -7,7 +7,7 @@ from uuid import uuid4  # 生成唯一运行ID
 # 内部模块依赖（需配套实现）
 from .prompts import load_system_prompt, load_tool_router_prompt  # 加载提示词
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
-from .tools import ToolError, ToolResult, list_dir, read_file  # 工具定义与异常
+from .tools import ToolError, ToolResult, list_dir, read_file, count_lines  # 工具定义与异常
 
 
 @dataclass(frozen=True)  # frozen=True：不可变，确保轨迹不可篡改
@@ -79,6 +79,8 @@ class WorkspaceAgent:
             return read_file(self.workspace_root, route.tool_input or ".")
         if route.tool_name == "list_dir":
             return list_dir(self.workspace_root, route.tool_input or ".")
+        if route.tool_name == "count_lines":
+            return count_lines(self.workspace_root, route.tool_input or ".")
         # 未知工具，抛出异常
         raise ToolError(f"Unknown tool: {route.tool_name}")
 

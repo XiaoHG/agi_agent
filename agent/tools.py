@@ -66,3 +66,18 @@ def list_dir(root: Path, raw_path: str = ".") -> ToolResult:
     header = f"[list_dir] {path.relative_to(root.resolve())}"
     body = "\n".join(items) if items else "- <empty>"
     return ToolResult("list_dir", f"{header}\n{body}")
+
+def count_lines(root: Path, raw_path: str = ".") -> ToolResult:
+    """Count the number of lines in a file inside the workspace root."""
+
+    path = _resolve_within_root(root, raw_path)
+    if not path.exists():
+        raise ToolError(f"File does not exist: {raw_path}")
+    if not path.is_file():
+        raise ToolError(f"Path is not a file: {raw_path}")
+
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        line_count = sum(1 for _ in f)
+
+    header = f"[count_lines] {path.relative_to(root.resolve())}"
+    return ToolResult("count_lines", f"{header}\nLine count: {line_count}")

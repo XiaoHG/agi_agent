@@ -2,7 +2,7 @@
 
 from .core import AgentRun, AgentStep, WorkspaceAgent
 from .router import ToolRoute, route_intent
-from .tools import ToolError, ToolResult, list_dir, read_file
+from .tools import ToolError, ToolResult, list_dir, read_file, count_lines
 
 __all__ = [
     "AgentRun",
@@ -13,6 +13,7 @@ __all__ = [
     "ToolResult",
     "list_dir",
     "read_file",
+    "count_lines",
     "route_intent",
 ]
 
