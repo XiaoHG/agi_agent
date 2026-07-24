@@ -3,9 +3,8 @@
 from pathlib import Path
 import tempfile  # 临时文件夹，测试完自动删，不污染环境
 import unittest  # Python 官方测试框架
-import re
 
-from agent import WorkspaceAgent, list_dir, read_file, count_lines, route_intent
+from agent import WorkspaceAgent, count_lines, list_dir, read_file, route_intent
 
 
 class WorkspaceAgentTests(unittest.TestCase):
@@ -27,7 +26,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         route = route_intent(text)
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "count_lines")
-        self.assertEqual(route.tool_input, re.search(r'([\w-]+\.\w+)', text).group(1) if re.search(r'([\w-]+\.\w+)', text) else ".")
+        self.assertEqual(route.tool_input, "README.md")
 
     def test_route_to_workflow(self) -> None:
         text = "Read README.md and then count lines."
@@ -39,6 +38,25 @@ class WorkspaceAgentTests(unittest.TestCase):
         run = agent.run("Read README.md and then count lines.")
         self.assertIn("workflow completed", run.answer)
         self.assertIn("count_lines", run.answer)
+
+    def test_workflow_lists_directories_then_reads_readme(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("List directories and then read README.md.")
+        self.assertIn("workflow completed", run.answer)
+        self.assertIn("configs", run.answer)
+        self.assertIn("agi_agent", run.answer)
+
+    def test_workflow_stops_after_missing_file_error(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        text = "Read not-exist.md and then count lines."
+        route = route_intent(text)
+        self.assertEqual(route.action, "workflow")
+        run = agent.run(text)
+        self.assertIn("workflow failed", run.answer)
+        self.assertIn("File does not exist", run.answer)
+        self.assertEqual(run.tool_result, None)
+        self.assertTrue(any(step.title == "Step failed" for step in run.steps))
+        self.assertFalse(any(step.title == "Step completed" and "count_lines" in step.detail for step in run.steps))
 
     def test_read_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

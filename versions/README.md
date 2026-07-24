@@ -1,19 +1,19 @@
 # versions/
 
-This directory stores versioned iteration notes.
+这个目录用于存放版本化的迭代说明文件。
 
-Naming convention:
+命名规范：
 
 ```text
 <topic>_v2.md
 <topic>_v3.md
 ```
 
-Each file should document:
+每个版本文件都应该说明：
 
-- What changed
-- Which files were added or modified
-- Line numbers for new code
-- New behavior and interaction flow
-- Verification results
+- 本次改了什么
+- 新增或修改了哪些文件
+- 新代码对应的行号
+- 新增了什么行为和交互流程
+- 验证结果如何
 

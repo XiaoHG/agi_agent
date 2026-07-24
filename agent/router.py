@@ -45,8 +45,10 @@ def _looks_like_file_question(text: str) -> bool:
     lowered = text.lower()
     return any(keyword.lower() in lowered for keyword in keywords) or bool(FILE_PATTERN.search(text))
 
+
 def _looks_like_file_count_lines(text: str) -> bool:
     """Return True when the user is likely asking about a file and counting lines."""
+
     keywords = [
         "count lines",
         "count the lines",
@@ -104,6 +106,12 @@ def route_intent(user_input: str) -> ToolRoute:
     text = user_input.strip()
     match = FILE_PATTERN.search(text)
 
+    if _looks_like_workflow_request(text):
+        return ToolRoute(
+            action="workflow",
+            reason="The request contains ordered actions and should be handled as a workflow.",
+        )
+
     if _looks_like_directory_question(text):
         return ToolRoute(
             action="use_tool",
@@ -112,20 +120,14 @@ def route_intent(user_input: str) -> ToolRoute:
             reason="The user is asking about the directory or project structure.",
         )
 
-    if _looks_like_workflow_request(text):
+    if "lines" in text.lower() and _looks_like_file_count_lines(text):
         return ToolRoute(
-            action="workflow",
-            reason="The request contains ordered actions and should be handled as a workflow.",
+            action="use_tool",
+            tool_name="count_lines",
+            tool_input=match.group("path") if match else ".",
+            reason="The user is asking to count the number of lines in a file.",
         )
 
-    if "lines" in text.lower() and _looks_like_file_count_lines(text):
-                return ToolRoute(
-                    action="use_tool",
-                    tool_name="count_lines",
-                    tool_input=match.group("path") if match else ".",
-                    reason="The user is asking to count the number of lines in a file.",
-                )
-    
     if "README" in text.upper() and _looks_like_file_question(text):
         return ToolRoute(
             action="use_tool",

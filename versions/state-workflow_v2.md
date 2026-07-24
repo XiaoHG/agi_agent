@@ -1,172 +1,179 @@
-# State and Workflow v2
+# 状态与工作流 v2
 
-Version: v2
+版本：v2
 
-Date: 2026-07-24
+日期：2026-07-24
 
-## Goal
+## 目标
 
-This iteration adds the first multi-step execution layer on top of the minimal agent loop.
+这次迭代是在最小 Agent 闭环之上，加入第一层多步执行能力。
 
-The new layer introduces:
+新增能力包括：
 
-- mutable execution state
-- simple workflow planning
-- sequential tool execution
-- workflow-level answer synthesis
+- 可变执行状态
+- 简单工作流规划
+- 顺序执行工具
+- 工作流结果汇总
 
-## New files
+## 新增文件
 
 ### `agent/state.py`
 
-New file.
+新增文件。
 
-Exact line range: `1-53`
+精确行号范围：`1-53`
 
-Responsibilities:
+职责：
 
-- define `AgentStep`
-- define `AgentState`
-- record trace steps
-- record tool results
-- expose helper methods for state updates
+- 定义 `AgentStep`
+- 定义 `AgentState`
+- 记录 trace 步骤
+- 记录工具结果
+- 提供状态更新辅助方法
 
 ### `agent/workflow.py`
 
-New file.
+新增文件。
 
-Exact line range: `1-178`
+精确行号范围：`1-178`
 
-Responsibilities:
+职责：
 
-- define `WorkflowStep`
-- define `WorkflowPlan`
-- build a small ordered plan from user input
-- synthesize workflow results into a final answer
+- 定义 `WorkflowStep`
+- 定义 `WorkflowPlan`
+- 根据用户输入构建顺序计划
+- 将工作流结果汇总成最终回答
 
 ### `versions/README.md`
 
-New file.
+新增文件。
 
-Exact line range: `1-19`
+精确行号范围：`1-19`
 
-Responsibilities:
+职责：
 
-- define how iteration notes should be stored
-- enforce the `*_v2.md` / `*_v3.md` naming pattern
+- 说明迭代文件的保存方式
+- 约束 `*_v2.md` / `*_v3.md` 的命名规范
 
-## Modified files
+## 修改文件
 
 ### `agent/core.py`
 
-Changed line ranges:
+变更行号范围：
 
-- imports and workflow integration: `11-12`, `50-63`, `85-128`
-- existing single-step flow remains unchanged outside those ranges
+- imports 和工作流接入：`11-12`、`50-63`、`85-128`
+- 其余单步流程保持不变
 
-What changed:
+本次改动：
 
-- imports now include `AgentState` and workflow helpers
-- `WorkspaceAgent.run()` now checks for `workflow` routes
-- new `_run_workflow()` execution path was added
-- workflow failures are handled separately
-- workflow results are synthesized into a final answer
+- imports 中加入 `AgentState` 和工作流辅助函数
+- `WorkspaceAgent.run()` 增加 `workflow` 分支
+- 新增 `_run_workflow()` 执行路径
+- 工作流失败单独处理
+- 工作流结果会被汇总成最终回答
 
-New behavior:
+新增行为：
 
-1. Receive input
-2. Load prompts
-3. Route request
-4. If the route is `workflow`, build a workflow plan
-5. Execute each workflow step in order
-6. Record tool results in mutable state
-7. Synthesize a final answer from the collected results
+1. 接收输入
+2. 加载提示词
+3. 路由判断
+4. 如果路由结果是 `workflow`，则构建工作流计划
+5. 按顺序执行每一个工作流步骤
+6. 将工具结果记录到可变状态中
+7. 基于已收集的结果汇总最终回答
 
 ### `agent/router.py`
 
-Changed line ranges:
+变更行号范围：
 
-- workflow detection helper: `80-94`
-- workflow routing branch: `115-120`
+- 工作流识别辅助函数：`80-94`
+- 工作流路由分支：`115-120`
 
-What changed:
+本次改动：
 
-- added `_looks_like_workflow_request()`
-- added a new `workflow` route
+- 新增 `_looks_like_workflow_request()`
+- 新增 `workflow` 路由
 
-New behavior:
+新增行为：
 
-- requests containing ordered-action markers such as `and then`, `then`, `after that`, or `step by step` are routed to the workflow path
+- 如果请求中包含 `and then`、`then`、`after that`、`step by step` 等顺序型表达，就进入工作流路径
 
 ### `agent/__init__.py`
 
-Changed line ranges:
+变更行号范围：
 
-- exports: `3-6`, `8-20`
+- 导出更新：`3-6`、`8-20`
 
-What changed:
+本次改动：
 
-- exported `AgentState`
-- exported `AgentStep` from `agent.state`
+- 导出 `AgentState`
+- 从 `agent.state` 导出 `AgentStep`
 
 ### `tests/test_agent.py`
 
-Changed line ranges:
+变更行号范围：
 
-- workflow tests: `32-42`
+- 工作流测试：`32-42`
 
-What changed:
+本次改动：
 
-- added workflow routing coverage
-- added a workflow execution test
+- 增加工作流路由覆盖
+- 增加工作流执行测试
 
-## New interaction flow
+## 新交互流程
 
-### Single-step flow
+### 单步流程
 
 ```text
 input -> route -> direct answer or one tool -> answer
 ```
 
-### Workflow flow
+### 工作流流程
 
 ```text
 input -> route(workflow) -> plan -> step 1 -> step 2 -> synthesis -> answer
 ```
 
-## Example workflow
+## 示例工作流
 
-Input:
+输入：
 
 ```text
 Read README.md and then count lines.
 ```
 
-Expected behavior:
+期望行为：
 
-- route to `workflow`
-- read the file
-- count lines
-- synthesize a combined answer
+- 路由到 `workflow`
+- 先读取文件
+- 再统计行数
+- 最后汇总成一个统一回答
 
-## Verification
+## 验证方式
 
-Run:
+运行：
 
 ```bash
 python -m unittest discover -s tests -v
 python -m cli.main --input "Read README.md and then count lines." --trace
 ```
 
-Observed result:
+观察结果：
 
-- tests pass
-- workflow route is triggered
-- workflow trace is visible
-- tool results are collected and summarized
+- 测试通过
+- workflow 路由被触发
+- trace 中能看到工作流步骤
+- 工具结果被收集并汇总
 
-## Notes for future iterations
+## 后续迭代建议
 
-- Keep version notes in `versions/`
-- Use the same `*_v2.md`, `*_v3.md` pattern for future iteration reports
-- Add more workflow patterns in later versions instead of making this planner too complex too early
+- 版本说明继续放在 `versions/`
+- 后续仍然使用 `*_v2.md`、`*_v3.md` 这种命名方式
+- 下一版再增加更多工作流模式，不要过早把规划器做得太复杂
+
+## 学习检查点
+
+- 我能解释 AgentState 的作用：保存 Agent 运行过程中的所有中间状态，以便于我们对 Agent 的历史能够进行追溯；
+- 我能解释 WorkflowPlan 的作用：形成agent的工作流，使得我们能够对需求做流程化处理，实现多步骤任务拆解；
+- 我能解释 workflow 和单步工具调用的区别：单步骤工具调用适合简单场景任务只有一个功能，而多步骤可以进行复杂任务拆解，细化任务流程；
+- 我能解释当前 workflow 的限制：当前workflow没有上下文概念，拆解开之后还是单步骤的简单组合；
