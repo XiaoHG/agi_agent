@@ -21,7 +21,7 @@ The new layer introduces:
 
 New file.
 
-Exact line range: `1-52`
+Exact line range: `1-53`
 
 Responsibilities:
 
@@ -35,7 +35,7 @@ Responsibilities:
 
 New file.
 
-Exact line range: `1-177`
+Exact line range: `1-178`
 
 Responsibilities:
 
@@ -48,7 +48,7 @@ Responsibilities:
 
 New file.
 
-Exact line range: `1-18`
+Exact line range: `1-19`
 
 Responsibilities:
 
