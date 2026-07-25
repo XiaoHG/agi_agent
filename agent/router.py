@@ -116,6 +116,13 @@ def _looks_like_knowledge_search(text: str) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+def _looks_like_mcp_request(text: str) -> bool:
+    """Return True when the user is asking about MCP tools."""
+
+    lowered = text.lower()
+    return "mcp" in lowered
+
+
 def route_intent(user_input: str) -> ToolRoute:
     """Choose the simplest safe action for the current input.
 
@@ -132,6 +139,19 @@ def route_intent(user_input: str) -> ToolRoute:
             tool_name="search_docs",
             tool_input=text,
             reason="The user is asking to search local project knowledge documents.",
+        )
+
+    if _looks_like_mcp_request(text):
+        tool_name = "list_mcp_tools"
+        reason = "The user is asking to inspect local MCP tools."
+        if "summary" in text.lower() or "workspace" in text.lower():
+            tool_name = "mcp_workspace_summary"
+            reason = "The user is asking to call the local MCP workspace summary tool."
+        return ToolRoute(
+            action="use_tool",
+            tool_name=tool_name,
+            tool_input=text,
+            reason=reason,
         )
 
     if _looks_like_workflow_request(text):

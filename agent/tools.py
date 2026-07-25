@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from mcp import call_mcp_tool, list_mcp_tools
 from rag import answer_question
 
 
@@ -69,6 +70,7 @@ def list_dir(root: Path, raw_path: str = ".") -> ToolResult:
     body = "\n".join(items) if items else "- <empty>"
     return ToolResult("list_dir", f"{header}\n{body}")
 
+
 def count_lines(root: Path, raw_path: str = ".") -> ToolResult:
     """Count the number of lines in a file inside the workspace root."""
 
@@ -90,3 +92,16 @@ def search_docs(root: Path, question: str) -> ToolResult:
 
     answer = answer_question(root, question)
     return ToolResult("search_docs", answer.to_text())
+
+
+def list_mcp_server_tools(root: Path) -> ToolResult:
+    """List tools exposed through the local MCP adapter."""
+
+    return ToolResult("list_mcp_tools", list_mcp_tools(root))
+
+
+def mcp_workspace_summary(root: Path) -> ToolResult:
+    """Call the local MCP workspace summary tool."""
+
+    output = call_mcp_tool(root, "workspace_summary")
+    return ToolResult("mcp_workspace_summary", output)

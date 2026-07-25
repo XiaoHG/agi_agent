@@ -3,7 +3,16 @@
 from .core import AgentRun, WorkspaceAgent
 from .router import ToolRoute, route_intent
 from .state import AgentStep, AgentState
-from .tools import ToolError, ToolResult, count_lines, list_dir, read_file, search_docs
+from .tools import (
+    ToolError,
+    ToolResult,
+    count_lines,
+    list_dir,
+    list_mcp_server_tools,
+    mcp_workspace_summary,
+    read_file,
+    search_docs,
+)
 
 __all__ = [
     "AgentRun",
@@ -14,6 +23,8 @@ __all__ = [
     "ToolError",
     "ToolResult",
     "list_dir",
+    "list_mcp_server_tools",
+    "mcp_workspace_summary",
     "read_file",
     "count_lines",
     "search_docs",

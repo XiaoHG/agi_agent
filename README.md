@@ -125,7 +125,7 @@ agi_agent/
 
 ## 当前可运行 Demo
 
-当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流，以及 Week 3 的本地 RAG 最小闭环。
+当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流，以及 Week 3 的本地 RAG 和 MCP 最小闭环。
 
 运行直接回答：
 
@@ -161,6 +161,18 @@ python -m cli.main --input "Search docs for workflow." --trace
 
 ```bash
 python -m cli.rag_demo --question "What does workflow mean in this project?"
+```
+
+列出本地 MCP 工具：
+
+```bash
+python -m cli.mcp_demo --list-tools
+```
+
+通过 Agent 调用本地 MCP 工具：
+
+```bash
+python -m cli.main --input "List MCP tools." --trace
 ```
 
 运行测试：
@@ -505,13 +517,13 @@ project/
 
 可以继续在这个仓库中按周推进：
 
-- 第 1 周先在 `agent/` 下创建最小 Agent
-- 第 3 周把 `rag/` 和 `mcp/` 接起来
-- 第 4 周开始沉淀 `skills/` 和 `subagent/`
+- 当前阶段先巩固 Week 3：RAG 与 MCP
+- 下一阶段进入 Week 4：Skills 与 Subagent
+- 第 5 周补工程化、评估、稳定性
 - 第 6 周把所有内容整合成一个完整项目
 
 当前建议优先做下面三件事：
 
-1. 先理解当前代码：`agent/core.py`、`agent/router.py`、`agent/tools.py`、`cli/main.py`。
-2. 补 Week 1 复盘，记录这版 Agent 的能力边界。
-3. 再进入 Week 2：状态、记忆与工作流。
+1. 先理解当前 MCP 代码：`mcp/schema.py`、`mcp/servers/local_server.py`、`mcp/clients/local_client.py`、`mcp/adapter.py`。
+2. 补 MCP eval case 和阶段复盘。
+3. 再评估是否进入 Week 4：Skills 与 Subagent。
