@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from rag import answer_question
+
 
 MAX_FILE_BYTES = 64_000
 
@@ -81,3 +83,10 @@ def count_lines(root: Path, raw_path: str = ".") -> ToolResult:
 
     header = f"[count_lines] {path.relative_to(root.resolve())}"
     return ToolResult("count_lines", f"{header}\nLine count: {line_count}")
+
+
+def search_docs(root: Path, question: str) -> ToolResult:
+    """Search local project documents and return referenced context."""
+
+    answer = answer_question(root, question)
+    return ToolResult("search_docs", answer.to_text())

@@ -7,7 +7,7 @@ from uuid import uuid4  # 生成唯一运行ID
 # 内部模块依赖（需配套实现）
 from .prompts import load_system_prompt, load_tool_router_prompt  # 加载提示词
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
-from .tools import ToolError, ToolResult, list_dir, read_file, count_lines  # 工具定义与异常
+from .tools import ToolError, ToolResult, count_lines, list_dir, read_file, search_docs  # 工具定义与异常
 from .state import AgentState, AgentStep  # 运行状态与轨迹记录
 from .workflow import WorkflowPlan, build_workflow_plan, build_workflow_summary  # 工作流规划与汇总
 
@@ -135,6 +135,8 @@ class WorkspaceAgent:
             return list_dir(self.workspace_root, route.tool_input or ".")
         if route.tool_name == "count_lines":
             return count_lines(self.workspace_root, route.tool_input or ".")
+        if route.tool_name == "search_docs":
+            return search_docs(self.workspace_root, route.tool_input or "")
         # 未知工具，抛出异常
         raise ToolError(f"Unknown tool: {route.tool_name}")
 

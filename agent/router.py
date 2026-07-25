@@ -96,6 +96,26 @@ def _looks_like_workflow_request(text: str) -> bool:
     return any(marker in lowered for marker in markers)
 
 
+def _looks_like_knowledge_search(text: str) -> bool:
+    """Return True when the user is asking to search local knowledge documents."""
+
+    keywords = [
+        "ask docs",
+        "ask documentation",
+        "local docs",
+        "local documentation",
+        "project docs",
+        "project documentation",
+        "search docs",
+        "search documentation",
+        "search knowledge",
+        "knowledge base",
+        "rag",
+    ]
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in keywords)
+
+
 def route_intent(user_input: str) -> ToolRoute:
     """Choose the simplest safe action for the current input.
 
@@ -105,6 +125,14 @@ def route_intent(user_input: str) -> ToolRoute:
 
     text = user_input.strip()
     match = FILE_PATTERN.search(text)
+
+    if _looks_like_knowledge_search(text):
+        return ToolRoute(
+            action="use_tool",
+            tool_name="search_docs",
+            tool_input=text,
+            reason="The user is asking to search local project knowledge documents.",
+        )
 
     if _looks_like_workflow_request(text):
         return ToolRoute(

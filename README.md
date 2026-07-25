@@ -125,7 +125,7 @@ agi_agent/
 
 ## 当前可运行 Demo
 
-当前已完成 Week 1 最小 CLI Agent。
+当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流，以及 Week 3 的本地 RAG 最小闭环。
 
 运行直接回答：
 
@@ -149,6 +149,18 @@ python -m cli.main --input "List the main project directories and explain what t
 
 ```bash
 python -m cli.main --input "Read README.md and summarize the project learning goals." --trace
+```
+
+搜索本地文档：
+
+```bash
+python -m cli.main --input "Search docs for workflow." --trace
+```
+
+运行 RAG demo：
+
+```bash
+python -m cli.rag_demo --question "What does workflow mean in this project?"
 ```
 
 运行测试：
