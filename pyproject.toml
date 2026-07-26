@@ -9,4 +9,4 @@ description = "Agent development learning workspace"
 requires-python = ">=3.11"
 
 [tool.setuptools]
-packages = ["agent", "cli", "mcp", "mcp.clients", "mcp.servers", "rag"]
+packages = ["agent", "cli", "mcp", "mcp.clients", "mcp.servers", "rag", "skills", "subagent"]

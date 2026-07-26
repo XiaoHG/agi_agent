@@ -18,3 +18,19 @@
 - 编码、修复、测试、验证：优先 Coding Agent。
 - 同时包含学习和实现：Teacher Agent 先说明设计，Coding Agent 再实现。
 
+## 当前实现
+
+当前阶段先实现 deterministic collaboration planner，不做真实多 Agent 对话执行。
+
+```text
+subagent/
+  team.py        # SubagentSpec, CollaborationPlan, default collaboration plan
+```
+
+运行：
+
+```bash
+python -m cli.collaboration_demo --list-subagents
+python -m cli.collaboration_demo --task "Review this code and add tests."
+python -m cli.main --input "Plan subagent collaboration for a code review." --trace
+```

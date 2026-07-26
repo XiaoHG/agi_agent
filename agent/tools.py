@@ -7,6 +7,8 @@ from pathlib import Path
 
 from mcp import call_mcp_tool, list_mcp_tools
 from rag import answer_question
+from skills import describe_skills, select_skill
+from subagent import build_collaboration_plan, describe_subagents
 
 
 MAX_FILE_BYTES = 64_000
@@ -105,3 +107,29 @@ def mcp_workspace_summary(root: Path) -> ToolResult:
 
     output = call_mcp_tool(root, "workspace_summary")
     return ToolResult("mcp_workspace_summary", output)
+
+
+def list_agent_skills() -> ToolResult:
+    """List reusable skills available to the agent."""
+
+    return ToolResult("list_skills", describe_skills())
+
+
+def plan_skill(task: str) -> ToolResult:
+    """Select a skill for a task and explain the skill steps."""
+
+    skill = select_skill(task)
+    return ToolResult("plan_skill", skill.describe())
+
+
+def list_project_subagents() -> ToolResult:
+    """List subagents available in the project."""
+
+    return ToolResult("list_subagents", describe_subagents())
+
+
+def plan_subagent_collaboration(task: str) -> ToolResult:
+    """Build a small subagent collaboration plan."""
+
+    plan = build_collaboration_plan(task)
+    return ToolResult("plan_subagents", plan.to_text())

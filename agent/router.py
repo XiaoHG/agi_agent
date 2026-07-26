@@ -123,6 +123,21 @@ def _looks_like_mcp_request(text: str) -> bool:
     return "mcp" in lowered
 
 
+def _looks_like_skill_request(text: str) -> bool:
+    """Return True when the user is asking about reusable skills."""
+
+    lowered = text.lower()
+    return "skill" in lowered or "skills" in lowered
+
+
+def _looks_like_subagent_request(text: str) -> bool:
+    """Return True when the user is asking about subagents or collaboration."""
+
+    lowered = text.lower()
+    keywords = ["subagent", "subagents", "multi-agent", "collaboration", "collaborate", "team"]
+    return any(keyword in lowered for keyword in keywords)
+
+
 def route_intent(user_input: str) -> ToolRoute:
     """Choose the simplest safe action for the current input.
 
@@ -147,6 +162,32 @@ def route_intent(user_input: str) -> ToolRoute:
         if "summary" in text.lower() or "workspace" in text.lower():
             tool_name = "mcp_workspace_summary"
             reason = "The user is asking to call the local MCP workspace summary tool."
+        return ToolRoute(
+            action="use_tool",
+            tool_name=tool_name,
+            tool_input=text,
+            reason=reason,
+        )
+
+    if _looks_like_skill_request(text):
+        tool_name = "plan_skill"
+        reason = "The user is asking to select or explain a reusable skill."
+        if "list" in text.lower() or "available" in text.lower():
+            tool_name = "list_skills"
+            reason = "The user is asking to list available skills."
+        return ToolRoute(
+            action="use_tool",
+            tool_name=tool_name,
+            tool_input=text,
+            reason=reason,
+        )
+
+    if _looks_like_subagent_request(text):
+        tool_name = "plan_subagents"
+        reason = "The user is asking to plan subagent collaboration."
+        if "list" in text.lower() or "available" in text.lower():
+            tool_name = "list_subagents"
+            reason = "The user is asking to list available subagents."
         return ToolRoute(
             action="use_tool",
             tool_name=tool_name,

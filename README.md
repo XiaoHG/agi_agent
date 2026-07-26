@@ -125,7 +125,7 @@ agi_agent/
 
 ## 当前可运行 Demo
 
-当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流，以及 Week 3 的本地 RAG 和 MCP 最小闭环。
+当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流、Week 3 本地 RAG / MCP 最小闭环，并开始 Week 4 Skills 与 Subagent 最小协作层。
 
 运行直接回答：
 
@@ -173,6 +173,18 @@ python -m cli.mcp_demo --list-tools
 
 ```bash
 python -m cli.main --input "List MCP tools." --trace
+```
+
+列出 Skills：
+
+```bash
+python -m cli.collaboration_demo --list-skills
+```
+
+规划 Subagent 协作：
+
+```bash
+python -m cli.main --input "Plan subagent collaboration for a code review." --trace
 ```
 
 运行测试：
@@ -517,13 +529,12 @@ project/
 
 可以继续在这个仓库中按周推进：
 
-- 当前阶段先巩固 Week 3：RAG 与 MCP
-- 下一阶段进入 Week 4：Skills 与 Subagent
+- 当前阶段先巩固 Week 4：Skills 与 Subagent
 - 第 5 周补工程化、评估、稳定性
 - 第 6 周把所有内容整合成一个完整项目
 
 当前建议优先做下面三件事：
 
-1. 先理解当前 MCP 代码：`mcp/schema.py`、`mcp/servers/local_server.py`、`mcp/clients/local_client.py`、`mcp/adapter.py`。
-2. 补 MCP eval case 和阶段复盘。
-3. 再评估是否进入 Week 4：Skills 与 Subagent。
+1. 先理解当前 Skills/Subagent 代码：`skills/catalog.py`、`subagent/team.py`、`cli/collaboration_demo.py`。
+2. 补 Skills/Subagent eval case 和阶段复盘。
+3. 再评估是否进入 Week 5：工程化、评估与稳定性。

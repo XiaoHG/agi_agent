@@ -13,7 +13,11 @@ from .tools import (  # 工具定义与异常
     count_lines,
     list_dir,
     list_mcp_server_tools,
+    list_agent_skills,
+    list_project_subagents,
     mcp_workspace_summary,
+    plan_skill,
+    plan_subagent_collaboration,
     read_file,
     search_docs,
 )
@@ -150,6 +154,14 @@ class WorkspaceAgent:
             return list_mcp_server_tools(self.workspace_root)
         if route.tool_name == "mcp_workspace_summary":
             return mcp_workspace_summary(self.workspace_root)
+        if route.tool_name == "list_skills":
+            return list_agent_skills()
+        if route.tool_name == "plan_skill":
+            return plan_skill(route.tool_input or "")
+        if route.tool_name == "list_subagents":
+            return list_project_subagents()
+        if route.tool_name == "plan_subagents":
+            return plan_subagent_collaboration(route.tool_input or "")
         # 未知工具，抛出异常
         raise ToolError(f"Unknown tool: {route.tool_name}")
 

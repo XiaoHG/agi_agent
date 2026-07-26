@@ -8,60 +8,61 @@
 
 ## 当前阶段
 
-Week 3：RAG 与 MCP。
+Week 4：Skills 与 Subagent。
 
-当前状态：RAG 最小闭环已提交，MCP 最小骨架已开始实现。
+当前状态：Skills/Subagent 最小协作层已开始实现。
 
 ## 当前教师判断
 
-项目已经从“本地知识检索实验”进入“本地 MCP 协议边界实验”阶段。
+项目已经从“RAG 与 MCP 工具接入”进入“能力复用与角色协作”阶段。
 
 已具备：
 
 - Week 1 最小 CLI Agent
 - Week 2 状态与工作流
 - Week 3 本地 RAG 最小闭环
+- Week 3 本地 MCP 最小骨架
 - 本地工具：`read_file`、`list_dir`、`count_lines`、`search_docs`
-- 本地 MCP server / client / adapter 骨架
-- Agent 可调用 MCP 工具列表和 workspace summary
-- trace 输出
-- 工具失败处理
+- MCP 工具：`workspace_summary`、`read_project_file`
+- Skills catalog：`research_brief`、`code_review`、`learning_explanation`
+- Subagent planning：`teacher_agent`、`coding_agent`
+- Agent 可列出 skills、选择 skill、列出 subagents、生成 subagent 协作计划
 - 自动化测试
 
 当前缺口：
 
-- MCP 还只是进程内模拟，没有接真实 MCP SDK 或传输层。
-- MCP eval case 还未补充。
-- MCP 还没有和 RAG 形成组合 workflow。
+- Skills 还只是内置 catalog，没有从独立 skill 文件加载。
+- Subagent 还只是规划层，没有真实多 Agent 消息执行。
+- 还没有 Skills/Subagent eval case。
+- 还没有阶段复盘。
 
 ## 当前总目标
 
-先巩固 MCP 最小边界：理解 server、client、schema、adapter 分别负责什么。
+先巩固 Skills 与 Subagent 的最小边界：理解“可复用任务能力”和“角色协作计划”的区别。
 
-最小 MCP 学习链路：
+最小协作链路：
 
 ```text
-MCP Server -> MCP Client -> Agent adapter -> Agent tool call -> CLI output
+User task -> Skill selection -> Subagent plan -> Agent tool output -> CLI output
 ```
 
 ## 当前具体任务
 
 下一步建议：
 
-1. 由 Teacher Agent 讲解 MCP 最小骨架。
-2. 你手动运行 MCP CLI 示例，观察 server/client/adapter 的边界。
-3. 补 MCP eval case。
-4. 再评估是否进入 Skills 与 Subagent 阶段。
+1. 由 Teacher Agent 讲解 Skills/Subagent 最小骨架。
+2. 手动运行 collaboration demo，观察 skill 选择和 subagent 协作计划。
+3. 补 Skills/Subagent eval case。
+4. 写阶段复盘，再评估是否进入 Week 5。
 
 ## 当前学习重点
 
 学习者需要重点理解：
 
-- MCP 的价值不是某个具体工具，而是用统一协议暴露外部能力。
-- server 负责声明和执行工具。
-- client 负责按协议请求 server。
-- adapter 负责把 MCP 能力转换成当前 Agent 可以调用的本地工具。
-- 当前实现是学习版模拟，不等于完整生产 MCP 接入。
+- Skill 是可复用任务能力，不只是 prompt。
+- Subagent 是职责边界，不只是换一个名字继续调用同一个逻辑。
+- 当前实现只做选择和规划，没有真实多 Agent 对话执行。
+- 进入工程化阶段前，需要先把能力边界讲清楚。
 
 ## 已完成
 
@@ -69,19 +70,20 @@ MCP Server -> MCP Client -> Agent adapter -> Agent tool call -> CLI output
 - 创建 README 学习路线。
 - 创建 Teacher Agent / Coding Agent 定义。
 - 创建仓库级 `AGENTS.md` 协作规则。
-- 创建学习总任务大纲：`docs/learning-master-plan.md`。
-- 实现 Week 1 最小 CLI Agent。
+- 完成 Week 1 最小 CLI Agent。
 - 完成 Week 2 状态与工作流实现。
 - 完成 Week 3 本地 RAG 最小闭环。
+- 完成 Week 3 本地 MCP 最小骨架。
 - 提交 RAG 阶段代码：`03c0005 Add local RAG search stage`。
-- 开始实现 MCP 最小骨架。
+- 提交 MCP 阶段代码：`04746a4 Add local MCP protocol stage`。
+- 开始实现 Week 4 Skills/Subagent 最小协作层。
 
 ## 未完成
 
-- MCP 评估用例。
-- MCP 练习复盘。
-- 真实 MCP SDK / transport 接入。
-- 后续接入真实 LLM 决策层。
+- Skills/Subagent 评估用例。
+- Skills/Subagent 阶段复盘。
+- 从 markdown skill 文件加载 skill。
+- 真实多 Agent 消息执行。
 
 ## 恢复指令
 
@@ -90,9 +92,10 @@ MCP Server -> MCP Client -> Agent adapter -> Agent tool call -> CLI output
 1. `AGENTS.md`
 2. `docs/current-learning-state.md`
 3. `docs/learning-master-plan.md`
-4. `mcp/README.md`
-5. `tests/test_mcp.py`
-6. `versions/mcp-local-protocol_v4.md`
+4. `skills/README.md`
+5. `subagent/README.md`
+6. `tests/test_collaboration.py`
+7. `versions/skills-subagent-collaboration_v5.md`
 
 然后继续执行当前具体任务。
 
@@ -100,10 +103,8 @@ MCP Server -> MCP Client -> Agent adapter -> Agent tool call -> CLI output
 
 下一步优先让 Teacher Agent 讲解这次新增代码：
 
-- `mcp/schema.py`
-- `mcp/servers/local_server.py`
-- `mcp/clients/local_client.py`
-- `mcp/adapter.py`
-- `cli/mcp_demo.py`
+- `skills/catalog.py`
+- `subagent/team.py`
+- `cli/collaboration_demo.py`
 - `agent/tools.py`
 - `agent/router.py`

@@ -20,3 +20,25 @@ skills/
   doc-summarizer/
 ```
 
+## 当前实现
+
+当前阶段先实现代码内置 skill catalog，后续再扩展到从独立 skill 文件加载。
+
+```text
+skills/
+  catalog.py     # SkillSpec, built-in skills, skill selection
+```
+
+当前内置 skills：
+
+- `research_brief`
+- `code_review`
+- `learning_explanation`
+
+运行：
+
+```bash
+python -m cli.collaboration_demo --list-skills
+python -m cli.collaboration_demo --task "Review this code and add tests."
+python -m cli.main --input "List available skills." --trace
+```
