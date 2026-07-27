@@ -1,6 +1,7 @@
 """Core package for the Agent learning workspace."""
 
 from .core import AgentRun, WorkspaceAgent
+from .llm import DeepSeekConfig, DeepSeekLLMClient, LLMError, LLMMessage, LLMResponse
 from .router import ToolRoute, route_intent
 from .state import AgentStep, AgentState
 from .tools import (
@@ -22,6 +23,11 @@ __all__ = [
     "AgentRun",
     "AgentStep",
     "AgentState",
+    "DeepSeekConfig",
+    "DeepSeekLLMClient",
+    "LLMError",
+    "LLMMessage",
+    "LLMResponse",
     "WorkspaceAgent",
     "ToolRoute",
     "ToolError",

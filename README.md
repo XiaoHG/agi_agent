@@ -125,7 +125,7 @@ agi_agent/
 
 ## 当前可运行 Demo
 
-当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流、Week 3 本地 RAG / MCP、Week 4 Skills / Subagent，并开始 Week 5 工程化与评估。
+当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流、Week 3 本地 RAG / MCP、Week 4 Skills / Subagent、Week 5 工程化与评估，并开始 Week 6 综合项目。
 
 运行直接回答：
 
@@ -191,6 +191,18 @@ python -m cli.main --input "Plan subagent collaboration for a code review." --tr
 
 ```bash
 python -m cli.eval_runner
+```
+
+运行综合项目 Demo：
+
+```bash
+python -m cli.project_demo
+```
+
+运行真实 DeepSeek LLM 推理：
+
+```bash
+python -m cli.llm_demo --input "Explain why agents need tools."
 ```
 
 运行测试：
@@ -434,6 +446,8 @@ python -m unittest discover -s tests -v
 
 独立完成一个完整的 Agent 原型项目。
 
+本仓库当前选题为 Project Learning Assistant：一个用于辅助学习本项目的综合 Agent 原型。它会组合文件读取、本地 RAG、MCP、Skill、Subagent 和回归评估，生成一份可检查的项目学习报告。
+
 ### 选题建议
 
 可以从下面选一个，也可以自拟：
@@ -535,11 +549,11 @@ project/
 
 可以继续在这个仓库中按周推进：
 
-- 当前阶段先巩固 Week 5：工程化、评估、稳定性
-- 第 6 周把所有内容整合成一个完整项目
+- 当前阶段进入真实 LLM 驱动的专业 Agent 开发
+- 后续围绕 DeepSeek LLM 接入 RAG、MCP、Skills、LangGraph 等专业能力
 
 当前建议优先做下面三件事：
 
-1. 先理解当前 eval runner：`evals/runner.py`、`evals/regression_cases.json`、`cli/eval_runner.py`。
-2. 补 Week 5 工程化复盘，记录 eval、trace、稳定性边界。
-3. 再评估是否进入 Week 6：综合项目。
+1. 先运行真实 LLM Demo：`python -m cli.llm_demo --input "Explain why agents need tools."`。
+2. 理解 `agent/llm.py` 如何通过 DeepSeek API 发起真实模型请求。
+3. 下一步把 RAG 检索结果交给 DeepSeek LLM 生成最终答案。
