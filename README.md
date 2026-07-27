@@ -125,7 +125,7 @@ agi_agent/
 
 ## 当前可运行 Demo
 
-当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流、Week 3 本地 RAG / MCP 最小闭环，并开始 Week 4 Skills 与 Subagent 最小协作层。
+当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流、Week 3 本地 RAG / MCP、Week 4 Skills / Subagent，并开始 Week 5 工程化与评估。
 
 运行直接回答：
 
@@ -185,6 +185,12 @@ python -m cli.collaboration_demo --list-skills
 
 ```bash
 python -m cli.main --input "Plan subagent collaboration for a code review." --trace
+```
+
+运行回归评估：
+
+```bash
+python -m cli.eval_runner
 ```
 
 运行测试：
@@ -529,12 +535,11 @@ project/
 
 可以继续在这个仓库中按周推进：
 
-- 当前阶段先巩固 Week 4：Skills 与 Subagent
-- 第 5 周补工程化、评估、稳定性
+- 当前阶段先巩固 Week 5：工程化、评估、稳定性
 - 第 6 周把所有内容整合成一个完整项目
 
 当前建议优先做下面三件事：
 
-1. 先理解当前 Skills/Subagent 代码：`skills/catalog.py`、`subagent/team.py`、`cli/collaboration_demo.py`。
-2. 补 Skills/Subagent eval case 和阶段复盘。
-3. 再评估是否进入 Week 5：工程化、评估与稳定性。
+1. 先理解当前 eval runner：`evals/runner.py`、`evals/regression_cases.json`、`cli/eval_runner.py`。
+2. 补 Week 5 工程化复盘，记录 eval、trace、稳定性边界。
+3. 再评估是否进入 Week 6：综合项目。

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "direct-agent-difference",
+    "input": "Explain the difference between an agent and a chatbot.",
+    "expected_route": "direct_answer",
+    "expected_tool": null,
+    "required_answer_terms": ["main difference", "tools", "state"]
+  },
+  {
+    "id": "read-readme",
+    "input": "Read README.md and summarize the project learning goals.",
+    "expected_route": "use_tool",
+    "expected_tool": "read_file",
+    "required_answer_terms": ["Result: read README.md", "agi_agent"]
+  },
+  {
+    "id": "rag-search",
+    "input": "Search docs for MCP.",
+    "expected_route": "use_tool",
+    "expected_tool": "search_docs",
+    "required_answer_terms": ["relevant local context", "MCP"]
+  },
+  {
+    "id": "mcp-tools",
+    "input": "List MCP tools.",
+    "expected_route": "use_tool",
+    "expected_tool": "list_mcp_tools",
+    "required_answer_terms": ["Available MCP tools", "workspace_summary"]
+  },
+  {
+    "id": "skills-list",
+    "input": "List available skills.",
+    "expected_route": "use_tool",
+    "expected_tool": "list_skills",
+    "required_answer_terms": ["Available skills", "code_review"]
+  },
+  {
+    "id": "subagent-plan",
+    "input": "Plan subagent collaboration for a code review.",
+    "expected_route": "use_tool",
+    "expected_tool": "plan_subagents",
+    "required_answer_terms": ["Collaboration objective", "coding_agent"]
+  },
+  {
+    "id": "missing-file",
+    "input": "Read not-exist.md.",
+    "expected_route": "use_tool",
+    "expected_tool": "read_file",
+    "required_answer_terms": ["tool call failed", "File does not exist"]
+  },
+  {
+    "id": "workflow-read-count",
+    "input": "Read README.md and then count lines.",
+    "expected_route": "workflow",
+    "expected_tool": null,
+    "required_answer_terms": ["workflow completed", "count_lines"]
+  },
+  {
+    "id": "workflow-missing-file",
+    "input": "Read not-exist.md and then count lines.",
+    "expected_route": "workflow",
+    "expected_tool": null,
+    "required_answer_terms": ["workflow failed", "File does not exist"]
+  },
+  {
+    "id": "mcp-workspace-summary",
+    "input": "Use MCP workspace summary.",
+    "expected_route": "use_tool",
+    "expected_tool": "mcp_workspace_summary",
+    "required_answer_terms": ["[mcp:ok]", "Workspace"]
+  }
+]

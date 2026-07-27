@@ -99,6 +99,16 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("Responsibilities", run.answer)
         self.assertIn("`agent/`", run.answer)
 
+    def test_agent_exports_structured_trace(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("List available skills.")
+
+        trace = agent.to_trace_dict(run)
+
+        self.assertEqual(trace["route"]["tool_name"], "list_skills")
+        self.assertIn("steps", trace)
+        self.assertIn("answer_preview", trace)
+
 
 if __name__ == "__main__":
     unittest.main()

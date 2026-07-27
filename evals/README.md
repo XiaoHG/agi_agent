@@ -21,3 +21,32 @@ evals/
 
 Agent 项目的质量不能只靠“这次跑起来了”判断，必须有可重复评估。
 
+## 当前实现
+
+当前阶段新增 deterministic regression eval runner。
+
+```text
+evals/
+  regression_cases.json   # 固定回归用例
+  runner.py               # 加载、运行、判断、生成报告
+```
+
+运行：
+
+```bash
+python -m cli.eval_runner
+python -m cli.eval_runner --output logs/eval-report.json
+```
+
+当前判断维度：
+
+- route 是否符合预期
+- tool 是否符合预期
+- answer 是否包含必要关键词
+
+后续可以继续扩展：
+
+- 人工评分维度
+- 错误分类
+- trace 归档
+- 多轮 eval

@@ -4,17 +4,17 @@
 
 ## Last Updated
 
-2026-07-25
+2026-07-26
 
 ## 当前阶段
 
-Week 4：Skills 与 Subagent。
+Week 5：工程化、评估与稳定性。
 
-当前状态：Skills/Subagent 最小协作层已开始实现。
+当前状态：最小 eval runner 和结构化 trace 已开始实现。
 
 ## 当前教师判断
 
-项目已经从“RAG 与 MCP 工具接入”进入“能力复用与角色协作”阶段。
+项目已经从“能力复用与角色协作”进入“可复现评估与可观测性”阶段。
 
 已具备：
 
@@ -22,68 +22,69 @@ Week 4：Skills 与 Subagent。
 - Week 2 状态与工作流
 - Week 3 本地 RAG 最小闭环
 - Week 3 本地 MCP 最小骨架
-- 本地工具：`read_file`、`list_dir`、`count_lines`、`search_docs`
-- MCP 工具：`workspace_summary`、`read_project_file`
-- Skills catalog：`research_brief`、`code_review`、`learning_explanation`
-- Subagent planning：`teacher_agent`、`coding_agent`
-- Agent 可列出 skills、选择 skill、列出 subagents、生成 subagent 协作计划
+- Week 4 Skills/Subagent 最小协作层
+- 结构化 trace 导出
+- JSON eval cases
+- deterministic eval runner
+- eval CLI
 - 自动化测试
 
 当前缺口：
 
-- Skills 还只是内置 catalog，没有从独立 skill 文件加载。
-- Subagent 还只是规划层，没有真实多 Agent 消息执行。
-- 还没有 Skills/Subagent eval case。
-- 还没有阶段复盘。
+- eval runner 仍是规则判断，没有人工评分维度。
+- 结构化 trace 只在内存中导出，还没有统一写入日志文件。
+- 还没有错误分类体系。
+- 还没有 Week 5 阶段复盘。
 
 ## 当前总目标
 
-先巩固 Skills 与 Subagent 的最小边界：理解“可复用任务能力”和“角色协作计划”的区别。
+先巩固工程化最小闭环：让 Agent 的行为可以被重复运行、结构化记录、自动判断。
 
-最小协作链路：
+最小工程化链路：
 
 ```text
-User task -> Skill selection -> Subagent plan -> Agent tool output -> CLI output
+Eval cases -> Agent run -> Structured trace -> Eval report -> Regression result
 ```
 
 ## 当前具体任务
 
 下一步建议：
 
-1. 由 Teacher Agent 讲解 Skills/Subagent 最小骨架。
-2. 手动运行 collaboration demo，观察 skill 选择和 subagent 协作计划。
-3. 补 Skills/Subagent eval case。
-4. 写阶段复盘，再评估是否进入 Week 5。
+1. 由 Teacher Agent 讲解 eval runner 和结构化 trace。
+2. 手动运行 `python -m cli.eval_runner`。
+3. 增加更多 eval case。
+4. 写 Week 5 阶段复盘。
+5. 再评估是否进入 Week 6 综合项目。
 
 ## 当前学习重点
 
 学习者需要重点理解：
 
-- Skill 是可复用任务能力，不只是 prompt。
-- Subagent 是职责边界，不只是换一个名字继续调用同一个逻辑。
-- 当前实现只做选择和规划，没有真实多 Agent 对话执行。
-- 进入工程化阶段前，需要先把能力边界讲清楚。
+- 测试验证代码行为，eval 验证 Agent 行为。
+- trace 是定位 Agent 失败的核心证据。
+- eval case 要可重复、可比较、可扩展。
+- 工程化不是堆功能，而是让系统可调试、可回归、可维护。
 
 ## 已完成
 
 - 初始化项目目录。
-- 创建 README 学习路线。
-- 创建 Teacher Agent / Coding Agent 定义。
-- 创建仓库级 `AGENTS.md` 协作规则。
 - 完成 Week 1 最小 CLI Agent。
 - 完成 Week 2 状态与工作流实现。
 - 完成 Week 3 本地 RAG 最小闭环。
 - 完成 Week 3 本地 MCP 最小骨架。
+- 完成 Week 4 Skills/Subagent 最小协作层。
 - 提交 RAG 阶段代码：`03c0005 Add local RAG search stage`。
 - 提交 MCP 阶段代码：`04746a4 Add local MCP protocol stage`。
-- 开始实现 Week 4 Skills/Subagent 最小协作层。
+- 提交 Skills/Subagent 阶段代码：`375de6f Add skills and subagent collaboration stage`。
+- 开始实现 Week 5 eval runner 和结构化 trace。
 
 ## 未完成
 
-- Skills/Subagent 评估用例。
-- Skills/Subagent 阶段复盘。
-- 从 markdown skill 文件加载 skill。
-- 真实多 Agent 消息执行。
+- Week 5 评估复盘。
+- 更多 eval cases。
+- 日志落盘。
+- 错误分类。
+- 综合项目选题。
 
 ## 恢复指令
 
@@ -92,10 +93,11 @@ User task -> Skill selection -> Subagent plan -> Agent tool output -> CLI output
 1. `AGENTS.md`
 2. `docs/current-learning-state.md`
 3. `docs/learning-master-plan.md`
-4. `skills/README.md`
-5. `subagent/README.md`
-6. `tests/test_collaboration.py`
-7. `versions/skills-subagent-collaboration_v5.md`
+4. `evals/README.md`
+5. `evals/regression_cases.json`
+6. `evals/runner.py`
+7. `tests/test_evals.py`
+8. `versions/engineering-evals-observability_v6.md`
 
 然后继续执行当前具体任务。
 
@@ -103,8 +105,7 @@ User task -> Skill selection -> Subagent plan -> Agent tool output -> CLI output
 
 下一步优先让 Teacher Agent 讲解这次新增代码：
 
-- `skills/catalog.py`
-- `subagent/team.py`
-- `cli/collaboration_demo.py`
-- `agent/tools.py`
-- `agent/router.py`
+- `evals/runner.py`
+- `evals/regression_cases.json`
+- `cli/eval_runner.py`
+- `agent/core.py` 中的 `to_trace_dict()`

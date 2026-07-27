@@ -2,6 +2,7 @@
 from __future__ import annotations  # 支持类型注解的前向引用
 from dataclasses import dataclass, field  # 数据类，简化数据结构定义{insert\_element\_0\_}
 from pathlib import Path  # 路径处理，跨平台
+from typing import Any  # 结构化 trace 字典值类型
 from uuid import uuid4  # 生成唯一运行ID
 
 # 内部模块依赖（需配套实现）
@@ -288,3 +289,26 @@ class WorkspaceAgent:
         parts.append("\n[Final Answer]")
         parts.append(run.answer)
         return "\n".join(parts)
+
+    def to_trace_dict(self, run: AgentRun) -> dict[str, Any]:
+        """Render the run as structured trace data."""
+
+        return {
+            "run_id": run.run_id,
+            "user_input": run.user_input,
+            "route": {
+                "action": run.route.action,
+                "tool_name": run.route.tool_name,
+                "tool_input": run.route.tool_input,
+                "reason": run.route.reason,
+            },
+            "steps": [{"title": step.title, "detail": step.detail} for step in run.steps],
+            "tool_result": None
+            if run.tool_result is None
+            else {
+                "tool_name": run.tool_result.tool_name,
+                "output_preview": self._summarize_text(run.tool_result.output, limit=6),
+            },
+            "tool_error": run.tool_error,
+            "answer_preview": self._summarize_text(run.answer, limit=8),
+        }
