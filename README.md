@@ -237,6 +237,12 @@ python -m cli.langgraph_demo --question "Search docs for MCP."
 python -m cli.langgraph_demo --question "Read README.md."
 ```
 
+通过主 Agent 运行 LangGraph：
+
+```bash
+python -m cli.main --input "Use LangGraph to search docs for MCP." --trace
+```
+
 运行测试：
 
 ```bash
@@ -593,3 +599,4 @@ project/
 4. 查看 LangChain Tool Adapter：`python -m cli.langchain_tools_demo`。
 5. 运行 LangGraph workflow：`python -m cli.langgraph_demo --question "What does MCP mean in this project?"`。
 6. 对比 LangGraph 条件路由：`Search docs for MCP.`、`Read README.md.`、`What does MCP mean in this project?`。
+7. 通过主 Agent 调用 LangGraph：`python -m cli.main --input "Use LangGraph to search docs for MCP." --trace`。

@@ -33,6 +33,13 @@ class WorkspaceAgentTests(unittest.TestCase):
         route = route_intent(text)
         self.assertEqual(route.action, "workflow")
 
+    def test_route_to_langgraph(self) -> None:
+        route = route_intent("Use LangGraph to search docs for MCP.")
+
+        self.assertEqual(route.action, "graph")
+        self.assertEqual(route.tool_name, "langgraph_workflow")
+        self.assertEqual(route.tool_input, "search docs for MCP")
+
     def test_workflow_run(self) -> None:
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Read README.md and then count lines.")
@@ -98,6 +105,40 @@ class WorkspaceAgentTests(unittest.TestCase):
         run = agent.run("List the main project directories and explain what they are responsible for.")
         self.assertIn("Responsibilities", run.answer)
         self.assertIn("`agent/`", run.answer)
+
+    def test_agent_runs_langgraph_search(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("Use LangGraph to search docs for MCP.")
+
+        self.assertEqual(run.route.action, "graph")
+        self.assertEqual(run.route.tool_name, "langgraph_workflow")
+        self.assertEqual(run.tool_result.tool_name if run.tool_result else None, "langgraph_workflow")
+        self.assertIn("Graph route: search_docs", run.answer)
+        self.assertIn("Selected tool: search_workspace_docs", run.answer)
+        self.assertIn("relevant local context", run.answer)
+
+    def test_agent_runs_langgraph_read_file(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("Use LangGraph to read README.md.")
+
+        self.assertIn("Graph route: read_file", run.answer)
+        self.assertIn("Selected tool: read_workspace_file", run.answer)
+        self.assertIn("[read_file] README.md", run.answer)
+
+    def test_agent_runs_langgraph_no_context_without_network(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("Use LangGraph to answer: the and of")
+
+        self.assertIn("Graph route: answer_docs_with_llm", run.answer)
+        self.assertIn("Selected tool: answer_workspace_docs_with_llm", run.answer)
+        self.assertIn("insufficient", run.answer)
+
+    def test_agent_records_langgraph_trace_step(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("Use LangGraph to search docs for MCP.")
+
+        self.assertTrue(any(step.title == "Run graph" for step in run.steps))
+        self.assertIn("route=search_docs", agent.format_trace(run))
 
     def test_agent_exports_structured_trace(self) -> None:
         agent = WorkspaceAgent(Path("."))

@@ -75,5 +75,26 @@
     "expected_route": "use_tool",
     "expected_tool": "answer_docs_with_llm",
     "required_answer_terms": ["Answer:", "insufficient", "Sources:"]
+  },
+  {
+    "id": "langgraph-search-docs",
+    "input": "Use LangGraph to search docs for MCP.",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: search_docs", "search_workspace_docs", "relevant local context"]
+  },
+  {
+    "id": "langgraph-read-readme",
+    "input": "Use LangGraph to read README.md.",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: read_file", "read_workspace_file", "README.md"]
+  },
+  {
+    "id": "langgraph-no-context",
+    "input": "Use LangGraph to answer: the and of",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: answer_docs_with_llm", "insufficient", "Sources:"]
   }
 ]

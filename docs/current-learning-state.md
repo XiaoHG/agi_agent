@@ -4,13 +4,13 @@
 
 ## Last Updated
 
-2026-07-27
+2026-07-28
 
 ## 当前阶段
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：LangGraph workflow 已支持条件路由与多工具编排。
+当前状态：LangGraph workflow 已支持条件路由、多工具编排，并接回 `WorkspaceAgent` 主链路。
 
 ## 当前教师判断
 
@@ -42,6 +42,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - LangGraph RAG demo CLI
 - LangGraph conditional routing
 - LangGraph multi-tool dispatch
+- LangGraph 已接回 `WorkspaceAgent`
 
 当前缺口：
 
@@ -49,7 +50,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
-- LangGraph workflow 还没有接回 `WorkspaceAgent`。
+- LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 
 ## 当前总目标
 
@@ -65,11 +66,11 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 由 Teacher Agent 讲解 `agent/llm.py` 的真实 LLM 接入方式。
-2. 手动运行 `python -m cli.llm_demo --input "Explain why agents need tools."`。
-3. 手动运行 `python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。
-4. 手动运行 `python -m cli.langchain_tools_demo`。
-5. 手动运行 `python -m cli.langgraph_demo --question "Search docs for MCP."` 和 `python -m cli.langgraph_demo --question "Read README.md."`。
+1. 进入 v15：LLM tool calling / tool schema 阶段。
+2. 让 DeepSeek 不只生成回答，而是能基于 tool schema 做工具选择。
+3. 先设计本项目的统一 tool spec，再把 `read_file`、`search_docs`、`mcp_workspace_summary`、`plan_skill` 接入同一选择层。
+4. 在 eval 中增加“模型选择工具是否正确”的可回归用例。
+5. 手动运行 `python -m cli.main --input "Use LangGraph to search docs for MCP." --trace`，复盘 v14 的主 Agent graph 调用链。
 
 ## 当前学习重点
 
@@ -84,6 +85,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 真实 LLM client 应该独立封装，业务代码不能到处直接写 HTTP/API 调用。
 - API Key 必须只从环境变量读取，不能写入仓库。
 - 专业 Agent 框架接入应围绕统一 LLM client、tool schema 和 workflow state 展开。
+- 主 Agent 接入 LangGraph 后，trace 需要同时保留 Agent route 和 graph route，方便定位失败发生在哪一层。
 
 ## 已完成
 
@@ -97,18 +99,17 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 提交 MCP 阶段代码：`04746a4 Add local MCP protocol stage`。
 - 提交 Skills/Subagent 阶段代码：`375de6f Add skills and subagent collaboration stage`。
 - 提交工程化评估阶段代码：`2cc93c1 Add engineering evals and observability stage`。
-- 开始实现 Week 6 Project Learning Assistant。
-- 开始实现 DeepSeek V4 Pro 真实 LLM 接入。
+- 完成 Week 6 Project Learning Assistant 最小版本。
+- 完成 DeepSeek V4 Pro 真实 LLM 接入。
+- 完成 DeepSeek-grounded RAG 真实回答链路。
+- 完成 v14：LangGraph 接回 `WorkspaceAgent`，并补充 graph regression cases。
 
 ## 未完成
 
-- RAG + LLM 真实回答链路。
 - LLM tool calling / tool schema。
-- 将 LangGraph workflow 接入主 Agent。
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
-- LangChain tool adapter。
-- LangGraph workflow。
+- 让 LangGraph 成为可配置的默认主执行器。
 
 ## 恢复指令
 
@@ -144,6 +145,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 28. `tests/test_langgraph_workflow.py`
 29. `versions/langgraph-workflow_v12.md`
 30. `versions/langgraph-conditional-routing_v13.md`
+31. `versions/workspace-agent-langgraph_v14.md`
 
 然后继续执行当前具体任务。
 
@@ -166,3 +168,4 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `integrations/langgraph_workflow.py`
 - `cli/langgraph_demo.py`
 - `versions/langgraph-conditional-routing_v13.md`
+- `versions/workspace-agent-langgraph_v14.md`

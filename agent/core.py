@@ -76,6 +76,20 @@ class WorkspaceAgent:
             run.steps = workflow_state.steps
             return run
 
+        # 3.6 如果显式要求 LangGraph，则进入图编排路径
+        if run.route.action == "graph":
+            try:
+                graph_state = self._run_langgraph(run.route.tool_input or user_input)
+                run.steps.append(AgentStep("Run graph", self._describe_langgraph_state(graph_state)))
+                run.tool_result = ToolResult("langgraph_workflow", self._format_langgraph_answer(graph_state))
+                run.answer = run.tool_result.output
+            except ToolError as error:
+                run.tool_error = str(error)
+                run.steps.append(AgentStep("Graph failed", run.tool_error))
+                run.answer = self._compose_tool_error_answer(run)
+            run.steps.append(AgentStep("Complete", "final answer generated"))
+            return run
+
         # 3. 分支逻辑：根据路由结果执行不同策略
         if run.route.action == "use_tool":
             # 分支A：需要调用工具
@@ -132,6 +146,38 @@ class WorkspaceAgent:
         state.answer = build_workflow_summary(state, plan)
         state.add_step("Complete workflow", "final answer generated")
         return state.answer
+
+    def _run_langgraph(self, question: str) -> dict[str, Any]:
+        """Run the LangGraph workflow and return its final state."""
+
+        # 延迟导入，避免 integrations -> agent -> core 的循环导入
+        from integrations.langgraph_workflow import run_rag_graph
+
+        try:
+            return dict(run_rag_graph(self.workspace_root, question))
+        except Exception as error:
+            raise ToolError(f"LangGraph workflow failed: {error}") from error
+
+    def _describe_langgraph_state(self, graph_state: dict[str, Any]) -> str:
+        """Build a compact trace line for the graph execution."""
+
+        route = graph_state.get("route", "unknown")
+        tool = graph_state.get("selected_tool", "none")
+        steps = " -> ".join(graph_state.get("steps", []))
+        return f"route={route}; selected_tool={tool}; steps={steps}"
+
+    def _format_langgraph_answer(self, graph_state: dict[str, Any]) -> str:
+        """Convert LangGraph state into the same answer channel used by the agent."""
+
+        steps = " -> ".join(graph_state.get("steps", []))
+        answer = graph_state.get("answer", "")
+        return (
+            f"Graph route: {graph_state.get('route', 'unknown')}\n"
+            f"Route reason: {graph_state.get('route_reason', '')}\n"
+            f"Selected tool: {graph_state.get('selected_tool', 'none')}\n"
+            f"Graph steps: {steps}\n\n"
+            f"{answer}"
+        )
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
         """Convert a workflow failure into a user-facing answer."""

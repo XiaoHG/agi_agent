@@ -163,6 +163,47 @@ def _extract_llm_rag_question(text: str) -> str:
     return text
 
 
+def _looks_like_langgraph_request(text: str) -> bool:
+    """Return True when the user explicitly asks to use the LangGraph workflow."""
+
+    lowered = text.lower()
+    if "langgraph" in lowered:
+        return True
+    markers = [
+        "use graph",
+        "run graph",
+        "graph workflow",
+        "graph answer",
+        "answer with graph",
+        "route with graph",
+        "through graph",
+    ]
+    return any(marker in lowered for marker in markers)
+
+
+def _extract_langgraph_question(text: str) -> str:
+    """Remove LangGraph command wording and keep the question passed into the graph."""
+
+    if ":" in text:
+        return text.split(":", 1)[1].strip()
+
+    lowered = text.lower()
+    prefixes = [
+        "use langgraph to",
+        "run langgraph to",
+        "run with langgraph to",
+        "answer with langgraph",
+        "use graph to",
+        "run graph to",
+        "graph answer",
+        "graph workflow",
+    ]
+    for prefix in prefixes:
+        if lowered.startswith(prefix):
+            return text[len(prefix) :].strip(" .")
+    return text
+
+
 def _looks_like_mcp_request(text: str) -> bool:
     """Return True when the user is asking about MCP tools."""
 
@@ -194,6 +235,14 @@ def route_intent(user_input: str) -> ToolRoute:
 
     text = user_input.strip()
     match = FILE_PATTERN.search(text)
+
+    if _looks_like_langgraph_request(text):
+        return ToolRoute(
+            action="graph",
+            tool_name="langgraph_workflow",
+            tool_input=_extract_langgraph_question(text),
+            reason="The user is asking to run the request through the LangGraph workflow.",
+        )
 
     if _looks_like_llm_rag_request(text):
         return ToolRoute(

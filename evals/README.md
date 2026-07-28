@@ -44,7 +44,7 @@ python -m cli.eval_runner --output logs/eval-report.json
 - tool 是否符合预期
 - answer 是否包含必要关键词
 
-当前 regression cases 已包含一个 LLM-grounded RAG 工具接线用例。该用例使用无本地上下文的问题，因此不会触发真实 DeepSeek 网络请求；它只验证主 Agent 能正确路由到 `answer_docs_with_llm` 并返回 insufficient 边界结果。
+当前 regression cases 已包含一个 LLM-grounded RAG 工具接线用例，以及三个 LangGraph 入口用例。LLM-grounded 用例使用无本地上下文的问题，因此不会触发真实 DeepSeek 网络请求；LangGraph 用例分别覆盖搜索、读文件、无上下文回答三条主路径。
 
 后续可以继续扩展：
 
