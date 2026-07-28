@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：DeepSeek-grounded RAG 已接入 `WorkspaceAgent` 工具链，并开始 LangChain Tool Adapter。
+当前状态：已开始真实 LangGraph workflow，并把 LangChain Tool Adapter 放入 graph node。
 
 ## 当前教师判断
 
@@ -38,6 +38,8 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - LLM-grounded RAG regression case
 - LangChain `StructuredTool` adapter
 - `integrations/` 框架适配层
+- LangGraph `StateGraph` workflow
+- LangGraph RAG demo CLI
 
 当前缺口：
 
@@ -45,7 +47,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
-- 还没有 LangGraph workflow。
+- LangGraph workflow 目前还是固定流程，没有条件路由。
 
 ## 当前总目标
 
@@ -65,7 +67,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 2. 手动运行 `python -m cli.llm_demo --input "Explain why agents need tools."`。
 3. 手动运行 `python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。
 4. 手动运行 `python -m cli.langchain_tools_demo`。
-5. 下一步推进 LangGraph workflow。
+5. 手动运行 `python -m cli.langgraph_demo --question "What does MCP mean in this project?"`。
 
 ## 当前学习重点
 
@@ -100,7 +102,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 - RAG + LLM 真实回答链路。
 - LLM tool calling / tool schema。
-- LangGraph workflow。
+- LangGraph conditional routing。
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
 - LangChain tool adapter。
@@ -135,6 +137,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 23. `cli/langchain_tools_demo.py`
 24. `tests/test_langchain_tools.py`
 25. `versions/langchain-tool-adapter_v11.md`
+26. `integrations/langgraph_workflow.py`
+27. `cli/langgraph_demo.py`
+28. `tests/test_langgraph_workflow.py`
+29. `versions/langgraph-workflow_v12.md`
 
 然后继续执行当前具体任务。
 
@@ -154,3 +160,5 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `agent/router.py` 中的 LLM RAG 路由
 - `integrations/langchain_tools.py`
 - `cli/langchain_tools_demo.py`
+- `integrations/langgraph_workflow.py`
+- `cli/langgraph_demo.py`
