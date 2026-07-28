@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：已开始接入 DeepSeek V4 Pro 真实 LLM 推理。
+当前状态：已开始接入 DeepSeek V4 Pro 真实 LLM 推理，并进入 DeepSeek 驱动的专业 RAG。
 
 ## 当前教师判断
 
@@ -32,11 +32,13 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - 综合项目 CLI demo
 - DeepSeek V4 Pro 真实 LLM client
 - 真实 LLM CLI demo
+- DeepSeek-grounded RAG answer chain
+- RAG + LLM CLI demo
 
 当前缺口：
 
 - `WorkspaceAgent` 还没有默认使用 LLM 路由或回答。
-- RAG 检索结果还没有交给 LLM 生成最终答案。
+- RAG 检索结果已能交给 LLM 生成最终答案，但还没有接回 `WorkspaceAgent` 工具链。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
 - 还没有 LangChain / LangGraph 适配层。
@@ -57,9 +59,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 1. 由 Teacher Agent 讲解 `agent/llm.py` 的真实 LLM 接入方式。
 2. 手动运行 `python -m cli.llm_demo --input "Explain why agents need tools."`。
-3. 下一步把 RAG 检索上下文交给 DeepSeek LLM 生成最终答案。
-4. 再推进 LangChain tool schema 和 LangGraph workflow。
-5. 持续保留测试和 eval，但它们服务于真实 LLM Agent 能力。
+3. 手动运行 `python -m cli.rag_llm_demo --question "What does MCP mean in this project?"`。
+4. 下一步把 LLM-grounded RAG 接回 `WorkspaceAgent` 工具链。
+5. 再推进 LangChain tool schema 和 LangGraph workflow。
 
 ## 当前学习重点
 
@@ -98,6 +100,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - LangGraph workflow。
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
+- 将 LLM-grounded RAG 接入主 Agent。
 
 ## 恢复指令
 
@@ -119,6 +122,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 14. `cli/llm_demo.py`
 15. `tests/test_llm.py`
 16. `versions/deepseek-llm-provider_v8.md`
+17. `rag/llm_qa.py`
+18. `cli/rag_llm_demo.py`
+19. `tests/test_rag_llm.py`
+20. `versions/deepseek-rag_v9.md`
 
 然后继续执行当前具体任务。
 
@@ -132,3 +139,5 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `examples/project-learning-assistant/README.md`
 - `agent/llm.py`
 - `cli/llm_demo.py`
+- `rag/llm_qa.py`
+- `cli/rag_llm_demo.py`

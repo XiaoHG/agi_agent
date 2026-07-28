@@ -71,10 +71,14 @@ class LocalRAGTests(unittest.TestCase):
         self.assertIn("relevant local context", run.answer)
 
     def test_rag_returns_empty_result_for_unknown_keyword(self) -> None:
-        answer = answer_question(Path("."), "zzzz-not-existing-keyword")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
 
-        self.assertEqual(answer.results, [])
-        self.assertIn("no local context", answer.to_text())
+            answer = answer_question(root, "zzzz-not-existing-keyword")
+
+            self.assertEqual(answer.results, [])
+            self.assertIn("no local context", answer.to_text())
 
 
 if __name__ == "__main__":

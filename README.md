@@ -205,6 +205,12 @@ python -m cli.project_demo
 python -m cli.llm_demo --input "Explain why agents need tools."
 ```
 
+运行 DeepSeek 驱动的本地 RAG：
+
+```bash
+python -m cli.rag_llm_demo --question "What does MCP mean in this project?"
+```
+
 运行测试：
 
 ```bash
@@ -555,5 +561,5 @@ project/
 当前建议优先做下面三件事：
 
 1. 先运行真实 LLM Demo：`python -m cli.llm_demo --input "Explain why agents need tools."`。
-2. 理解 `agent/llm.py` 如何通过 DeepSeek API 发起真实模型请求。
-3. 下一步把 RAG 检索结果交给 DeepSeek LLM 生成最终答案。
+2. 再运行 DeepSeek RAG Demo：`python -m cli.rag_llm_demo --question "What does MCP mean in this project?"`。
+3. 理解 `rag/llm_qa.py` 如何把本地检索上下文交给 DeepSeek 生成 grounded answer。
