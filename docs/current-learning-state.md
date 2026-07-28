@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：已开始真实 LangGraph workflow，并把 LangChain Tool Adapter 放入 graph node。
+当前状态：LangGraph workflow 已支持条件路由与多工具编排。
 
 ## 当前教师判断
 
@@ -40,6 +40,8 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - `integrations/` 框架适配层
 - LangGraph `StateGraph` workflow
 - LangGraph RAG demo CLI
+- LangGraph conditional routing
+- LangGraph multi-tool dispatch
 
 当前缺口：
 
@@ -47,7 +49,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
-- LangGraph workflow 目前还是固定流程，没有条件路由。
+- LangGraph workflow 还没有接回 `WorkspaceAgent`。
 
 ## 当前总目标
 
@@ -67,7 +69,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 2. 手动运行 `python -m cli.llm_demo --input "Explain why agents need tools."`。
 3. 手动运行 `python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。
 4. 手动运行 `python -m cli.langchain_tools_demo`。
-5. 手动运行 `python -m cli.langgraph_demo --question "What does MCP mean in this project?"`。
+5. 手动运行 `python -m cli.langgraph_demo --question "Search docs for MCP."` 和 `python -m cli.langgraph_demo --question "Read README.md."`。
 
 ## 当前学习重点
 
@@ -102,7 +104,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 - RAG + LLM 真实回答链路。
 - LLM tool calling / tool schema。
-- LangGraph conditional routing。
+- 将 LangGraph workflow 接入主 Agent。
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
 - LangChain tool adapter。
@@ -141,6 +143,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 27. `cli/langgraph_demo.py`
 28. `tests/test_langgraph_workflow.py`
 29. `versions/langgraph-workflow_v12.md`
+30. `versions/langgraph-conditional-routing_v13.md`
 
 然后继续执行当前具体任务。
 
@@ -162,3 +165,4 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `cli/langchain_tools_demo.py`
 - `integrations/langgraph_workflow.py`
 - `cli/langgraph_demo.py`
+- `versions/langgraph-conditional-routing_v13.md`

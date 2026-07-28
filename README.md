@@ -230,6 +230,13 @@ python -m cli.langchain_tools_demo
 python -m cli.langgraph_demo --question "What does MCP mean in this project?"
 ```
 
+运行 LangGraph 条件路由示例：
+
+```bash
+python -m cli.langgraph_demo --question "Search docs for MCP."
+python -m cli.langgraph_demo --question "Read README.md."
+```
+
 运行测试：
 
 ```bash
@@ -585,3 +592,4 @@ project/
 3. 通过主 Agent 运行 DeepSeek RAG：`python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。
 4. 查看 LangChain Tool Adapter：`python -m cli.langchain_tools_demo`。
 5. 运行 LangGraph workflow：`python -m cli.langgraph_demo --question "What does MCP mean in this project?"`。
+6. 对比 LangGraph 条件路由：`Search docs for MCP.`、`Read README.md.`、`What does MCP mean in this project?`。

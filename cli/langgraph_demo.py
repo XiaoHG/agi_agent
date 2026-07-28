@@ -25,6 +25,8 @@ def main(argv: list[str] | None = None) -> int:
     result = run_rag_graph(Path(args.root), args.question)
 
     print("LangGraph result:")
+    print(f"Route: {result.get('route')}")
+    print(f"Route reason: {result.get('route_reason')}")
     print(f"Selected tool: {result.get('selected_tool')}")
     print(f"Steps: {' -> '.join(result.get('steps', []))}")
     print()
