@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：DeepSeek-grounded RAG 已接入 `WorkspaceAgent` 工具链。
+当前状态：DeepSeek-grounded RAG 已接入 `WorkspaceAgent` 工具链，并开始 LangChain Tool Adapter。
 
 ## 当前教师判断
 
@@ -36,6 +36,8 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - RAG + LLM CLI demo
 - `WorkspaceAgent` DeepSeek RAG tool
 - LLM-grounded RAG regression case
+- LangChain `StructuredTool` adapter
+- `integrations/` 框架适配层
 
 当前缺口：
 
@@ -43,7 +45,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
-- 还没有 LangChain / LangGraph 适配层。
+- 还没有 LangGraph workflow。
 
 ## 当前总目标
 
@@ -62,8 +64,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 1. 由 Teacher Agent 讲解 `agent/llm.py` 的真实 LLM 接入方式。
 2. 手动运行 `python -m cli.llm_demo --input "Explain why agents need tools."`。
 3. 手动运行 `python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。
-4. 下一步推进 LangChain tool schema。
-5. 再推进 LangGraph workflow。
+4. 手动运行 `python -m cli.langchain_tools_demo`。
+5. 下一步推进 LangGraph workflow。
 
 ## 当前学习重点
 
@@ -98,7 +100,6 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 - RAG + LLM 真实回答链路。
 - LLM tool calling / tool schema。
-- LangChain tool adapter。
 - LangGraph workflow。
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
@@ -130,6 +131,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 19. `tests/test_rag_llm.py`
 20. `versions/deepseek-rag_v9.md`
 21. `versions/workspace-agent-deepseek-rag_v10.md`
+22. `integrations/langchain_tools.py`
+23. `cli/langchain_tools_demo.py`
+24. `tests/test_langchain_tools.py`
+25. `versions/langchain-tool-adapter_v11.md`
 
 然后继续执行当前具体任务。
 
@@ -147,3 +152,5 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `cli/rag_llm_demo.py`
 - `agent/tools.py` 中的 `answer_docs_with_llm`
 - `agent/router.py` 中的 LLM RAG 路由
+- `integrations/langchain_tools.py`
+- `cli/langchain_tools_demo.py`

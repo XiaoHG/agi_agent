@@ -7,6 +7,9 @@ name = "agi-agent"
 version = "0.1.0"
 description = "Agent development learning workspace"
 requires-python = ">=3.11"
+dependencies = [
+    "langchain-core>=1.5.1",
+]
 
 [tool.setuptools]
-packages = ["agent", "cli", "mcp", "mcp.clients", "mcp.servers", "rag", "skills", "subagent"]
+packages = ["agent", "cli", "integrations", "mcp", "mcp.clients", "mcp.servers", "rag", "skills", "subagent"]

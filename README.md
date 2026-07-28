@@ -33,6 +33,7 @@ agi_agent/
   README.md
   agent/        # 单 Agent、任务循环、状态管理、工具调用主实验
   cli/          # 命令行入口、交互式运行脚本、开发调试入口
+  integrations/ # LangChain、LangGraph 等专业框架适配层
   mcp/          # MCP Server、MCP Client、工具协议集成实验
   rag/          # 文档加载、切分、embedding、检索、问答实验
   skills/       # 可复用技能模块：任务说明、流程、工具组合、示例
@@ -215,6 +216,12 @@ python -m cli.rag_llm_demo --question "What does MCP mean in this project?"
 
 ```bash
 python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace
+```
+
+列出 LangChain 工具适配：
+
+```bash
+python -m cli.langchain_tools_demo
 ```
 
 运行测试：
@@ -488,6 +495,7 @@ project/
   README.md
   agent/
   cli/
+  integrations/
   mcp/
   rag/
   skills/
@@ -569,3 +577,4 @@ project/
 1. 先运行真实 LLM Demo：`python -m cli.llm_demo --input "Explain why agents need tools."`。
 2. 再运行 DeepSeek RAG Demo：`python -m cli.rag_llm_demo --question "What does MCP mean in this project?"`。
 3. 通过主 Agent 运行 DeepSeek RAG：`python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。
+4. 查看 LangChain Tool Adapter：`python -m cli.langchain_tools_demo`。
