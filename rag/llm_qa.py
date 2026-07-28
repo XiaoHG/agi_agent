@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-
-from agent.llm import DeepSeekLLMClient, LLMMessage
+from typing import TYPE_CHECKING
 
 from .qa import answer_question
 from .retrieval import SearchResult
+
+if TYPE_CHECKING:
+    from agent.llm import DeepSeekLLMClient
 
 
 RAG_SYSTEM_PROMPT = (
@@ -52,6 +54,8 @@ def answer_question_with_llm(
             answer="The local context is insufficient to answer this question.",
             sources=[],
         )
+
+    from agent.llm import DeepSeekLLMClient, LLMMessage
 
     client = llm_client or DeepSeekLLMClient()
     prompt = build_grounded_rag_prompt(question, retrieval_answer.results)

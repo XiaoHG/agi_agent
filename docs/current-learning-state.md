@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：已开始接入 DeepSeek V4 Pro 真实 LLM 推理，并进入 DeepSeek 驱动的专业 RAG。
+当前状态：DeepSeek-grounded RAG 已接入 `WorkspaceAgent` 工具链。
 
 ## 当前教师判断
 
@@ -34,11 +34,13 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - 真实 LLM CLI demo
 - DeepSeek-grounded RAG answer chain
 - RAG + LLM CLI demo
+- `WorkspaceAgent` DeepSeek RAG tool
+- LLM-grounded RAG regression case
 
 当前缺口：
 
-- `WorkspaceAgent` 还没有默认使用 LLM 路由或回答。
-- RAG 检索结果已能交给 LLM 生成最终答案，但还没有接回 `WorkspaceAgent` 工具链。
+- `WorkspaceAgent` direct answer 还没有默认使用 LLM。
+- RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
 - 还没有 LangChain / LangGraph 适配层。
@@ -59,9 +61,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 1. 由 Teacher Agent 讲解 `agent/llm.py` 的真实 LLM 接入方式。
 2. 手动运行 `python -m cli.llm_demo --input "Explain why agents need tools."`。
-3. 手动运行 `python -m cli.rag_llm_demo --question "What does MCP mean in this project?"`。
-4. 下一步把 LLM-grounded RAG 接回 `WorkspaceAgent` 工具链。
-5. 再推进 LangChain tool schema 和 LangGraph workflow。
+3. 手动运行 `python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。
+4. 下一步推进 LangChain tool schema。
+5. 再推进 LangGraph workflow。
 
 ## 当前学习重点
 
@@ -100,7 +102,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - LangGraph workflow。
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
-- 将 LLM-grounded RAG 接入主 Agent。
+- LangChain tool adapter。
+- LangGraph workflow。
 
 ## 恢复指令
 
@@ -126,6 +129,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 18. `cli/rag_llm_demo.py`
 19. `tests/test_rag_llm.py`
 20. `versions/deepseek-rag_v9.md`
+21. `versions/workspace-agent-deepseek-rag_v10.md`
 
 然后继续执行当前具体任务。
 
@@ -141,3 +145,5 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `cli/llm_demo.py`
 - `rag/llm_qa.py`
 - `cli/rag_llm_demo.py`
+- `agent/tools.py` 中的 `answer_docs_with_llm`
+- `agent/router.py` 中的 LLM RAG 路由

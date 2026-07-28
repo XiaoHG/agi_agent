@@ -116,6 +116,53 @@ def _looks_like_knowledge_search(text: str) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+def _looks_like_llm_rag_request(text: str) -> bool:
+    """Return True when the user is asking for an LLM-grounded local docs answer."""
+
+    keywords = [
+        "answer docs",
+        "answer documentation",
+        "answer from docs",
+        "answer from documentation",
+        "answer with docs",
+        "answer with local docs",
+        "answer with local context",
+        "deepseek rag",
+        "grounded answer",
+        "grounded rag",
+        "llm rag",
+        "rag answer",
+        "use deepseek rag",
+    ]
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in keywords)
+
+
+def _extract_llm_rag_question(text: str) -> str:
+    """Extract the actual question from an LLM-grounded RAG request."""
+
+    if ":" in text:
+        return text.split(":", 1)[1].strip()
+
+    lowered = text.lower()
+    prefixes = [
+        "answer with local docs and deepseek rag",
+        "answer with local docs",
+        "answer with local context",
+        "answer from docs",
+        "answer with docs",
+        "use deepseek rag",
+        "deepseek rag",
+        "grounded rag",
+        "llm rag",
+        "rag answer",
+    ]
+    for prefix in prefixes:
+        if lowered.startswith(prefix):
+            return text[len(prefix) :].strip(" .")
+    return text
+
+
 def _looks_like_mcp_request(text: str) -> bool:
     """Return True when the user is asking about MCP tools."""
 
@@ -147,6 +194,14 @@ def route_intent(user_input: str) -> ToolRoute:
 
     text = user_input.strip()
     match = FILE_PATTERN.search(text)
+
+    if _looks_like_llm_rag_request(text):
+        return ToolRoute(
+            action="use_tool",
+            tool_name="answer_docs_with_llm",
+            tool_input=_extract_llm_rag_question(text),
+            reason="The user is asking for an LLM-grounded answer from local project documents.",
+        )
 
     if _looks_like_knowledge_search(text):
         return ToolRoute(

@@ -11,6 +11,7 @@ from .router import ToolRoute, route_intent  # 意图路由（核心决策模块
 from .tools import (  # 工具定义与异常
     ToolError,
     ToolResult,
+    answer_docs_with_llm,
     count_lines,
     list_dir,
     list_mcp_server_tools,
@@ -151,6 +152,8 @@ class WorkspaceAgent:
             return count_lines(self.workspace_root, route.tool_input or ".")
         if route.tool_name == "search_docs":
             return search_docs(self.workspace_root, route.tool_input or "")
+        if route.tool_name == "answer_docs_with_llm":
+            return answer_docs_with_llm(self.workspace_root, route.tool_input or "")
         if route.tool_name == "list_mcp_tools":
             return list_mcp_server_tools(self.workspace_root)
         if route.tool_name == "mcp_workspace_summary":

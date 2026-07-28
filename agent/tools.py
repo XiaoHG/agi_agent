@@ -6,9 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mcp import call_mcp_tool, list_mcp_tools
-from rag import answer_question
+from rag import answer_question, answer_question_with_llm
 from skills import describe_skills, select_skill
 from subagent import build_collaboration_plan, describe_subagents
+
+from .llm import LLMError
 
 
 MAX_FILE_BYTES = 64_000
@@ -94,6 +96,16 @@ def search_docs(root: Path, question: str) -> ToolResult:
 
     answer = answer_question(root, question)
     return ToolResult("search_docs", answer.to_text())
+
+
+def answer_docs_with_llm(root: Path, question: str) -> ToolResult:
+    """Answer from local project documents with DeepSeek-grounded RAG."""
+
+    try:
+        answer = answer_question_with_llm(root, question)
+    except LLMError as error:
+        raise ToolError(str(error)) from error
+    return ToolResult("answer_docs_with_llm", answer.to_text())
 
 
 def list_mcp_server_tools(root: Path) -> ToolResult:

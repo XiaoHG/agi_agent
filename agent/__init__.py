@@ -7,6 +7,7 @@ from .state import AgentStep, AgentState
 from .tools import (
     ToolError,
     ToolResult,
+    answer_docs_with_llm,
     count_lines,
     list_agent_skills,
     list_dir,
@@ -32,6 +33,7 @@ __all__ = [
     "ToolRoute",
     "ToolError",
     "ToolResult",
+    "answer_docs_with_llm",
     "list_agent_skills",
     "list_dir",
     "list_mcp_server_tools",

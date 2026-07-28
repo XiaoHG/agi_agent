@@ -211,6 +211,12 @@ python -m cli.llm_demo --input "Explain why agents need tools."
 python -m cli.rag_llm_demo --question "What does MCP mean in this project?"
 ```
 
+通过主 Agent 调用 DeepSeek RAG：
+
+```bash
+python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace
+```
+
 运行测试：
 
 ```bash
@@ -562,4 +568,4 @@ project/
 
 1. 先运行真实 LLM Demo：`python -m cli.llm_demo --input "Explain why agents need tools."`。
 2. 再运行 DeepSeek RAG Demo：`python -m cli.rag_llm_demo --question "What does MCP mean in this project?"`。
-3. 理解 `rag/llm_qa.py` 如何把本地检索上下文交给 DeepSeek 生成 grounded answer。
+3. 通过主 Agent 运行 DeepSeek RAG：`python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace`。

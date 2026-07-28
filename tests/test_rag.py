@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile  # 使用临时工作区，避免依赖真实项目文件
 import unittest  # Python 官方测试框架
 
-from agent import WorkspaceAgent, route_intent, search_docs
+from agent import WorkspaceAgent, answer_docs_with_llm, route_intent, search_docs
 from rag import Document, answer_question, chunk_document, load_text_documents, retrieve
 
 
@@ -54,6 +54,13 @@ class LocalRAGTests(unittest.TestCase):
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "search_docs")
 
+    def test_route_to_answer_docs_with_llm(self) -> None:
+        route = route_intent("Answer with local docs and DeepSeek RAG: What does workflow mean?")
+
+        self.assertEqual(route.action, "use_tool")
+        self.assertEqual(route.tool_name, "answer_docs_with_llm")
+        self.assertEqual(route.tool_input, "What does workflow mean?")
+
     def test_agent_searches_local_docs(self) -> None:
         agent = WorkspaceAgent(Path("."))
 
@@ -61,6 +68,27 @@ class LocalRAGTests(unittest.TestCase):
 
         self.assertEqual(run.route.tool_name, "search_docs")
         self.assertIn("relevant local context", run.answer)
+
+    def test_answer_docs_with_llm_tool_handles_no_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+
+            result = answer_docs_with_llm(root, "qa-no-context-token-928374")
+
+            self.assertEqual(result.tool_name, "answer_docs_with_llm")
+            self.assertIn("insufficient", result.output)
+
+    def test_agent_answers_docs_with_llm_without_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            agent = WorkspaceAgent(root)
+
+            run = agent.run("Answer with local docs and DeepSeek RAG: qa-no-context-token-928374")
+
+            self.assertEqual(run.route.tool_name, "answer_docs_with_llm")
+            self.assertIn("insufficient", run.answer)
 
     def test_agent_searches_mcp(self) -> None:
         agent = WorkspaceAgent(Path("."))

@@ -68,5 +68,12 @@
     "expected_route": "use_tool",
     "expected_tool": "mcp_workspace_summary",
     "required_answer_terms": ["[mcp:ok]", "Workspace"]
+  },
+  {
+    "id": "llm-rag-no-context",
+    "input": "Answer with local docs and DeepSeek RAG: the and of",
+    "expected_route": "use_tool",
+    "expected_tool": "answer_docs_with_llm",
+    "required_answer_terms": ["Answer:", "insufficient", "Sources:"]
   }
 ]
