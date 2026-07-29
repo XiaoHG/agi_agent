@@ -6,8 +6,10 @@ from typing import Any  # 结构化 trace 字典值类型
 from uuid import uuid4  # 生成唯一运行ID
 
 # 内部模块依赖（需配套实现）
-from .prompts import load_system_prompt, load_tool_router_prompt  # 加载提示词
+from .prompts import load_system_prompt, load_tool_calling_prompt, load_tool_router_prompt  # 加载提示词
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
+from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
+from .tool_schema import build_workspace_tool_specs  # 工具 schema 目录
 from .tools import (  # 工具定义与异常
     ToolError,
     ToolResult,
@@ -33,6 +35,7 @@ class AgentRun:
     run_id: str                  # 唯一会话ID（uuid4.hex[:8]生成）
     user_input: str              # 用户原始输入
     route: ToolRoute             # 路由决策结果（来自route_intent）
+    tool_call: ToolCallSelection | None = None  # LLM 工具选择结果（仅 tool_call 分支使用）
     steps: list[AgentStep] = field(default_factory=list)  # 执行步骤列表
     tool_result: ToolResult | None = None  # 工具执行结果（成功时）
     tool_error: str | None = None          # 工具执行错误（失败时）
@@ -42,10 +45,13 @@ class AgentRun:
 class WorkspaceAgent:
     """Minimal agent that can answer directly or call local tools."""
 
-    def __init__(self, workspace_root: Path | str = ".") -> None:
+    def __init__(self, workspace_root: Path | str = ".", llm_client: Any | None = None) -> None:
         self.workspace_root = Path(workspace_root).resolve()  # 解析为绝对路径
         self.system_prompt = load_system_prompt()            # 加载系统提示词
         self.tool_router_prompt = load_tool_router_prompt()  # 加载工具路由提示词
+        self.tool_calling_prompt = load_tool_calling_prompt()  # 加载结构化工具调用提示词
+        self.tool_specs = build_workspace_tool_specs()  # 工具 schema 目录
+        self._llm_client = llm_client  # 测试可注入 fake client；生产环境延迟创建真实 client
 
     def run(self, user_input: str) -> AgentRun:
         """Execute one turn and return a structured run record."""
@@ -86,6 +92,39 @@ class WorkspaceAgent:
             except ToolError as error:
                 run.tool_error = str(error)
                 run.steps.append(AgentStep("Graph failed", run.tool_error))
+                run.answer = self._compose_tool_error_answer(run)
+            run.steps.append(AgentStep("Complete", "final answer generated"))
+            return run
+
+        # 3.7 如果要求模型参与工具选择，则进入结构化 tool calling 路径
+        if run.route.action == "tool_call":
+            try:
+                tool_call_input = run.route.tool_input or user_input
+                run.tool_call = self._select_tool_call(tool_call_input)
+                run.steps.append(AgentStep("Select tool", self._describe_tool_call(run.tool_call)))
+                if run.tool_call.action == "use_tool":
+                    tool_route = ToolRoute(
+                        action="use_tool",
+                        tool_name=run.tool_call.tool_name,
+                        tool_input=run.tool_call.tool_input,
+                        reason=run.tool_call.reason,
+                    )
+                    run.tool_result = self._call_tool(tool_route)
+                    run.steps.append(AgentStep("Run tool", f"{run.tool_result.tool_name} completed"))
+                    run.answer = self._compose_tool_answer(run)
+                elif run.tool_call.action == "answer_directly":
+                    run.answer = self._compose_direct_answer(tool_call_input)
+                    run.steps.append(AgentStep("Answer directly", "LLM selected direct answer"))
+                else:
+                    run.answer = (
+                        "Result: the agent needs more information before acting.\n\n"
+                        f"Reason: {run.tool_call.reason}\n\n"
+                        "Next step: provide the missing details and try again."
+                    )
+                    run.steps.append(AgentStep("Ask clarification", run.tool_call.reason))
+            except ToolError as error:
+                run.tool_error = str(error)
+                run.steps.append(AgentStep("Tool calling failed", run.tool_error))
                 run.answer = self._compose_tool_error_answer(run)
             run.steps.append(AgentStep("Complete", "final answer generated"))
             return run
@@ -158,6 +197,30 @@ class WorkspaceAgent:
         except Exception as error:
             raise ToolError(f"LangGraph workflow failed: {error}") from error
 
+    def _select_tool_call(self, user_input: str) -> ToolCallSelection:
+        """Ask the real LLM to choose a tool from the workspace tool catalog."""
+
+        from .llm import DeepSeekLLMClient
+
+        if self._llm_client is None:
+            self._llm_client = DeepSeekLLMClient()
+        try:
+            return select_tool_call(
+                self._llm_client,
+                user_input,
+                self.tool_specs,
+                prompt=self.tool_calling_prompt,
+            )
+        except Exception as error:
+            raise ToolError(f"Tool calling selection failed: {error}") from error
+
+    def _describe_tool_call(self, tool_call: ToolCallSelection) -> str:
+        """Render the selected tool call as a compact trace line."""
+
+        tool_name = tool_call.tool_name or "none"
+        tool_input = tool_call.tool_input or "none"
+        return f"action={tool_call.action}; tool={tool_name}; input={tool_input}; reason={tool_call.reason}"
+
     def _describe_langgraph_state(self, graph_state: dict[str, Any]) -> str:
         """Build a compact trace line for the graph execution."""
 
@@ -227,9 +290,10 @@ class WorkspaceAgent:
     def _compose_tool_answer(self, run: AgentRun) -> str:
         """Turn tool output into a concise answer."""
         assert run.tool_result is not None  # 断言：确保工具结果存在
+        display_input = run.tool_call.tool_input if run.tool_call and run.tool_call.tool_input else run.route.tool_input
         if run.tool_result.tool_name == "read_file":
             return (
-                f"Result: read {run.route.tool_input}.\n\n"
+                f"Result: read {display_input}.\n\n"
                 f"Key content:\n{self._summarize_text(run.tool_result.output)}"
             )
         if run.tool_result.tool_name == "list_dir":
@@ -328,6 +392,12 @@ class WorkspaceAgent:
         for index, step in enumerate(run.steps, start=1):
             parts.append(f"{index}. {step.title}: {step.detail}")
         # 追加工具结果/错误
+        if run.tool_call is not None:
+            parts.append("\n[Tool Call]")
+            parts.append(
+                f"action={run.tool_call.action}, tool={run.tool_call.tool_name or 'none'}, "
+                f"input={run.tool_call.tool_input or 'none'}"
+            )
         if run.tool_result is not None:
             parts.append("\n[Tool] " + run.tool_result.tool_name)
             parts.append(run.tool_result.output)
@@ -351,6 +421,15 @@ class WorkspaceAgent:
                 "tool_input": run.route.tool_input,
                 "reason": run.route.reason,
             },
+            "tool_call": None
+            if run.tool_call is None
+            else {
+                "action": run.tool_call.action,
+                "tool_name": run.tool_call.tool_name,
+                "tool_input": run.tool_call.tool_input,
+                "reason": run.tool_call.reason,
+            },
+            "selected_tool_name": None if run.tool_call is None else run.tool_call.tool_name,
             "steps": [{"title": step.title, "detail": step.detail} for step in run.steps],
             "tool_result": None
             if run.tool_result is None

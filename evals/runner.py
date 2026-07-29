@@ -19,6 +19,7 @@ class EvalCase:
     expected_route: str  # 期望路由 action
     expected_tool: str | None  # 期望工具名
     required_answer_terms: list[str]  # 答案中必须出现的关键词
+    expected_selected_tool: str | None = None  # tool_call 分支中期望 LLM 选择的实际工具
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class EvalResult:
     failures: list[str]  # 失败原因
     route: str  # 实际路由 action
     tool_name: str | None  # 实际工具名
+    selected_tool_name: str | None  # tool_call 分支中模型选择的实际工具
     answer_preview: str  # 答案摘要
 
 
@@ -57,6 +59,7 @@ def evaluate_case(agent: WorkspaceAgent, case: EvalCase) -> EvalResult:
         failures=failures,
         route=run.route.action,
         tool_name=run.route.tool_name,
+        selected_tool_name=run.tool_call.tool_name if run.tool_call else None,
         answer_preview=_preview(run.answer),
     )
 
@@ -81,6 +84,10 @@ def _check_run(run: AgentRun, case: EvalCase) -> list[str]:
         failures.append(f"Expected route {case.expected_route}, got {run.route.action}")
     if run.route.tool_name != case.expected_tool:
         failures.append(f"Expected tool {case.expected_tool}, got {run.route.tool_name}")
+    if case.expected_selected_tool is not None:
+        selected_tool = run.tool_call.tool_name if run.tool_call else None
+        if selected_tool != case.expected_selected_tool:
+            failures.append(f"Expected selected tool {case.expected_selected_tool}, got {selected_tool}")
     lowered_answer = run.answer.lower()
     for term in case.required_answer_terms:
         if term.lower() not in lowered_answer:

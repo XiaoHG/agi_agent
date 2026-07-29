@@ -206,6 +206,12 @@ python -m cli.project_demo
 python -m cli.llm_demo --input "Explain why agents need tools."
 ```
 
+运行 DeepSeek 工具选择：
+
+```bash
+python -m cli.tool_calling_demo --input "Use tool calling to read README.md." --trace
+```
+
 运行 DeepSeek 驱动的本地 RAG：
 
 ```bash
@@ -600,3 +606,4 @@ project/
 5. 运行 LangGraph workflow：`python -m cli.langgraph_demo --question "What does MCP mean in this project?"`。
 6. 对比 LangGraph 条件路由：`Search docs for MCP.`、`Read README.md.`、`What does MCP mean in this project?`。
 7. 通过主 Agent 调用 LangGraph：`python -m cli.main --input "Use LangGraph to search docs for MCP." --trace`。
+8. 运行 LLM tool calling：`python -m cli.tool_calling_demo --input "Use tool calling to read README.md." --trace`。

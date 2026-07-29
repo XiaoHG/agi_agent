@@ -4,7 +4,19 @@ from pathlib import Path
 import unittest  # Python 官方测试框架
 
 from agent import WorkspaceAgent
+from agent.llm import LLMResponse
 from evals.runner import EvalCase, build_eval_report, load_eval_cases, run_eval_cases
+
+
+class FakeToolCallingClient:
+    """Minimal fake LLM client for eval tests."""
+
+    def chat(self, messages):  # noqa: ANN001 - keep the test double flexible
+        return LLMResponse(
+            model="fake",
+            content='{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Inspect the README."}',
+            raw={"messages": len(messages)},
+        )
 
 
 class EvalRunnerTests(unittest.TestCase):
@@ -45,6 +57,22 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertGreaterEqual(len(results[0].failures), 2)
         self.assertIn("Expected route", ", ".join(results[0].failures))
         self.assertIn("Expected tool", ", ".join(results[0].failures))
+
+    def test_eval_runner_checks_selected_tool(self) -> None:
+        case = EvalCase(
+            id="tool-call-readme",
+            input="Use tool calling to read README.md.",
+            expected_route="tool_call",
+            expected_tool="llm_tool_selector",
+            expected_selected_tool="read_file",
+            required_answer_terms=["Result: read README.md"],
+        )
+        agent = WorkspaceAgent(Path("."), llm_client=FakeToolCallingClient())
+
+        results = run_eval_cases(agent, [case])
+
+        self.assertTrue(results[0].passed)
+        self.assertEqual(results[0].selected_tool_name, "read_file")
 
 
 if __name__ == "__main__":

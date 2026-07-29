@@ -204,6 +204,46 @@ def _extract_langgraph_question(text: str) -> str:
     return text
 
 
+def _looks_like_tool_calling_request(text: str) -> bool:
+    """Return True when the user explicitly wants the LLM to choose a tool."""
+
+    lowered = text.lower()
+    keywords = [
+        "tool calling",
+        "tool call",
+        "tool selection",
+        "select a tool",
+        "choose a tool",
+        "llm tool",
+        "let the model choose",
+        "let llm choose",
+        "structured tool",
+    ]
+    return any(keyword in lowered for keyword in keywords)
+
+
+def _extract_tool_calling_question(text: str) -> str:
+    """Remove tool-calling instruction wording and keep the actual task."""
+
+    if ":" in text:
+        return text.split(":", 1)[1].strip()
+
+    lowered = text.lower()
+    prefixes = [
+        "use tool calling to",
+        "use llm tool calling to",
+        "let the model choose the tool for",
+        "let llm choose the tool for",
+        "choose a tool for",
+        "select a tool for",
+        "use structured tool calling to",
+    ]
+    for prefix in prefixes:
+        if lowered.startswith(prefix):
+            return text[len(prefix) :].strip(" .")
+    return text
+
+
 def _looks_like_mcp_request(text: str) -> bool:
     """Return True when the user is asking about MCP tools."""
 
@@ -242,6 +282,14 @@ def route_intent(user_input: str) -> ToolRoute:
             tool_name="langgraph_workflow",
             tool_input=_extract_langgraph_question(text),
             reason="The user is asking to run the request through the LangGraph workflow.",
+        )
+
+    if _looks_like_tool_calling_request(text):
+        return ToolRoute(
+            action="tool_call",
+            tool_name="llm_tool_selector",
+            tool_input=_extract_tool_calling_question(text),
+            reason="The user is asking the LLM to choose the best tool from the tool catalog.",
         )
 
     if _looks_like_llm_rag_request(text):

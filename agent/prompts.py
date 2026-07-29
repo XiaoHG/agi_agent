@@ -23,3 +23,8 @@ def load_tool_router_prompt() -> str:
 
     return load_prompt("prompts/tool-router.v1.md")
 
+
+def load_tool_calling_prompt() -> str:
+    """Load the prompt that instructs the LLM to emit structured tool calls."""
+
+    return load_prompt("prompts/tool-calling.v1.md")

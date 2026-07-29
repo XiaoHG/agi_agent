@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：LangGraph workflow 已支持条件路由、多工具编排，并接回 `WorkspaceAgent` 主链路。
+当前状态：LLM tool calling / tool schema 最小闭环已接入 `WorkspaceAgent` 主链路。
 
 ## 当前教师判断
 
@@ -43,6 +43,10 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - LangGraph conditional routing
 - LangGraph multi-tool dispatch
 - LangGraph 已接回 `WorkspaceAgent`
+- LLM tool calling prompt
+- workspace tool schema catalog
+- LLM-assisted tool selection
+- tool_call trace and selected-tool eval support
 
 当前缺口：
 
@@ -51,6 +55,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
+- LLM tool calling 当前仍是单次工具选择，还没有进入多步 tool loop。
 
 ## 当前总目标
 
@@ -66,11 +71,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 进入 v15：LLM tool calling / tool schema 阶段。
-2. 让 DeepSeek 不只生成回答，而是能基于 tool schema 做工具选择。
-3. 先设计本项目的统一 tool spec，再把 `read_file`、`search_docs`、`mcp_workspace_summary`、`plan_skill` 接入同一选择层。
-4. 在 eval 中增加“模型选择工具是否正确”的可回归用例。
-5. 手动运行 `python -m cli.main --input "Use LangGraph to search docs for MCP." --trace`，复盘 v14 的主 Agent graph 调用链。
+1. 学习 v15：`agent/tool_schema.py` 和 `agent/tool_calling.py`。
+2. 手动运行 `python -m cli.tool_calling_demo --input "Use tool calling to read README.md." --trace`。
+3. 对比规则路由、LangGraph 路由、LLM tool calling 三种路径的 trace。
+4. 下一阶段进入 MCP/Skills 的专业化接入，让它们成为更完整的 LLM tool layer。
 
 ## 当前学习重点
 
@@ -86,6 +90,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - API Key 必须只从环境变量读取，不能写入仓库。
 - 专业 Agent 框架接入应围绕统一 LLM client、tool schema 和 workflow state 展开。
 - 主 Agent 接入 LangGraph 后，trace 需要同时保留 Agent route 和 graph route，方便定位失败发生在哪一层。
+- LLM tool calling 必须拆成两层：模型负责选择工具和参数，代码负责校验、兜底和执行。
 
 ## 已完成
 
@@ -103,13 +108,14 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 DeepSeek V4 Pro 真实 LLM 接入。
 - 完成 DeepSeek-grounded RAG 真实回答链路。
 - 完成 v14：LangGraph 接回 `WorkspaceAgent`，并补充 graph regression cases。
+- 完成 v15：LLM tool calling / tool schema 接回 `WorkspaceAgent`。
 
 ## 未完成
 
-- LLM tool calling / tool schema。
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
 - 让 LangGraph 成为可配置的默认主执行器。
+- 多步 LLM tool loop。
 
 ## 恢复指令
 
@@ -146,6 +152,12 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 29. `versions/langgraph-workflow_v12.md`
 30. `versions/langgraph-conditional-routing_v13.md`
 31. `versions/workspace-agent-langgraph_v14.md`
+32. `agent/tool_schema.py`
+33. `agent/tool_calling.py`
+34. `prompts/tool-calling.v1.md`
+35. `cli/tool_calling_demo.py`
+36. `tests/test_tool_calling.py`
+37. `versions/llm-tool-calling_v15.md`
 
 然后继续执行当前具体任务。
 
@@ -169,3 +181,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `cli/langgraph_demo.py`
 - `versions/langgraph-conditional-routing_v13.md`
 - `versions/workspace-agent-langgraph_v14.md`
+- `agent/tool_schema.py`
+- `agent/tool_calling.py`
+- `prompts/tool-calling.v1.md`
+- `cli/tool_calling_demo.py`
+- `versions/llm-tool-calling_v15.md`

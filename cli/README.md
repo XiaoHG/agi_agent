@@ -25,3 +25,8 @@ Run with trace output:
 python -m cli.main --input "Read README.md and summarize the project learning goals." --trace
 ```
 
+Run LLM tool calling:
+
+```bash
+python -m cli.tool_calling_demo --input "Use tool calling to read README.md." --trace
+```
