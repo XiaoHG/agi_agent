@@ -222,6 +222,22 @@ def _looks_like_tool_calling_request(text: str) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+def _looks_like_tool_loop_request(text: str) -> bool:
+    """Return True when the user explicitly wants a multi-step tool loop."""
+
+    lowered = text.lower()
+    keywords = [
+        "tool loop",
+        "multi-step tool",
+        "multi step tool",
+        "multiple tool steps",
+        "iterate tools",
+        "tool iteration",
+        "loop with tools",
+    ]
+    return any(keyword in lowered for keyword in keywords)
+
+
 def _extract_tool_calling_question(text: str) -> str:
     """Remove tool-calling instruction wording and keep the actual task."""
 
@@ -237,6 +253,28 @@ def _extract_tool_calling_question(text: str) -> str:
         "choose a tool for",
         "select a tool for",
         "use structured tool calling to",
+    ]
+    for prefix in prefixes:
+        if lowered.startswith(prefix):
+            return text[len(prefix) :].strip(" .")
+    return text
+
+
+def _extract_tool_loop_question(text: str) -> str:
+    """Remove tool-loop instruction wording and keep the actual task."""
+
+    if ":" in text:
+        return text.split(":", 1)[1].strip()
+
+    lowered = text.lower()
+    prefixes = [
+        "use tool loop to",
+        "use a tool loop to",
+        "run tool loop to",
+        "run a tool loop to",
+        "use multi-step tool loop to",
+        "use multi step tool loop to",
+        "loop with tools to",
     ]
     for prefix in prefixes:
         if lowered.startswith(prefix):
@@ -282,6 +320,14 @@ def route_intent(user_input: str) -> ToolRoute:
             tool_name="langgraph_workflow",
             tool_input=_extract_langgraph_question(text),
             reason="The user is asking to run the request through the LangGraph workflow.",
+        )
+
+    if _looks_like_tool_loop_request(text):
+        return ToolRoute(
+            action="tool_loop",
+            tool_name="llm_tool_loop",
+            tool_input=_extract_tool_loop_question(text),
+            reason="The user is asking the LLM to run a bounded multi-step tool loop.",
         )
 
     if _looks_like_tool_calling_request(text):

@@ -31,6 +31,7 @@ The current Python package uses standard module names and keeps the runtime code
 agent/core.py
 agent/router.py
 agent/tool_calling.py
+agent/tool_loop.py
 agent/tool_schema.py
 agent/tools.py
 agent/prompts.py
@@ -41,6 +42,7 @@ Core files:
 - `core.py`: agent orchestration.
 - `router.py`: tool-routing decision logic.
 - `tool_calling.py`: LLM-assisted structured tool selection.
+- `tool_loop.py`: bounded multi-step LLM tool loop records.
 - `tool_schema.py`: workspace tool catalog and schema definitions.
 - `tools.py`: local tool implementations.
 - `prompts.py`: prompt loading helpers.

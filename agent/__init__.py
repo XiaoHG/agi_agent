@@ -4,6 +4,7 @@ from .core import AgentRun, WorkspaceAgent
 from .llm import DeepSeekConfig, DeepSeekLLMClient, LLMError, LLMMessage, LLMResponse
 from .router import ToolRoute, route_intent
 from .tool_calling import ToolCallSelection, build_tool_calling_messages, parse_tool_call_selection, select_tool_call
+from .tool_loop import ToolLoopResult, ToolLoopStep
 from .tool_schema import ToolArgumentSpec, ToolSpec, build_workspace_tool_specs
 from .state import AgentStep, AgentState
 from .tools import (
@@ -35,6 +36,8 @@ __all__ = [
     "ToolRoute",
     "ToolCallSelection",
     "ToolArgumentSpec",
+    "ToolLoopResult",
+    "ToolLoopStep",
     "ToolSpec",
     "ToolError",
     "ToolResult",

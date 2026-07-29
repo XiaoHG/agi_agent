@@ -47,6 +47,13 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(route.tool_name, "llm_tool_selector")
         self.assertEqual(route.tool_input, "read README.md")
 
+    def test_route_to_tool_loop(self) -> None:
+        route = route_intent("Use tool loop to read README.md and then answer.")
+
+        self.assertEqual(route.action, "tool_loop")
+        self.assertEqual(route.tool_name, "llm_tool_loop")
+        self.assertEqual(route.tool_input, "read README.md and then answer")
+
     def test_workflow_run(self) -> None:
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Read README.md and then count lines.")

@@ -9,6 +9,7 @@ from uuid import uuid4  # 生成唯一运行ID
 from .prompts import load_system_prompt, load_tool_calling_prompt, load_tool_router_prompt  # 加载提示词
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
+from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
 from .tool_schema import build_workspace_tool_specs  # 工具 schema 目录
 from .tools import (  # 工具定义与异常
     ToolError,
@@ -36,6 +37,7 @@ class AgentRun:
     user_input: str              # 用户原始输入
     route: ToolRoute             # 路由决策结果（来自route_intent）
     tool_call: ToolCallSelection | None = None  # LLM 工具选择结果（仅 tool_call 分支使用）
+    tool_loop_result: ToolLoopResult | None = None  # 多步工具循环结果
     steps: list[AgentStep] = field(default_factory=list)  # 执行步骤列表
     tool_result: ToolResult | None = None  # 工具执行结果（成功时）
     tool_error: str | None = None          # 工具执行错误（失败时）
@@ -92,6 +94,22 @@ class WorkspaceAgent:
             except ToolError as error:
                 run.tool_error = str(error)
                 run.steps.append(AgentStep("Graph failed", run.tool_error))
+                run.answer = self._compose_tool_error_answer(run)
+            run.steps.append(AgentStep("Complete", "final answer generated"))
+            return run
+
+        # 3.7 如果要求多步工具循环，则让模型在观察结果后继续决策
+        if run.route.action == "tool_loop":
+            try:
+                loop_input = run.route.tool_input or user_input
+                run.tool_loop_result = self._run_tool_loop(loop_input)
+                if run.tool_loop_result.steps:
+                    run.tool_call = run.tool_loop_result.steps[-1].selection
+                run.steps.append(AgentStep("Run tool loop", self._describe_tool_loop(run.tool_loop_result)))
+                run.answer = run.tool_loop_result.to_text()
+            except ToolError as error:
+                run.tool_error = str(error)
+                run.steps.append(AgentStep("Tool loop failed", run.tool_error))
                 run.answer = self._compose_tool_error_answer(run)
             run.steps.append(AgentStep("Complete", "final answer generated"))
             return run
@@ -213,6 +231,123 @@ class WorkspaceAgent:
             )
         except Exception as error:
             raise ToolError(f"Tool calling selection failed: {error}") from error
+
+    def _run_tool_loop(self, objective: str, max_steps: int = 3) -> ToolLoopResult:
+        """Run a bounded LLM tool loop with observations between steps."""
+
+        loop_steps: list[ToolLoopStep] = [] # 每一步的记录
+        observations: list[str] = []        # 工具执行结果，给下一轮 LLM 看
+        seen_tool_calls: set[tuple[str | None, str | None]] = set() # 防止重复调用同一个工具
+
+        for index in range(1, max_steps + 1):
+            loop_input = self._build_tool_loop_input(objective, observations)
+            selection = self._select_tool_call(loop_input)
+
+            if selection.action == "answer_directly":
+                final_answer = self._compose_tool_loop_final_answer(objective, observations, selection.reason)
+                loop_steps.append(ToolLoopStep(index=index, selection=selection, observation=selection.reason))
+                return ToolLoopResult(
+                    objective=objective,
+                    steps=loop_steps,
+                    final_answer=final_answer,
+                    stop_reason="model_answered_directly",
+                )
+
+            if selection.action == "ask_clarification":
+                loop_steps.append(ToolLoopStep(index=index, selection=selection, observation=selection.reason))
+                return ToolLoopResult(
+                    objective=objective,
+                    steps=loop_steps,
+                    final_answer=f"The agent needs more information: {selection.reason}",
+                    stop_reason="needs_clarification",
+                )
+
+            tool_key = (selection.tool_name, selection.tool_input)
+            if tool_key in seen_tool_calls:
+                loop_steps.append(
+                    ToolLoopStep(index=index, selection=selection, error="Repeated tool call detected.")
+                )
+                return ToolLoopResult(
+                    objective=objective,
+                    steps=loop_steps,
+                    final_answer=self._compose_tool_loop_final_answer(
+                        objective,
+                        observations,
+                        "Stopped because the model repeated the same tool call.",
+                    ),
+                    stop_reason="repeated_tool_call",
+                )
+            seen_tool_calls.add(tool_key)
+
+            try:
+                result = self._call_tool(
+                    ToolRoute(
+                        action="use_tool",
+                        tool_name=selection.tool_name,
+                        tool_input=selection.tool_input,
+                        reason=selection.reason,
+                    )
+                )
+            except ToolError as error:
+                loop_steps.append(ToolLoopStep(index=index, selection=selection, error=str(error)))
+                return ToolLoopResult(
+                    objective=objective,
+                    steps=loop_steps,
+                    final_answer=f"The tool loop failed while running {selection.tool_name}: {error}",
+                    stop_reason="tool_error",
+                )
+
+            observation = self._preview_observation(result.output)
+            observations.append(f"{result.tool_name}: {observation}")
+            loop_steps.append(ToolLoopStep(index=index, selection=selection, observation=observation))
+
+        return ToolLoopResult(
+            objective=objective,
+            steps=loop_steps,
+            final_answer=self._compose_tool_loop_final_answer(
+                objective,
+                observations,
+                f"Reached the max step limit of {max_steps}.",
+            ),
+            stop_reason="max_steps",
+        )
+
+    def _build_tool_loop_input(self, objective: str, observations: list[str]) -> str:
+        """Build the next LLM input for a tool loop iteration."""
+
+        if not observations:
+            return objective
+        return (
+            f"Objective:\n{objective}\n\n"
+            "Previous observations:\n"
+            f"{chr(10).join(f'- {item}' for item in observations)}\n\n"
+            "Choose the next smallest sufficient action. "
+            "If the observations are enough, choose answer_directly."
+        )
+
+    def _compose_tool_loop_final_answer(self, objective: str, observations: list[str], reason: str) -> str:
+        """Build a deterministic final answer from tool loop observations."""
+
+        observation_text = "\n".join(f"- {item}" for item in observations) if observations else "- no observations"
+        return (
+            f"Objective: {objective}\n\n"
+            f"Reason: {reason}\n\n"
+            "Observations:\n"
+            f"{observation_text}"
+        )
+
+    def _describe_tool_loop(self, result: ToolLoopResult) -> str:
+        """Render the tool loop result as a compact trace line."""
+
+        return f"steps={len(result.steps)}; stop_reason={result.stop_reason}"
+
+    def _preview_observation(self, text: str, limit: int = 280) -> str:
+        """Create a compact one-line observation for the next loop step."""
+
+        normalized = " ".join(text.split())
+        if len(normalized) <= limit:
+            return normalized
+        return normalized[: limit - 15] + "... (truncated)"
 
     def _describe_tool_call(self, tool_call: ToolCallSelection) -> str:
         """Render the selected tool call as a compact trace line."""
@@ -398,6 +533,9 @@ class WorkspaceAgent:
                 f"action={run.tool_call.action}, tool={run.tool_call.tool_name or 'none'}, "
                 f"input={run.tool_call.tool_input or 'none'}"
             )
+        if run.tool_loop_result is not None:
+            parts.append("\n[Tool Loop]")
+            parts.append(run.tool_loop_result.to_text())
         if run.tool_result is not None:
             parts.append("\n[Tool] " + run.tool_result.tool_name)
             parts.append(run.tool_result.output)
@@ -428,6 +566,13 @@ class WorkspaceAgent:
                 "tool_name": run.tool_call.tool_name,
                 "tool_input": run.tool_call.tool_input,
                 "reason": run.tool_call.reason,
+            },
+            "tool_loop": None
+            if run.tool_loop_result is None
+            else {
+                "stop_reason": run.tool_loop_result.stop_reason,
+                "step_count": len(run.tool_loop_result.steps),
+                "steps": [step.describe() for step in run.tool_loop_result.steps],
             },
             "selected_tool_name": None if run.tool_call is None else run.tool_call.tool_name,
             "steps": [{"title": step.title, "detail": step.detail} for step in run.steps],

@@ -30,3 +30,9 @@ Run LLM tool calling:
 ```bash
 python -m cli.tool_calling_demo --input "Use tool calling to read README.md." --trace
 ```
+
+Run a bounded LLM tool loop:
+
+```bash
+python -m cli.tool_loop_demo --input "Use tool loop to count lines in README.md and then answer." --trace
+```
