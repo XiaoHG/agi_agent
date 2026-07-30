@@ -6,6 +6,7 @@ from .router import ToolRoute, route_intent
 from .tool_calling import ToolCallSelection, build_tool_calling_messages, parse_tool_call_selection, select_tool_call
 from .tool_loop import ToolLoopResult, ToolLoopStep
 from .tool_schema import ToolArgumentSpec, ToolSpec, build_workspace_tool_specs
+from .tool_synthesis import build_tool_loop_synthesis_messages, synthesize_tool_loop_answer
 from .state import AgentStep, AgentState
 from .tools import (
     ToolError,
@@ -42,6 +43,7 @@ __all__ = [
     "ToolError",
     "ToolResult",
     "build_tool_calling_messages",
+    "build_tool_loop_synthesis_messages",
     "build_workspace_tool_specs",
     "answer_docs_with_llm",
     "list_agent_skills",
@@ -57,4 +59,5 @@ __all__ = [
     "parse_tool_call_selection",
     "route_intent",
     "select_tool_call",
+    "synthesize_tool_loop_answer",
 ]

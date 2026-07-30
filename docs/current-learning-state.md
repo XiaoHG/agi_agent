@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：bounded multi-step LLM tool loop 已接入 `WorkspaceAgent` 主链路。
+当前状态：LLM final synthesis 已接入 bounded tool loop。
 
 ## 当前教师判断
 
@@ -51,6 +51,8 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - tool loop observation feedback
 - repeated tool call guard
 - tool loop trace and structured trace support
+- LLM final synthesis for tool-loop observations
+- deterministic fallback for final synthesis failure
 
 当前缺口：
 
@@ -59,7 +61,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - MCP tool result 还没有进入 LLM 综合。
 - Skills 还没有成为 LLM 可选择的专业能力。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
-- LLM tool loop 已支持多步，但最终回答仍是确定性汇总，不是完整 LLM synthesis。
+- MCP / Skills 还没有成为 tool loop 中的一等能力。
 
 ## 当前总目标
 
@@ -75,9 +77,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v16：`agent/tool_loop.py` 和 `WorkspaceAgent._run_tool_loop()`。
+1. 学习 v17：`agent/tool_synthesis.py` 和 `WorkspaceAgent._synthesize_tool_loop_result()`。
 2. 手动运行 `python -m cli.tool_loop_demo --input "Use tool loop to count lines in README.md and then answer." --trace`。
-3. 对比单次 tool calling 和多步 tool loop 的 trace。
+3. 重点观察 `Final answer source: llm`。
 4. 下一阶段进入 MCP/Skills 的专业化接入，让它们成为更完整的 LLM tool layer。
 
 ## 当前学习重点
@@ -96,6 +98,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 主 Agent 接入 LangGraph 后，trace 需要同时保留 Agent route 和 graph route，方便定位失败发生在哪一层。
 - LLM tool calling 必须拆成两层：模型负责选择工具和参数，代码负责校验、兜底和执行。
 - 多步 tool loop 必须有最大步数和重复调用保护，避免模型陷入无限工具调用。
+- final synthesis 应该只基于 tool observations 生成答案，不能编造工具没有返回的信息。
 
 ## 已完成
 
@@ -115,13 +118,14 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v14：LangGraph 接回 `WorkspaceAgent`，并补充 graph regression cases。
 - 完成 v15：LLM tool calling / tool schema 接回 `WorkspaceAgent`。
 - 完成 v16：bounded multi-step LLM tool loop 接回 `WorkspaceAgent`。
+- 完成 v17：LLM final synthesis 接入 tool loop。
 
 ## 未完成
 
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
 - 让 LangGraph 成为可配置的默认主执行器。
-- LLM tool loop 的最终答案 LLM synthesis。
+- MCP / Skills 接入统一 tool loop。
 
 ## 恢复指令
 
@@ -168,6 +172,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 39. `cli/tool_loop_demo.py`
 40. `tests/test_tool_loop.py`
 41. `versions/llm-tool-loop_v16.md`
+42. `agent/tool_synthesis.py`
+43. `prompts/tool-loop-synthesis.v1.md`
+44. `tests/test_tool_synthesis.py`
+45. `versions/llm-tool-synthesis_v17.md`
 
 然后继续执行当前具体任务。
 
@@ -200,3 +208,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `cli/tool_loop_demo.py`
 - `tests/test_tool_loop.py`
 - `versions/llm-tool-loop_v16.md`
+- `agent/tool_synthesis.py`
+- `prompts/tool-loop-synthesis.v1.md`
+- `tests/test_tool_synthesis.py`
+- `versions/llm-tool-synthesis_v17.md`

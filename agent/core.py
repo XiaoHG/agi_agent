@@ -6,10 +6,16 @@ from typing import Any  # 结构化 trace 字典值类型
 from uuid import uuid4  # 生成唯一运行ID
 
 # 内部模块依赖（需配套实现）
-from .prompts import load_system_prompt, load_tool_calling_prompt, load_tool_router_prompt  # 加载提示词
+from .prompts import (  # 加载提示词
+    load_system_prompt,
+    load_tool_calling_prompt,
+    load_tool_loop_synthesis_prompt,
+    load_tool_router_prompt,
+)
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
+from .tool_synthesis import synthesize_tool_loop_answer  # 工具循环最终综合
 from .tool_schema import build_workspace_tool_specs  # 工具 schema 目录
 from .tools import (  # 工具定义与异常
     ToolError,
@@ -52,6 +58,7 @@ class WorkspaceAgent:
         self.system_prompt = load_system_prompt()            # 加载系统提示词
         self.tool_router_prompt = load_tool_router_prompt()  # 加载工具路由提示词
         self.tool_calling_prompt = load_tool_calling_prompt()  # 加载结构化工具调用提示词
+        self.tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()  # 加载工具循环最终综合提示词
         self.tool_specs = build_workspace_tool_specs()  # 工具 schema 目录
         self._llm_client = llm_client  # 测试可注入 fake client；生产环境延迟创建真实 client
 
@@ -103,6 +110,7 @@ class WorkspaceAgent:
             try:
                 loop_input = run.route.tool_input or user_input
                 run.tool_loop_result = self._run_tool_loop(loop_input)
+                run.tool_loop_result = self._synthesize_tool_loop_result(run.tool_loop_result)
                 if run.tool_loop_result.steps:
                     run.tool_call = run.tool_loop_result.steps[-1].selection
                 run.steps.append(AgentStep("Run tool loop", self._describe_tool_loop(run.tool_loop_result)))
@@ -231,6 +239,40 @@ class WorkspaceAgent:
             )
         except Exception as error:
             raise ToolError(f"Tool calling selection failed: {error}") from error
+
+    def _synthesize_tool_loop_result(self, result: ToolLoopResult) -> ToolLoopResult:
+        """Ask the LLM for a final answer and keep deterministic fallback on failure."""
+
+        from .llm import DeepSeekLLMClient
+
+        if self._llm_client is None:
+            self._llm_client = DeepSeekLLMClient()
+        try:
+            final_answer = synthesize_tool_loop_answer(
+                self._llm_client,
+                result,
+                prompt=self.tool_loop_synthesis_prompt,
+            )
+        except Exception as error:
+            fallback = (
+                f"{result.final_answer}\n\n"
+                f"Final synthesis fallback reason: {error}"
+            )
+            return ToolLoopResult(
+                objective=result.objective,
+                steps=result.steps,
+                final_answer=fallback,
+                stop_reason=result.stop_reason,
+                final_answer_source="deterministic_fallback",
+            )
+
+        return ToolLoopResult(
+            objective=result.objective,
+            steps=result.steps,
+            final_answer=final_answer,
+            stop_reason=result.stop_reason,
+            final_answer_source="llm",
+        )
 
     def _run_tool_loop(self, objective: str, max_steps: int = 3) -> ToolLoopResult:
         """Run a bounded LLM tool loop with observations between steps."""
@@ -573,6 +615,7 @@ class WorkspaceAgent:
                 "stop_reason": run.tool_loop_result.stop_reason,
                 "step_count": len(run.tool_loop_result.steps),
                 "steps": [step.describe() for step in run.tool_loop_result.steps],
+                "final_answer_source": run.tool_loop_result.final_answer_source,
             },
             "selected_tool_name": None if run.tool_call is None else run.tool_call.tool_name,
             "steps": [{"title": step.title, "detail": step.detail} for step in run.steps],

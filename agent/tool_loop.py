@@ -36,6 +36,7 @@ class ToolLoopResult:
     steps: list[ToolLoopStep] = field(default_factory=list)  # loop 内部步骤
     final_answer: str = ""                     # 面向用户的最终回答
     stop_reason: str = ""                      # loop 停止原因
+    final_answer_source: str = "deterministic"  # 最终答案来源：llm 或 deterministic fallback
 
     def to_text(self) -> str:
         """Render the loop result for the user."""
@@ -48,6 +49,6 @@ class ToolLoopResult:
             f"Objective: {self.objective}\n\n"
             "Loop steps:\n"
             f"{chr(10).join(step_lines)}\n\n"
+            f"Final answer source: {self.final_answer_source}\n\n"
             f"Final answer:\n{self.final_answer}"
         )
-

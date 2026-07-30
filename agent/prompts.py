@@ -28,3 +28,9 @@ def load_tool_calling_prompt() -> str:
     """Load the prompt that instructs the LLM to emit structured tool calls."""
 
     return load_prompt("prompts/tool-calling.v1.md")
+
+
+def load_tool_loop_synthesis_prompt() -> str:
+    """Load the prompt that asks the LLM to synthesize tool-loop observations."""
+
+    return load_prompt("prompts/tool-loop-synthesis.v1.md")

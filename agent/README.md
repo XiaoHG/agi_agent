@@ -33,6 +33,7 @@ agent/router.py
 agent/tool_calling.py
 agent/tool_loop.py
 agent/tool_schema.py
+agent/tool_synthesis.py
 agent/tools.py
 agent/prompts.py
 ```
@@ -44,5 +45,6 @@ Core files:
 - `tool_calling.py`: LLM-assisted structured tool selection.
 - `tool_loop.py`: bounded multi-step LLM tool loop records.
 - `tool_schema.py`: workspace tool catalog and schema definitions.
+- `tool_synthesis.py`: LLM final synthesis from tool-loop observations.
 - `tools.py`: local tool implementations.
 - `prompts.py`: prompt loading helpers.
