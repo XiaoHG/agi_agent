@@ -8,6 +8,23 @@ from agent import WorkspaceAgent, route_intent
 from mcp import LocalMCPClient, LocalMCPServer, call_mcp_tool, list_mcp_tools
 
 
+class FakeMCPReadClient:
+    """Fake LLM client that selects the MCP file reader."""
+
+    def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        from agent.llm import LLMResponse
+
+        return LLMResponse(
+            model="fake",
+            content=(
+                '{"action":"use_tool","tool_name":"mcp_read_project_file",'
+                '"tool_input":"Use MCP to read README.md",'
+                '"reason":"The task asks to read a file through MCP."}'
+            ),
+            raw={"messages": len(messages)},
+        )
+
+
 class LocalMCPTests(unittest.TestCase):
     """Verify local MCP server, client, adapter, and agent integration."""
 
@@ -72,6 +89,18 @@ class LocalMCPTests(unittest.TestCase):
 
         self.assertEqual(run.route.tool_name, "mcp_workspace_summary")
         self.assertIn("[mcp:ok]", run.answer)
+
+    def test_agent_reads_project_file_through_mcp_tool(self) -> None:
+        client = FakeMCPReadClient()
+        agent = WorkspaceAgent(Path("."), llm_client=client)
+
+        run = agent.run("Use tool calling to read README.md through MCP.")
+
+        self.assertEqual(run.route.action, "tool_call")
+        self.assertIsNotNone(run.tool_call)
+        self.assertEqual(run.tool_call.tool_name if run.tool_call else None, "mcp_read_project_file")
+        self.assertIn("[mcp:ok]", run.answer)
+        self.assertIn("[read_project_file] README.md", run.answer)
 
     def test_adapter_returns_error_for_missing_file_path(self) -> None:
         output = call_mcp_tool(Path("."), "read_project_file", {"path": ""})

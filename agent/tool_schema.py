@@ -76,6 +76,11 @@ def build_workspace_tool_specs() -> list[ToolSpec]:
             description="Summarize the workspace through the local MCP adapter.",
         ),
         ToolSpec(
+            name="mcp_read_project_file",
+            description="Read a workspace file through the local MCP adapter.",
+            arguments=(ToolArgumentSpec("path", "string", "Workspace-relative file path."),),
+        ),
+        ToolSpec(
             name="list_skills",
             description="List reusable skills available in the project.",
         ),
@@ -94,4 +99,3 @@ def build_workspace_tool_specs() -> list[ToolSpec]:
             arguments=(ToolArgumentSpec("task", "string", "Task description."),),
         ),
     ]
-

@@ -47,6 +47,42 @@ class ToolCallingTests(unittest.TestCase):
         self.assertEqual(selection.tool_name, "read_file")
         self.assertEqual(selection.tool_input, "README.md")
 
+    def test_tool_schema_exposes_mcp_file_reader(self) -> None:
+        specs = build_workspace_tool_specs()
+        names = {spec.name for spec in specs}
+
+        self.assertIn("mcp_read_project_file", names)
+
+    def test_select_tool_call_normalizes_mcp_file_path(self) -> None:
+        client = FakeToolCallingClient(
+            '{"action":"use_tool","tool_name":"mcp_read_project_file","tool_input":"Use MCP to read README.md","reason":"The task asks MCP to read a file."}'
+        )
+
+        selection = select_tool_call(
+            client,  # type: ignore[arg-type]
+            "Use tool calling to read README.md through MCP.",
+            build_workspace_tool_specs(),
+            prompt="Tool calling prompt",
+        )
+
+        self.assertEqual(selection.tool_name, "mcp_read_project_file")
+        self.assertEqual(selection.tool_input, "README.md")
+
+    def test_select_tool_call_removes_input_for_no_argument_mcp_tool(self) -> None:
+        client = FakeToolCallingClient(
+            '{"action":"use_tool","tool_name":"mcp_workspace_summary","tool_input":"Use MCP workspace summary.","reason":"The task asks for the MCP workspace summary."}'
+        )
+
+        selection = select_tool_call(
+            client,  # type: ignore[arg-type]
+            "Use tool calling to call MCP workspace summary.",
+            build_workspace_tool_specs(),
+            prompt="Tool calling prompt",
+        )
+
+        self.assertEqual(selection.tool_name, "mcp_workspace_summary")
+        self.assertIsNone(selection.tool_input)
+
     def test_workspace_agent_runs_tool_calling_read_file(self) -> None:
         client = FakeToolCallingClient(
             '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"The task asks to inspect the README."}'
@@ -77,4 +113,3 @@ class ToolCallingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -59,6 +59,15 @@ def normalize_tool_call_selection(selection: ToolCallSelection, user_input: str)
     if selection.action != "use_tool":
         return selection
 
+    if selection.tool_name in _NO_ARGUMENT_TOOLS:
+        return ToolCallSelection(
+            action=selection.action,
+            tool_name=selection.tool_name,
+            tool_input=None,
+            reason=selection.reason,
+            raw_response=selection.raw_response,
+        )
+
     normalized_input = selection.tool_input
     # 如果 tool_input 是空或像指令文本（如 "read README.md"），则推断参数
     if not normalized_input or _looks_like_instruction_text(normalized_input):
@@ -132,7 +141,7 @@ def _infer_tool_input(tool_name: str | None, user_input: str) -> str | None:
     if not tool_name:
         return text or None
 
-    if tool_name in {"read_file", "count_lines"}:
+    if tool_name in _PATH_INPUT_TOOLS:
         match = _FILE_PATTERN.search(text)
         if match:
             return match.group("path")
@@ -144,7 +153,7 @@ def _infer_tool_input(tool_name: str | None, user_input: str) -> str | None:
             return _parent_path(match.group("path"))
         return "."
 
-    if tool_name in {"search_docs", "answer_docs_with_llm", "plan_skill", "plan_subagents"}:
+    if tool_name in _TASK_INPUT_TOOLS:
         return text or None
 
     return text or None
@@ -182,3 +191,26 @@ _FILE_PATTERN = re.compile(
     r"(?P<path>(?:[\w.\-]+/)*[\w.\-]+\.(?:md|txt|py|json|yaml|yml|toml|ini|cfg|csv|tsv|log))",
     re.IGNORECASE,
 )
+
+
+_NO_ARGUMENT_TOOLS = {
+    "list_mcp_tools",
+    "mcp_workspace_summary",
+    "list_skills",
+    "list_subagents",
+}
+
+
+_PATH_INPUT_TOOLS = {
+    "read_file",
+    "count_lines",
+    "mcp_read_project_file",
+}
+
+
+_TASK_INPUT_TOOLS = {
+    "search_docs",
+    "answer_docs_with_llm",
+    "plan_skill",
+    "plan_subagents",
+}

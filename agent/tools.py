@@ -121,6 +121,13 @@ def mcp_workspace_summary(root: Path) -> ToolResult:
     return ToolResult("mcp_workspace_summary", output)
 
 
+def mcp_read_project_file(root: Path, raw_path: str) -> ToolResult:
+    """Read a workspace file through the local MCP adapter."""
+
+    output = call_mcp_tool(root, "read_project_file", {"path": raw_path})
+    return ToolResult("mcp_read_project_file", output)
+
+
 def list_agent_skills() -> ToolResult:
     """List reusable skills available to the agent."""
 

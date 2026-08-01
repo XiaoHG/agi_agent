@@ -4,13 +4,13 @@
 
 ## Last Updated
 
-2026-07-28
+2026-07-30
 
 ## 当前阶段
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：LLM final synthesis 已接入 bounded tool loop。
+当前状态：正在进入 v18，目标是让 MCP / Skills 成为 tool loop 中更稳定的一等能力。
 
 ## 当前教师判断
 
@@ -53,15 +53,17 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - tool loop trace and structured trace support
 - LLM final synthesis for tool-loop observations
 - deterministic fallback for final synthesis failure
+- MCP project file reading exposed through the workspace tool catalog
+- MCP / Skills tool-loop regression coverage
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
-- MCP tool result 还没有进入 LLM 综合。
-- Skills 还没有成为 LLM 可选择的专业能力。
+- MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
+- Skills 已可被 LLM 选择和进入 tool loop，但还没有真实执行外部技能资源。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
-- MCP / Skills 还没有成为 tool loop 中的一等能力。
+- MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 
 ## 当前总目标
 
@@ -77,10 +79,11 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v17：`agent/tool_synthesis.py` 和 `WorkspaceAgent._synthesize_tool_loop_result()`。
-2. 手动运行 `python -m cli.tool_loop_demo --input "Use tool loop to count lines in README.md and then answer." --trace`。
-3. 重点观察 `Final answer source: llm`。
-4. 下一阶段进入 MCP/Skills 的专业化接入，让它们成为更完整的 LLM tool layer。
+1. 学习 v18：`mcp_read_project_file` 如何通过 MCP adapter 接回 `WorkspaceAgent`。
+2. 理解 `agent/tool_calling.py` 中无参数工具、文件型工具、任务型工具的参数归一化。
+3. 手动运行 `python -m unittest tests.test_mcp tests.test_tool_calling tests.test_tool_loop -v`。
+4. 手动运行 `python -m cli.tool_loop_demo --input "Use tool loop to inspect MCP workspace summary, list skills, and then answer." --trace`。
+5. 重点观察 MCP / Skills observations 如何进入 final synthesis。
 
 ## 当前学习重点
 
@@ -99,6 +102,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - LLM tool calling 必须拆成两层：模型负责选择工具和参数，代码负责校验、兜底和执行。
 - 多步 tool loop 必须有最大步数和重复调用保护，避免模型陷入无限工具调用。
 - final synthesis 应该只基于 tool observations 生成答案，不能编造工具没有返回的信息。
+- 专业 tool layer 不能只把工具名字暴露给 LLM，还要明确参数边界、无参数工具行为、失败兜底和 trace 证据。
 
 ## 已完成
 
@@ -119,13 +123,14 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v15：LLM tool calling / tool schema 接回 `WorkspaceAgent`。
 - 完成 v16：bounded multi-step LLM tool loop 接回 `WorkspaceAgent`。
 - 完成 v17：LLM final synthesis 接入 tool loop。
+- 正在进行 v18：MCP / Skills 作为 tool loop 一等能力。
 
 ## 未完成
 
 - 标准化 MCP server/client。
 - 专业 Skills 执行系统。
 - 让 LangGraph 成为可配置的默认主执行器。
-- MCP / Skills 接入统一 tool loop。
+- MCP / Skills 标准化执行协议。
 
 ## 恢复指令
 
@@ -176,6 +181,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 43. `prompts/tool-loop-synthesis.v1.md`
 44. `tests/test_tool_synthesis.py`
 45. `versions/llm-tool-synthesis_v17.md`
+46. `versions/mcp-skills-tool-loop_v18.md`
+47. `docs/mcp-skills-tool-loop-exercises.md`
 
 然后继续执行当前具体任务。
 
@@ -212,3 +219,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `prompts/tool-loop-synthesis.v1.md`
 - `tests/test_tool_synthesis.py`
 - `versions/llm-tool-synthesis_v17.md`
+- `agent/tools.py` 中的 `mcp_read_project_file`
+- `agent/tool_schema.py` 中的 MCP / Skills tool specs
+- `agent/tool_calling.py` 中的 tool input normalization
+- `tests/test_mcp.py` 中的 MCP 文件读取 agent 测试
+- `tests/test_tool_loop.py` 中的 MCP / Skills tool loop 测试
+- `versions/mcp-skills-tool-loop_v18.md`

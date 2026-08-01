@@ -95,6 +95,26 @@ class ToolLoopTests(unittest.TestCase):
         )
         self.assertIn("Final synthesis fallback reason", run.answer)
 
+    def test_tool_loop_can_use_mcp_and_skills_as_capabilities(self) -> None:
+        client = SequenceToolLoopClient(
+            [
+                '{"action":"use_tool","tool_name":"mcp_workspace_summary","tool_input":"Use MCP workspace summary.","reason":"Inspect the workspace through MCP."}',
+                '{"action":"use_tool","tool_name":"list_skills","tool_input":"List skills.","reason":"Inspect available skills after MCP context."}',
+                '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"MCP and skills observations are enough."}',
+                "The loop inspected the workspace through MCP and then listed available skills.",
+            ]
+        )
+        agent = WorkspaceAgent(Path("."), llm_client=client)
+
+        run = agent.run("Use tool loop to inspect MCP workspace summary, list skills, and then answer.")
+
+        self.assertIsNotNone(run.tool_loop_result)
+        self.assertEqual(run.tool_loop_result.stop_reason if run.tool_loop_result else "", "model_answered_directly")
+        self.assertEqual(len(run.tool_loop_result.steps) if run.tool_loop_result else 0, 3)
+        self.assertIn("mcp_workspace_summary", run.answer)
+        self.assertIn("list_skills", run.answer)
+        self.assertIn("workspace through MCP", run.answer)
+
 
 if __name__ == "__main__":
     unittest.main()
