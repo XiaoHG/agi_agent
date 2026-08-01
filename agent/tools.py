@@ -7,7 +7,7 @@ from pathlib import Path
 
 from mcp import call_mcp_tool, list_mcp_tools
 from rag import answer_question, answer_question_with_llm
-from skills import describe_skills, select_skill
+from skills import describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents
 
 from .llm import LLMError
@@ -139,6 +139,13 @@ def plan_skill(task: str) -> ToolResult:
 
     skill = select_skill(task)
     return ToolResult("plan_skill", skill.describe())
+
+
+def run_skill(task: str) -> ToolResult:
+    """Execute a selected skill and return a structured skill run."""
+
+    skill_run = execute_skill(task)
+    return ToolResult("execute_skill", skill_run.to_text())
 
 
 def list_project_subagents() -> ToolResult:

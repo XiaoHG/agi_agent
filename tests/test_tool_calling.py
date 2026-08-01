@@ -53,6 +53,12 @@ class ToolCallingTests(unittest.TestCase):
 
         self.assertIn("mcp_read_project_file", names)
 
+    def test_tool_schema_exposes_skill_execution(self) -> None:
+        specs = build_workspace_tool_specs()
+        names = {spec.name for spec in specs}
+
+        self.assertIn("execute_skill", names)
+
     def test_select_tool_call_normalizes_mcp_file_path(self) -> None:
         client = FakeToolCallingClient(
             '{"action":"use_tool","tool_name":"mcp_read_project_file","tool_input":"Use MCP to read README.md","reason":"The task asks MCP to read a file."}'

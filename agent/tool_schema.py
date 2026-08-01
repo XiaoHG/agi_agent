@@ -90,6 +90,11 @@ def build_workspace_tool_specs() -> list[ToolSpec]:
             arguments=(ToolArgumentSpec("task", "string", "Task description."),),
         ),
         ToolSpec(
+            name="execute_skill",
+            description="Execute the best reusable skill for a task and return a structured skill run.",
+            arguments=(ToolArgumentSpec("task", "string", "Task description."),),
+        ),
+        ToolSpec(
             name="list_subagents",
             description="List project subagents.",
         ),

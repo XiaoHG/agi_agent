@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from skills import describe_skills, select_skill
+from skills import describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents
 
 
@@ -14,6 +14,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Skills and subagent collaboration demo")
     parser.add_argument("--list-skills", action="store_true", help="list available skills")
     parser.add_argument("--list-subagents", action="store_true", help="list available subagents")
+    parser.add_argument("--execute-skill", action="store_true", help="execute the selected skill for --task")
     parser.add_argument("--task", help="task to route through skills and subagents")
     return parser
 
@@ -33,6 +34,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.task:
+        if args.execute_skill:
+            print(execute_skill(args.task).to_text())
+            return 0
+
         skill = select_skill(args.task)
         plan = build_collaboration_plan(args.task)
         print(skill.describe())

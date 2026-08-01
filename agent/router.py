@@ -296,6 +296,20 @@ def _looks_like_skill_request(text: str) -> bool:
     return "skill" in lowered or "skills" in lowered
 
 
+def _looks_like_skill_execution_request(text: str) -> bool:
+    """Return True when the user is asking to execute a reusable skill."""
+
+    lowered = text.lower()
+    keywords = [
+        "execute skill",
+        "run skill",
+        "use skill",
+        "perform skill",
+        "skill execution",
+    ]
+    return any(keyword in lowered for keyword in keywords)
+
+
 def _looks_like_subagent_request(text: str) -> bool:
     """Return True when the user is asking about subagents or collaboration."""
 
@@ -373,6 +387,9 @@ def route_intent(user_input: str) -> ToolRoute:
         if "list" in text.lower() or "available" in text.lower():
             tool_name = "list_skills"
             reason = "The user is asking to list available skills."
+        elif _looks_like_skill_execution_request(text):
+            tool_name = "execute_skill"
+            reason = "The user is asking to execute a reusable skill."
         return ToolRoute(
             action="use_tool",
             tool_name=tool_name,

@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进入 v18，目标是让 MCP / Skills 成为 tool loop 中更稳定的一等能力。
+当前状态：正在进入 v19，目标是把 Skills 从描述/选择升级为可执行的结构化 run。
 
 ## 当前教师判断
 
@@ -55,13 +55,16 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - deterministic fallback for final synthesis failure
 - MCP project file reading exposed through the workspace tool catalog
 - MCP / Skills tool-loop regression coverage
+- deterministic Skills execution records
+- `execute_skill` Agent tool
+- Skills execution CLI entrypoint
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已可被 LLM 选择和进入 tool loop，但还没有真实执行外部技能资源。
+- Skills 已有 deterministic execution run，但还没有接入真实外部技能资源或动态 step runner。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 
@@ -79,11 +82,11 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v18：`mcp_read_project_file` 如何通过 MCP adapter 接回 `WorkspaceAgent`。
-2. 理解 `agent/tool_calling.py` 中无参数工具、文件型工具、任务型工具的参数归一化。
-3. 手动运行 `python -m unittest tests.test_mcp tests.test_tool_calling tests.test_tool_loop -v`。
-4. 手动运行 `python -m cli.tool_loop_demo --input "Use tool loop to inspect MCP workspace summary, list skills, and then answer." --trace`。
-5. 重点观察 MCP / Skills observations 如何进入 final synthesis。
+1. 学习 v19：`skills/execution.py` 中的 `SkillRun`、`SkillStepResult`、`execute_skill()`。
+2. 理解 `execute_skill` 如何从 skills package 接入 `agent/tools.py`、`WorkspaceAgent._call_tool()` 和 `tool_schema`。
+3. 手动运行 `python -m unittest tests.test_collaboration tests.test_tool_calling -v`。
+4. 手动运行 `python -m cli.collaboration_demo --task "Review this code and add tests." --execute-skill`。
+5. 重点观察 skill execution 和 skill planning 的差异。
 
 ## 当前学习重点
 
@@ -103,6 +106,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 多步 tool loop 必须有最大步数和重复调用保护，避免模型陷入无限工具调用。
 - final synthesis 应该只基于 tool observations 生成答案，不能编造工具没有返回的信息。
 - 专业 tool layer 不能只把工具名字暴露给 LLM，还要明确参数边界、无参数工具行为、失败兜底和 trace 证据。
+- Skills execution 必须有 run、step、status、observation 和 final output，不能只返回一段不可追踪文本。
 
 ## 已完成
 
@@ -123,7 +127,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v15：LLM tool calling / tool schema 接回 `WorkspaceAgent`。
 - 完成 v16：bounded multi-step LLM tool loop 接回 `WorkspaceAgent`。
 - 完成 v17：LLM final synthesis 接入 tool loop。
-- 正在进行 v18：MCP / Skills 作为 tool loop 一等能力。
+- 完成 v18：MCP / Skills 作为 tool loop 一等能力。
+- 正在进行 v19：标准化 Skills execution run。
 
 ## 未完成
 
@@ -131,6 +136,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 专业 Skills 执行系统。
 - 让 LangGraph 成为可配置的默认主执行器。
 - MCP / Skills 标准化执行协议。
+- Skills 动态 step runner。
 
 ## 恢复指令
 
@@ -183,6 +189,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 45. `versions/llm-tool-synthesis_v17.md`
 46. `versions/mcp-skills-tool-loop_v18.md`
 47. `docs/mcp-skills-tool-loop-exercises.md`
+48. `skills/execution.py`
+49. `versions/skills-execution_v19.md`
+50. `docs/skills-execution-exercises.md`
 
 然后继续执行当前具体任务。
 
@@ -225,3 +234,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `tests/test_mcp.py` 中的 MCP 文件读取 agent 测试
 - `tests/test_tool_loop.py` 中的 MCP / Skills tool loop 测试
 - `versions/mcp-skills-tool-loop_v18.md`
+- `skills/execution.py`
+- `agent/tools.py` 中的 `run_skill`
+- `agent/tool_schema.py` 中的 `execute_skill`
+- `cli/collaboration_demo.py` 中的 `--execute-skill`
+- `tests/test_collaboration.py` 中的 skill execution 测试
+- `versions/skills-execution_v19.md`
