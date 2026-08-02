@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from mcp import call_mcp_tool, list_mcp_tools
 from rag import answer_question, answer_question_with_llm
@@ -26,6 +27,7 @@ class ToolResult:
 
     tool_name: str
     output: str
+    metadata: dict[str, Any] | None = None
 
 
 def _resolve_within_root(root: Path, raw_path: str) -> Path:
@@ -145,14 +147,14 @@ def run_skill(task: str) -> ToolResult:
     """Execute a selected skill with workspace tool support."""
 
     skill_run = execute_skill(task, tool_runner=_build_skill_tool_runner(Path(".")))
-    return ToolResult("execute_skill", skill_run.to_text())
+    return ToolResult("execute_skill", skill_run.to_text(), {"skill_run": skill_run.to_dict()})
 
 
 def run_skill_with_workspace(root: Path, task: str) -> ToolResult:
     """Execute a selected skill with access to workspace tools."""
 
     skill_run = execute_skill(task, tool_runner=_build_skill_tool_runner(root))
-    return ToolResult("execute_skill", skill_run.to_text())
+    return ToolResult("execute_skill", skill_run.to_text(), {"skill_run": skill_run.to_dict()})
 
 
 def _build_skill_tool_runner(root: Path):

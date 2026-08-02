@@ -35,6 +35,13 @@
     "required_answer_terms": ["Available skills", "code_review"]
   },
   {
+    "id": "skills-execution",
+    "input": "Execute skill for code review.",
+    "expected_route": "use_tool",
+    "expected_tool": "execute_skill",
+    "required_answer_terms": ["Skill run: code_review", "tool-backed steps", "[list_dir]"]
+  },
+  {
     "id": "subagent-plan",
     "input": "Plan subagent collaboration for a code review.",
     "expected_route": "use_tool",

@@ -15,6 +15,14 @@ class SkillToolRequest:
     tool_name: str  # 需要调用的工具名
     tool_input: str  # 传给工具的输入
 
+    def to_dict(self) -> dict[str, str]:
+        """Render the tool request as JSON-ready data."""
+
+        return {
+            "tool_name": self.tool_name,
+            "tool_input": self.tool_input,
+        }
+
 
 @dataclass(frozen=True)
 class SkillToolResponse:
@@ -23,6 +31,15 @@ class SkillToolResponse:
     tool_name: str  # 实际执行的工具名
     output: str  # 工具输出
     is_error: bool = False  # 工具是否失败
+
+    def to_dict(self) -> dict[str, object]:
+        """Render the tool response as JSON-ready data."""
+
+        return {
+            "tool_name": self.tool_name,
+            "output": self.output,
+            "is_error": self.is_error,
+        }
 
 
 @dataclass(frozen=True)
@@ -34,6 +51,17 @@ class SkillStep:
     action: str = "record"  # record / tool
     tool_name: str | None = None  # action=tool 时要调用的工具
     tool_input: str | None = None  # action=tool 时传给工具的输入
+
+    def to_dict(self) -> dict[str, object]:
+        """Render the executable step spec as JSON-ready data."""
+
+        return {
+            "index": self.index,
+            "instruction": self.instruction,
+            "action": self.action,
+            "tool_name": self.tool_name,
+            "tool_input": self.tool_input,
+        }
 
 
 @dataclass(frozen=True)
@@ -61,6 +89,20 @@ class SkillStepResult:
             f"{tool_part} -> {self.observation}{error_part}"
         )
 
+    def to_dict(self) -> dict[str, object]:
+        """Render the step result as JSON-ready trace data."""
+
+        return {
+            "index": self.index,
+            "instruction": self.instruction,
+            "status": self.status,
+            "observation": self.observation,
+            "action": self.action,
+            "tool_name": self.tool_name,
+            "tool_input": self.tool_input,
+            "error": self.error,
+        }
+
 
 @dataclass(frozen=True)
 class SkillRun:
@@ -87,6 +129,25 @@ class SkillRun:
             f"{chr(10).join(step_lines)}\n\n"
             f"Final output:\n{self.final_output}"
         )
+
+    def to_dict(self) -> dict[str, object]:
+        """Render the skill run as JSON-ready trace data."""
+
+        return {
+            "task": self.task,
+            "skill": {
+                "name": self.skill.name,
+                "purpose": self.skill.purpose,
+                "output_format": self.skill.output_format,
+            },
+            "status": self.status,
+            "step_count": len(self.steps),
+            "completed_steps": sum(1 for step in self.steps if step.status == "completed"),
+            "failed_steps": sum(1 for step in self.steps if step.status == "failed"),
+            "tool_backed_steps": sum(1 for step in self.steps if step.action == "tool"),
+            "steps": [step.to_dict() for step in self.steps],
+            "final_output": self.final_output,
+        }
 
 
 SkillToolRunner = Callable[[SkillToolRequest], SkillToolResponse]

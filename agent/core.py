@@ -630,7 +630,11 @@ class WorkspaceAgent:
             else {
                 "tool_name": run.tool_result.tool_name,
                 "output_preview": self._summarize_text(run.tool_result.output, limit=6),
+                "metadata": run.tool_result.metadata,
             },
+            "skill_run": None
+            if run.tool_result is None or run.tool_result.metadata is None
+            else run.tool_result.metadata.get("skill_run"),
             "tool_error": run.tool_error,
             "answer_preview": self._summarize_text(run.answer, limit=8),
         }

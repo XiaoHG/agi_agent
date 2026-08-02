@@ -69,6 +69,17 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("tool-backed steps: 3", run.final_output)
         self.assertIn("tool output", run.steps[0].observation)
 
+    def test_skill_run_exports_trace_dict(self) -> None:
+        def runner(request: SkillToolRequest) -> SkillToolResponse:
+            return SkillToolResponse(request.tool_name, f"tool output for {request.tool_input}")
+
+        payload = execute_skill("Review this code and add tests.", tool_runner=runner).to_dict()
+
+        self.assertEqual(payload["skill"]["name"], "code_review")
+        self.assertEqual(payload["status"], "completed")
+        self.assertEqual(payload["tool_backed_steps"], 3)
+        self.assertEqual(payload["steps"][0]["tool_name"], "list_dir")
+
     def test_execute_skill_stops_on_tool_error(self) -> None:
         def runner(request: SkillToolRequest) -> SkillToolResponse:
             return SkillToolResponse(request.tool_name, "tool failed", is_error=True)
@@ -142,6 +153,16 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("Executed steps", run.answer)
         self.assertIn("tool-backed steps", run.answer)
         self.assertIn("[list_dir]", run.answer)
+
+    def test_agent_trace_dict_contains_skill_run(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+
+        trace = agent.to_trace_dict(agent.run("Execute skill for code review."))
+
+        self.assertIsNotNone(trace["skill_run"])
+        self.assertEqual(trace["skill_run"]["skill"]["name"], "code_review")
+        self.assertEqual(trace["skill_run"]["status"], "completed")
+        self.assertEqual(trace["skill_run"]["tool_backed_steps"], 3)
 
     def test_collaboration_demo_cli(self) -> None:
         result = subprocess.run(
