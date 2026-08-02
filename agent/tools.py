@@ -7,7 +7,7 @@ from pathlib import Path
 
 from mcp import call_mcp_tool, list_mcp_tools
 from rag import answer_question, answer_question_with_llm
-from skills import describe_skills, execute_skill, select_skill
+from skills import SkillToolRequest, SkillToolResponse, describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents
 
 from .llm import LLMError
@@ -142,10 +142,41 @@ def plan_skill(task: str) -> ToolResult:
 
 
 def run_skill(task: str) -> ToolResult:
-    """Execute a selected skill and return a structured skill run."""
+    """Execute a selected skill with workspace tool support."""
 
-    skill_run = execute_skill(task)
+    skill_run = execute_skill(task, tool_runner=_build_skill_tool_runner(Path(".")))
     return ToolResult("execute_skill", skill_run.to_text())
+
+
+def run_skill_with_workspace(root: Path, task: str) -> ToolResult:
+    """Execute a selected skill with access to workspace tools."""
+
+    skill_run = execute_skill(task, tool_runner=_build_skill_tool_runner(root))
+    return ToolResult("execute_skill", skill_run.to_text())
+
+
+def _build_skill_tool_runner(root: Path):
+    """Build the small tool runner used by tool-backed skill steps."""
+
+    def runner(request: SkillToolRequest) -> SkillToolResponse:
+        try:
+            if request.tool_name == "list_dir":
+                result = list_dir(root, request.tool_input or ".")
+            elif request.tool_name == "read_file":
+                result = read_file(root, request.tool_input)
+            elif request.tool_name == "search_docs":
+                result = search_docs(root, request.tool_input)
+            elif request.tool_name == "list_mcp_tools":
+                result = list_mcp_server_tools(root)
+            elif request.tool_name == "mcp_workspace_summary":
+                result = mcp_workspace_summary(root)
+            else:
+                return SkillToolResponse(request.tool_name, f"Unsupported skill tool: {request.tool_name}", True)
+        except ToolError as error:
+            return SkillToolResponse(request.tool_name, str(error), True)
+        return SkillToolResponse(result.tool_name, result.output)
+
+    return runner
 
 
 def list_project_subagents() -> ToolResult:

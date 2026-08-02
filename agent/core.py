@@ -31,7 +31,7 @@ from .tools import (  # 工具定义与异常
     plan_skill,
     plan_subagent_collaboration,
     read_file,
-    run_skill,
+    run_skill_with_workspace,
     search_docs,
 )
 from .state import AgentState, AgentStep  # 运行状态与轨迹记录
@@ -453,7 +453,7 @@ class WorkspaceAgent:
         if route.tool_name == "plan_skill":
             return plan_skill(route.tool_input or "")
         if route.tool_name == "execute_skill":
-            return run_skill(route.tool_input or "")
+            return run_skill_with_workspace(self.workspace_root, route.tool_input or "")
         if route.tool_name == "list_subagents":
             return list_project_subagents()
         if route.tool_name == "plan_subagents":

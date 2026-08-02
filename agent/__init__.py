@@ -23,6 +23,7 @@ from .tools import (
     plan_subagent_collaboration,
     read_file,
     run_skill,
+    run_skill_with_workspace,
     search_docs,
 )
 
@@ -58,6 +59,7 @@ __all__ = [
     "plan_subagent_collaboration",
     "read_file",
     "run_skill",
+    "run_skill_with_workspace",
     "count_lines",
     "search_docs",
     "parse_tool_call_selection",

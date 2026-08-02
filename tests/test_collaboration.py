@@ -6,7 +6,14 @@ import sys  # 使用当前 Python 解释器执行模块
 import unittest  # Python 官方测试框架
 
 from agent import WorkspaceAgent, route_intent
-from skills import describe_skills, execute_skill, select_skill
+from skills import (
+    SkillToolRequest,
+    SkillToolResponse,
+    build_skill_steps,
+    describe_skills,
+    execute_skill,
+    select_skill,
+)
 from subagent import build_collaboration_plan, describe_subagents
 
 
@@ -42,6 +49,36 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(run.status, "completed")
         self.assertEqual(len(run.steps), len(run.skill.steps))
         self.assertIn("Executed skill 'code_review'", run.final_output)
+
+    def test_build_skill_steps_marks_tool_backed_steps(self) -> None:
+        skill = select_skill("Review this code and add tests.")
+
+        steps = build_skill_steps(skill, "Review this code and add tests.")
+
+        self.assertEqual(steps[0].action, "tool")
+        self.assertEqual(steps[0].tool_name, "list_dir")
+        self.assertEqual(steps[-1].action, "record")
+
+    def test_execute_skill_uses_tool_runner(self) -> None:
+        def runner(request: SkillToolRequest) -> SkillToolResponse:
+            return SkillToolResponse(request.tool_name, f"tool output for {request.tool_input}")
+
+        run = execute_skill("Review this code and add tests.", tool_runner=runner)
+
+        self.assertEqual(run.status, "completed")
+        self.assertIn("tool-backed steps: 3", run.final_output)
+        self.assertIn("tool output", run.steps[0].observation)
+
+    def test_execute_skill_stops_on_tool_error(self) -> None:
+        def runner(request: SkillToolRequest) -> SkillToolResponse:
+            return SkillToolResponse(request.tool_name, "tool failed", is_error=True)
+
+        run = execute_skill("Review this code and add tests.", tool_runner=runner)
+
+        self.assertEqual(run.status, "failed")
+        self.assertEqual(len(run.steps), 1)
+        self.assertEqual(run.steps[0].status, "failed")
+        self.assertIn("failed steps: 1", run.final_output)
 
     def test_describe_subagents(self) -> None:
         output = describe_subagents()
@@ -103,6 +140,8 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(run.route.tool_name, "execute_skill")
         self.assertIn("Skill run: code_review", run.answer)
         self.assertIn("Executed steps", run.answer)
+        self.assertIn("tool-backed steps", run.answer)
+        self.assertIn("[list_dir]", run.answer)
 
     def test_collaboration_demo_cli(self) -> None:
         result = subprocess.run(
@@ -132,6 +171,27 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertIn("Skill run: code_review", result.stdout)
         self.assertIn("Status: completed", result.stdout)
+
+    def test_collaboration_demo_executes_tool_backed_skill(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "cli.collaboration_demo",
+                "--task",
+                "Review this code and add tests.",
+                "--execute-skill",
+                "--tool-backed",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertIn("Skill run: code_review", result.stdout)
+        self.assertIn("tool-backed steps", result.stdout)
+        self.assertIn("[list_dir]", result.stdout)
+        self.assertNotIn("Planned tool: list_dir", result.stdout)
 
 
 if __name__ == "__main__":

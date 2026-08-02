@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进入 v19，目标是把 Skills 从描述/选择升级为可执行的结构化 run。
+当前状态：正在进入 v20，目标是让 Skills execution 接入现有 workspace tool layer。
 
 ## 当前教师判断
 
@@ -58,13 +58,16 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - deterministic Skills execution records
 - `execute_skill` Agent tool
 - Skills execution CLI entrypoint
+- tool-backed skill steps
+- skill tool runner request/response boundary
+- skill step failure handling
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已有 deterministic execution run，但还没有接入真实外部技能资源或动态 step runner。
+- Skills 已可通过 runner 调用部分 workspace tools，但还没有外部 skill registry、动态配置和真实权限模型。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 
@@ -82,11 +85,11 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v19：`skills/execution.py` 中的 `SkillRun`、`SkillStepResult`、`execute_skill()`。
-2. 理解 `execute_skill` 如何从 skills package 接入 `agent/tools.py`、`WorkspaceAgent._call_tool()` 和 `tool_schema`。
-3. 手动运行 `python -m unittest tests.test_collaboration tests.test_tool_calling -v`。
-4. 手动运行 `python -m cli.collaboration_demo --task "Review this code and add tests." --execute-skill`。
-5. 重点观察 skill execution 和 skill planning 的差异。
+1. 学习 v20：`SkillStep`、`SkillToolRequest`、`SkillToolResponse` 和 `SkillToolRunner`。
+2. 理解 `execute_skill(task, tool_runner=...)` 如何兼容 deterministic execution 和 tool-backed execution。
+3. 理解 `agent/tools.py` 中 workspace skill runner 如何调用现有 tools。
+4. 手动运行 `python -m unittest tests.test_collaboration -v`。
+5. 手动运行 `python -m cli.collaboration_demo --task "Review this code and add tests." --execute-skill --tool-backed`。
 
 ## 当前学习重点
 
@@ -107,6 +110,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - final synthesis 应该只基于 tool observations 生成答案，不能编造工具没有返回的信息。
 - 专业 tool layer 不能只把工具名字暴露给 LLM，还要明确参数边界、无参数工具行为、失败兜底和 trace 证据。
 - Skills execution 必须有 run、step、status、observation 和 final output，不能只返回一段不可追踪文本。
+- Skill runner 应该通过清晰 request/response 边界调用工具，不能让 Skills 包直接依赖 Agent 主循环。
 
 ## 已完成
 
@@ -128,7 +132,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v16：bounded multi-step LLM tool loop 接回 `WorkspaceAgent`。
 - 完成 v17：LLM final synthesis 接入 tool loop。
 - 完成 v18：MCP / Skills 作为 tool loop 一等能力。
-- 正在进行 v19：标准化 Skills execution run。
+- 完成 v19：标准化 Skills execution run。
+- 正在进行 v20：tool-backed skill runner。
 
 ## 未完成
 
@@ -136,7 +141,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 专业 Skills 执行系统。
 - 让 LangGraph 成为可配置的默认主执行器。
 - MCP / Skills 标准化执行协议。
-- Skills 动态 step runner。
+- Skills 外部 registry 与权限模型。
 
 ## 恢复指令
 
@@ -192,6 +197,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 48. `skills/execution.py`
 49. `versions/skills-execution_v19.md`
 50. `docs/skills-execution-exercises.md`
+51. `versions/tool-backed-skills_v20.md`
+52. `docs/tool-backed-skills-exercises.md`
 
 然后继续执行当前具体任务。
 
@@ -240,3 +247,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `cli/collaboration_demo.py` 中的 `--execute-skill`
 - `tests/test_collaboration.py` 中的 skill execution 测试
 - `versions/skills-execution_v19.md`
+- `skills/execution.py` 中的 tool-backed step runner
+- `agent/tools.py` 中的 `_build_skill_tool_runner`
+- `cli/collaboration_demo.py` 中的 `--tool-backed`
+- `versions/tool-backed-skills_v20.md`

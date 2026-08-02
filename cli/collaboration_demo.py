@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from skills import describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents
@@ -15,6 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list-skills", action="store_true", help="list available skills")
     parser.add_argument("--list-subagents", action="store_true", help="list available subagents")
     parser.add_argument("--execute-skill", action="store_true", help="execute the selected skill for --task")
+    parser.add_argument("--tool-backed", action="store_true", help="execute skill steps with workspace tools")
     parser.add_argument("--task", help="task to route through skills and subagents")
     return parser
 
@@ -35,6 +37,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.task:
         if args.execute_skill:
+            if args.tool_backed:
+                from agent import run_skill_with_workspace
+
+                print(run_skill_with_workspace(Path("."), args.task).output)
+                return 0
             print(execute_skill(args.task).to_text())
             return 0
 

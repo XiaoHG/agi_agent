@@ -1,10 +1,39 @@
-"""Deterministic skill execution records for the learning workspace."""
+"""Tool-backed skill execution records for the learning workspace."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from .catalog import SkillSpec, select_skill
+
+
+@dataclass(frozen=True)
+class SkillToolRequest:
+    """Tool request emitted by a skill step."""
+
+    tool_name: str  # 需要调用的工具名
+    tool_input: str  # 传给工具的输入
+
+
+@dataclass(frozen=True)
+class SkillToolResponse:
+    """Tool response returned to the skill runner."""
+
+    tool_name: str  # 实际执行的工具名
+    output: str  # 工具输出
+    is_error: bool = False  # 工具是否失败
+
+
+@dataclass(frozen=True)
+class SkillStep:
+    """Executable step definition inside a skill run."""
+
+    index: int  # 步骤序号，从 1 开始
+    instruction: str  # 当前步骤说明
+    action: str = "record"  # record / tool
+    tool_name: str | None = None  # action=tool 时要调用的工具
+    tool_input: str | None = None  # action=tool 时传给工具的输入
 
 
 @dataclass(frozen=True)
@@ -13,13 +42,24 @@ class SkillStepResult:
 
     index: int  # 步骤序号，从 1 开始
     instruction: str  # 当前步骤的标准说明
-    status: str  # 当前阶段只使用 completed，后续可扩展 failed/skipped
-    observation: str  # 当前步骤产生的确定性观察结果
+    status: str  # completed / failed
+    observation: str  # 当前步骤产生的观察结果
+    action: str = "record"  # record / tool
+    tool_name: str | None = None  # 本步骤调用的工具
+    tool_input: str | None = None  # 本步骤传给工具的输入
+    error: str | None = None  # 本步骤失败原因
 
     def to_text(self) -> str:
         """Render the step result as a trace line."""
 
-        return f"{self.index}. [{self.status}] {self.instruction} -> {self.observation}"
+        tool_part = ""
+        if self.tool_name:
+            tool_part = f" tool={self.tool_name} input={self.tool_input or ''}"
+        error_part = f" error={self.error}" if self.error else ""
+        return (
+            f"{self.index}. [{self.status}] {self.instruction}"
+            f"{tool_part} -> {self.observation}{error_part}"
+        )
 
 
 @dataclass(frozen=True)
@@ -49,41 +89,172 @@ class SkillRun:
         )
 
 
-def execute_skill(task: str) -> SkillRun:
-    """Select and execute one built-in skill with deterministic step records."""
+SkillToolRunner = Callable[[SkillToolRequest], SkillToolResponse]
+
+
+def execute_skill(task: str, tool_runner: SkillToolRunner | None = None) -> SkillRun:
+    """Select and execute one built-in skill with optional tool-backed steps."""
 
     skill = select_skill(task)
-    steps = [
-        SkillStepResult(
-            index=index,
-            instruction=instruction,
-            status="completed",
-            observation=_build_step_observation(skill, task, instruction),
-        )
-        for index, instruction in enumerate(skill.steps, start=1)
-    ]
+    step_specs = build_skill_steps(skill, task)
+    steps: list[SkillStepResult] = []
+    status = "completed"
+
+    for step in step_specs:
+        result = _run_step(skill, task, step, tool_runner)
+        steps.append(result)
+        if result.status == "failed":
+            status = "failed"
+            break
+
     return SkillRun(
         task=task,
         skill=skill,
-        status="completed",
+        status=status,
         steps=steps,
-        final_output=_build_final_output(skill, task),
+        final_output=_build_final_output(skill, task, steps, status),
     )
 
 
-def _build_step_observation(skill: SkillSpec, task: str, instruction: str) -> str:
-    """Create a deterministic observation for one skill step."""
+def build_skill_steps(skill: SkillSpec, task: str) -> list[SkillStep]:
+    """Build executable step specs for a selected skill."""
 
-    return (
-        f"Prepared {skill.name} step for task '{task}'. "
-        f"Step focus: {instruction}"
+    if skill.name == "code_review":
+        tool_plan = {
+            1: ("list_dir", "."),
+            2: ("search_docs", task),
+            3: ("search_docs", "project tests evaluation workflow"),
+        }
+        return _build_steps_with_tools(skill, tool_plan)
+
+    if skill.name == "research_brief":
+        tool_plan = {
+            2: ("search_docs", task),
+            3: ("search_docs", f"sources for {task}"),
+        }
+        return _build_steps_with_tools(skill, tool_plan)
+
+    if skill.name == "learning_explanation":
+        tool_plan = {
+            2: ("search_docs", task),
+            3: ("read_file", "docs/current-learning-state.md"),
+        }
+        return _build_steps_with_tools(skill, tool_plan)
+
+    return _build_steps_with_tools(skill, {})
+
+
+def _build_steps_with_tools(skill: SkillSpec, tool_plan: dict[int, tuple[str, str]]) -> list[SkillStep]:
+    """Convert a skill definition into executable step specs."""
+
+    steps: list[SkillStep] = []
+    for index, instruction in enumerate(skill.steps, start=1):
+        planned_tool = tool_plan.get(index)
+        if planned_tool:
+            tool_name, tool_input = planned_tool
+            steps.append(
+                SkillStep(
+                    index=index,
+                    instruction=instruction,
+                    action="tool",
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                )
+            )
+        else:
+            steps.append(SkillStep(index=index, instruction=instruction))
+    return steps
+
+
+def _run_step(
+    skill: SkillSpec,
+    task: str,
+    step: SkillStep,
+    tool_runner: SkillToolRunner | None,
+) -> SkillStepResult:
+    """Run one skill step and return a structured step result."""
+
+    if step.action == "tool" and step.tool_name:
+        if tool_runner is None:
+            return SkillStepResult(
+                index=step.index,
+                instruction=step.instruction,
+                status="completed",
+                observation=_build_planned_tool_observation(skill, task, step),
+                action=step.action,
+                tool_name=step.tool_name,
+                tool_input=step.tool_input,
+            )
+
+        response = tool_runner(SkillToolRequest(step.tool_name, step.tool_input or ""))
+        if response.is_error:
+            return SkillStepResult(
+                index=step.index,
+                instruction=step.instruction,
+                status="failed",
+                observation=response.output,
+                action=step.action,
+                tool_name=response.tool_name,
+                tool_input=step.tool_input,
+                error=response.output,
+            )
+        return SkillStepResult(
+            index=step.index,
+            instruction=step.instruction,
+            status="completed",
+            observation=_preview(response.output),
+            action=step.action,
+            tool_name=response.tool_name,
+            tool_input=step.tool_input,
+        )
+
+    return SkillStepResult(
+        index=step.index,
+        instruction=step.instruction,
+        status="completed",
+        observation=_build_record_observation(skill, task, step.instruction),
+        action=step.action,
     )
 
 
-def _build_final_output(skill: SkillSpec, task: str) -> str:
-    """Build the deterministic final output for a completed skill run."""
+def _build_record_observation(skill: SkillSpec, task: str, instruction: str) -> str:
+    """Create a deterministic observation for a record-only skill step."""
+
+    return f"Prepared {skill.name} step for task '{task}'. Step focus: {instruction}"
+
+
+def _build_planned_tool_observation(skill: SkillSpec, task: str, step: SkillStep) -> str:
+    """Describe the planned tool call when no tool runner is available."""
 
     return (
-        f"Executed skill '{skill.name}' for task '{task}'. "
+        f"Prepared {skill.name} tool step for task '{task}'. "
+        f"Planned tool: {step.tool_name}; input: {step.tool_input or ''}"
+    )
+
+
+def _build_final_output(
+    skill: SkillSpec,
+    task: str,
+    steps: list[SkillStepResult],
+    status: str,
+) -> str:
+    """Build the final output for a completed or failed skill run."""
+
+    completed = sum(1 for step in steps if step.status == "completed")
+    failed = sum(1 for step in steps if step.status == "failed")
+    tool_steps = sum(1 for step in steps if step.action == "tool")
+
+    return (
+        f"Executed skill '{skill.name}' for task '{task}' with status '{status}'. "
+        f"Completed steps: {completed}; failed steps: {failed}; tool-backed steps: {tool_steps}. "
         f"Expected output format: {skill.output_format}"
     )
+
+
+def _preview(text: str, limit: int = 240) -> str:
+    """Keep tool output compact inside skill step observations."""
+
+    normalized = " ".join(text.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 15] + "... (truncated)"
