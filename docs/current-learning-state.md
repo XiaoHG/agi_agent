@@ -91,6 +91,12 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 
 围绕 DeepSeek 真实 LLM 调用链路，逐步接入专业级 RAG、MCP、Skills 和 LangGraph。
 
+后续迭代必须参考：
+
+- `docs/professional-agent-iteration-plan.md`
+
+基本原则：不要长期停留在局部 helper 修补；每个阶段应尽量围绕专业 Agent 能力闭环推进，包括数据模型、执行逻辑、CLI/demo、tests、eval、trace、docs 和 exercises。
+
 当前专业 Agent 迭代链路：
 
 ```text
@@ -184,65 +190,74 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 3. `docs/learning-master-plan.md`
 4. `evals/README.md`
 5. `evals/regression_cases.json`
-6. `evals/runner.py`
-7. `tests/test_evals.py`
-8. `versions/engineering-evals-observability_v6.md`
-9. `agent/project.py`
-10. `cli/project_demo.py`
-11. `tests/test_project.py`
-12. `versions/project-learning-assistant_v7.md`
-13. `agent/llm.py`
-14. `cli/llm_demo.py`
-15. `tests/test_llm.py`
-16. `versions/deepseek-llm-provider_v8.md`
-17. `rag/llm_qa.py`
-18. `cli/rag_llm_demo.py`
-19. `tests/test_rag_llm.py`
-20. `versions/deepseek-rag_v9.md`
-21. `versions/workspace-agent-deepseek-rag_v10.md`
-22. `integrations/langchain_tools.py`
-23. `cli/langchain_tools_demo.py`
-24. `tests/test_langchain_tools.py`
-25. `versions/langchain-tool-adapter_v11.md`
-26. `integrations/langgraph_workflow.py`
-27. `cli/langgraph_demo.py`
-28. `tests/test_langgraph_workflow.py`
-29. `versions/langgraph-workflow_v12.md`
-30. `versions/langgraph-conditional-routing_v13.md`
-31. `versions/workspace-agent-langgraph_v14.md`
-32. `agent/tool_schema.py`
-33. `agent/tool_calling.py`
-34. `prompts/tool-calling.v1.md`
-35. `cli/tool_calling_demo.py`
-36. `tests/test_tool_calling.py`
-37. `versions/llm-tool-calling_v15.md`
-38. `agent/tool_loop.py`
-39. `cli/tool_loop_demo.py`
-40. `tests/test_tool_loop.py`
-41. `versions/llm-tool-loop_v16.md`
-42. `agent/tool_synthesis.py`
-43. `prompts/tool-loop-synthesis.v1.md`
-44. `tests/test_tool_synthesis.py`
-45. `versions/llm-tool-synthesis_v17.md`
-46. `versions/mcp-skills-tool-loop_v18.md`
-47. `docs/mcp-skills-tool-loop-exercises.md`
-48. `skills/execution.py`
-49. `versions/skills-execution_v19.md`
-50. `docs/skills-execution-exercises.md`
-51. `versions/tool-backed-skills_v20.md`
-52. `docs/tool-backed-skills-exercises.md`
-53. `versions/skill-trace-export_v21.md`
-54. `docs/skill-trace-export-exercises_v21.md`
-55. `versions/langgraph-skill-node_v22.md`
-56. `docs/langgraph-skill-node-exercises_v22.md`
-57. `versions/langgraph-skill-failure-recovery_v23.md`
-58. `docs/langgraph-skill-failure-recovery-exercises_v23.md`
-59. `versions/langgraph-tool-failure-recovery_v24.md`
-60. `docs/langgraph-tool-failure-recovery-exercises_v24.md`
+6. `docs/professional-agent-iteration-plan.md`
+7. `evals/runner.py`
+8. `tests/test_evals.py`
+9. `versions/engineering-evals-observability_v6.md`
+10. `agent/project.py`
+11. `cli/project_demo.py`
+12. `tests/test_project.py`
+13. `versions/project-learning-assistant_v7.md`
+14. `agent/llm.py`
+15. `cli/llm_demo.py`
+16. `tests/test_llm.py`
+17. `versions/deepseek-llm-provider_v8.md`
+18. `rag/llm_qa.py`
+19. `cli/rag_llm_demo.py`
+20. `tests/test_rag_llm.py`
+21. `versions/deepseek-rag_v9.md`
+22. `versions/workspace-agent-deepseek-rag_v10.md`
+23. `integrations/langchain_tools.py`
+24. `cli/langchain_tools_demo.py`
+25. `tests/test_langchain_tools.py`
+26. `versions/langchain-tool-adapter_v11.md`
+27. `integrations/langgraph_workflow.py`
+28. `cli/langgraph_demo.py`
+29. `tests/test_langgraph_workflow.py`
+30. `versions/langgraph-workflow_v12.md`
+31. `versions/langgraph-conditional-routing_v13.md`
+32. `versions/workspace-agent-langgraph_v14.md`
+33. `agent/tool_schema.py`
+34. `agent/tool_calling.py`
+35. `prompts/tool-calling.v1.md`
+36. `cli/tool_calling_demo.py`
+37. `tests/test_tool_calling.py`
+38. `versions/llm-tool-calling_v15.md`
+39. `agent/tool_loop.py`
+40. `cli/tool_loop_demo.py`
+41. `tests/test_tool_loop.py`
+42. `versions/llm-tool-loop_v16.md`
+43. `agent/tool_synthesis.py`
+44. `prompts/tool-loop-synthesis.v1.md`
+45. `tests/test_tool_synthesis.py`
+46. `versions/llm-tool-synthesis_v17.md`
+47. `versions/mcp-skills-tool-loop_v18.md`
+48. `docs/mcp-skills-tool-loop-exercises.md`
+49. `skills/execution.py`
+50. `versions/skills-execution_v19.md`
+51. `docs/skills-execution-exercises.md`
+52. `versions/tool-backed-skills_v20.md`
+53. `docs/tool-backed-skills-exercises.md`
+54. `versions/skill-trace-export_v21.md`
+55. `docs/skill-trace-export-exercises_v21.md`
+56. `versions/langgraph-skill-node_v22.md`
+57. `docs/langgraph-skill-node-exercises_v22.md`
+58. `versions/langgraph-skill-failure-recovery_v23.md`
+59. `docs/langgraph-skill-failure-recovery-exercises_v23.md`
+60. `versions/langgraph-tool-failure-recovery_v24.md`
+61. `docs/langgraph-tool-failure-recovery-exercises_v24.md`
 
 然后继续执行当前具体任务。
 
 ## 下一步建议
+
+下一阶段规划必须先参考：
+
+- `docs/professional-agent-iteration-plan.md`
+
+建议优先进入：
+
+- v25：Unified Agent Runtime Events and Recovery Model
 
 下一步优先让 Teacher Agent 讲解这次新增代码：
 
