@@ -7,6 +7,11 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from agent.recovery import (
+    build_exception_recovery_plan,
+    build_skill_recovery_plan,
+    build_tool_recovery_plan,
+)
 from agent.tools import run_skill_with_workspace
 
 from .langchain_tools import build_langchain_tools
@@ -126,7 +131,7 @@ def build_rag_graph(workspace_root: Path | str = "."):
                 **state,
                 "error": str(error),
                 "skill_status": "failed",
-                "recovery_plan": _build_exception_recovery_plan(state, error),
+                "recovery_plan": build_exception_recovery_plan(str(error)).to_dict(),
                 "steps": steps,
             }
 
@@ -134,11 +139,14 @@ def build_rag_graph(workspace_root: Path | str = "."):
         """Build a deterministic recovery plan for a failed skill run."""
 
         steps = [*state.get("steps", []), "recover_skill_failure"]
-        recovery_plan = _build_skill_recovery_plan(state)
+        recovery_plan = build_skill_recovery_plan(
+            state.get("skill_run") if isinstance(state.get("skill_run"), dict) else None,
+            state.get("error", ""),
+        )
         return {
             **state,
-            "recovery_plan": recovery_plan,
-            "tool_output": _format_recovery_plan(recovery_plan),
+            "recovery_plan": recovery_plan.to_dict(),
+            "tool_output": recovery_plan.to_text(),
             "steps": steps,
         }
 
@@ -146,12 +154,16 @@ def build_rag_graph(workspace_root: Path | str = "."):
         """Build a deterministic recovery plan for a failed LangChain tool call."""
 
         steps = [*state.get("steps", []), "recover_tool_failure"]
-        recovery_plan = _build_tool_recovery_plan(state)
+        recovery_plan = build_tool_recovery_plan(
+            state.get("selected_tool", "unknown"),
+            state.get("tool_input", {}),
+            state.get("tool_error") or state.get("error") or "Tool execution failed.",
+        )
         return {
             **state,
             "error": "",
-            "recovery_plan": recovery_plan,
-            "tool_output": _format_tool_recovery_plan(recovery_plan),
+            "recovery_plan": recovery_plan.to_dict(),
+            "tool_output": recovery_plan.to_text(),
             "steps": steps,
         }
 
@@ -257,173 +269,6 @@ def _looks_like_skill_execution(lowered_question: str) -> bool:
         "skill execution",
     ]
     return any(keyword in lowered_question for keyword in keywords)
-
-
-def _build_tool_recovery_plan(state: RAGGraphState) -> dict[str, Any]:
-    """Create structured recovery data from a failed LangChain tool call."""
-
-    tool_name = state.get("selected_tool", "unknown")
-    tool_input = state.get("tool_input", {})
-    reason = state.get("tool_error") or state.get("error") or "Tool execution failed."
-    return {
-        "status": "failed",
-        "failure_type": _classify_tool_failure(reason),
-        "tool_name": tool_name,
-        "tool_input": tool_input,
-        "reason": reason,
-        "next_safe_action": _build_tool_next_safe_action(tool_name, tool_input, reason),
-    }
-
-
-def _classify_tool_failure(reason: str) -> str:
-    """Classify common tool failures for recovery and eval readability."""
-
-    lowered = reason.lower()
-    if "does not exist" in lowered or "not found" in lowered:
-        return "missing_resource"
-    if "escapes workspace root" in lowered or "permission" in lowered:
-        return "unsafe_or_denied_access"
-    if "api key" in lowered or "network" in lowered or "connection" in lowered:
-        return "external_dependency"
-    if "too large" in lowered:
-        return "input_too_large"
-    return "tool_execution_error"
-
-
-def _build_tool_next_safe_action(tool_name: str, tool_input: dict[str, str], reason: str) -> str:
-    """Suggest a deterministic next action for a failed normal tool call."""
-
-    failure_type = _classify_tool_failure(reason)
-    if failure_type == "missing_resource":
-        path = tool_input.get("path") or tool_input.get("question") or "the requested input"
-        return f"Inspect whether {path} exists in the workspace, correct the input, then rerun {tool_name}."
-    if failure_type == "unsafe_or_denied_access":
-        return "Use a workspace-relative path that stays inside the project root, then rerun the graph."
-    if failure_type == "external_dependency":
-        return "Check the required API key or network dependency before rerunning the tool."
-    if failure_type == "input_too_large":
-        return "Use a smaller file or add a chunked reader before rerunning the tool."
-    return f"Inspect the tool input and error message, then rerun {tool_name} with corrected arguments."
-
-
-def _format_tool_recovery_plan(recovery_plan: dict[str, Any]) -> str:
-    """Render a normal tool recovery plan as deterministic graph output."""
-
-    return (
-        "Tool recovery plan\n"
-        f"Status: {recovery_plan.get('status')}\n"
-        f"Failure type: {recovery_plan.get('failure_type')}\n"
-        f"Tool: {recovery_plan.get('tool_name')}\n"
-        f"Tool input: {recovery_plan.get('tool_input')}\n"
-        f"Reason: {recovery_plan.get('reason')}\n"
-        f"Next safe action: {recovery_plan.get('next_safe_action')}"
-    )
-
-
-def _build_skill_recovery_plan(state: RAGGraphState) -> dict[str, Any]:
-    """Create structured recovery data from a failed skill run."""
-
-    skill_run = state.get("skill_run")
-    if not isinstance(skill_run, dict):
-        return {
-            "status": "failed",
-            "skill_name": "unknown",
-            "failed_step": None,
-            "reason": state.get("error", "Skill execution failed without a structured run."),
-            "completed_steps": 0,
-            "next_safe_action": "Inspect the graph error and rerun the skill after fixing the execution context.",
-        }
-
-    failed_step = _find_failed_skill_step(skill_run)
-    return {
-        "status": "failed",
-        "skill_name": _extract_skill_name(skill_run),
-        "failed_step": failed_step,
-        "reason": _extract_failure_reason(failed_step, state),
-        "completed_steps": skill_run.get("completed_steps", 0),
-        "next_safe_action": _build_next_safe_action(failed_step),
-    }
-
-
-def _build_exception_recovery_plan(state: RAGGraphState, error: Exception) -> dict[str, Any]:
-    """Create recovery data when skill execution raises before returning SkillRun."""
-
-    return {
-        "status": "failed",
-        "skill_name": "unknown",
-        "failed_step": None,
-        "reason": str(error),
-        "completed_steps": 0,
-        "next_safe_action": "Inspect the exception, fix the runtime context, and rerun the graph skill request.",
-    }
-
-
-def _find_failed_skill_step(skill_run: dict[str, Any]) -> dict[str, Any] | None:
-    """Return the first failed step from a structured SkillRun trace."""
-
-    steps = skill_run.get("steps", [])
-    if not isinstance(steps, list):
-        return None
-    for step in steps:
-        if isinstance(step, dict) and step.get("status") == "failed":
-            return step
-    return None
-
-
-def _extract_skill_name(skill_run: dict[str, Any]) -> str:
-    """Read the selected skill name from a SkillRun trace."""
-
-    skill = skill_run.get("skill", {})
-    if isinstance(skill, dict):
-        name = skill.get("name")
-        if isinstance(name, str):
-            return name
-    return "unknown"
-
-
-def _extract_failure_reason(failed_step: dict[str, Any] | None, state: RAGGraphState) -> str:
-    """Find the clearest available reason for a failed skill run."""
-
-    if failed_step:
-        error = failed_step.get("error")
-        observation = failed_step.get("observation")
-        if isinstance(error, str) and error:
-            return error
-        if isinstance(observation, str) and observation:
-            return observation
-    return state.get("error", "Skill execution failed.")
-
-
-def _build_next_safe_action(failed_step: dict[str, Any] | None) -> str:
-    """Suggest the next deterministic recovery action from the failed step."""
-
-    if not failed_step:
-        return "Inspect the skill trace and rerun after fixing the missing execution context."
-    tool_name = failed_step.get("tool_name") or "the failed tool"
-    tool_input = failed_step.get("tool_input") or "the requested input"
-    return f"Inspect {tool_input} for {tool_name}, fix the missing resource or path, then rerun the skill."
-
-
-def _format_recovery_plan(recovery_plan: dict[str, Any]) -> str:
-    """Render a recovery plan as deterministic graph output."""
-
-    failed_step = recovery_plan.get("failed_step")
-    failed_step_text = "none"
-    if isinstance(failed_step, dict):
-        failed_step_text = (
-            f"{failed_step.get('index')}. {failed_step.get('instruction')} "
-            f"(tool={failed_step.get('tool_name')}, input={failed_step.get('tool_input')})"
-        )
-
-    return (
-        "Skill recovery plan\n"
-        f"Status: {recovery_plan.get('status')}\n"
-        f"Skill: {recovery_plan.get('skill_name')}\n"
-        f"Failed step: {failed_step_text}\n"
-        f"Reason: {recovery_plan.get('reason')}\n"
-        f"Completed steps: {recovery_plan.get('completed_steps')}\n"
-        f"Next safe action: {recovery_plan.get('next_safe_action')}"
-    )
 
 
 def _looks_like_search_only(lowered_question: str) -> bool:

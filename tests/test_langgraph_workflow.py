@@ -59,6 +59,8 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["route"], "read_file")
             self.assertEqual(result["tool_status"], "failed")
             self.assertEqual(result["steps"], ["route", "call_tool", "recover_tool_failure", "finalize"])
+            self.assertEqual(result["recovery_plan"]["source_type"], "tool")
+            self.assertEqual(result["recovery_plan"]["source_name"], "read_workspace_file")
             self.assertEqual(result["recovery_plan"]["tool_name"], "read_workspace_file")
             self.assertEqual(result["recovery_plan"]["failure_type"], "missing_resource")
             self.assertIn("Tool recovery plan", result["answer"])
@@ -120,6 +122,8 @@ class LangGraphWorkflowTests(unittest.TestCase):
 
             self.assertEqual(result["skill_status"], "failed")
             self.assertEqual(result["steps"], ["route", "call_skill", "recover_skill_failure", "finalize"])
+            self.assertEqual(result["recovery_plan"]["source_type"], "skill")
+            self.assertEqual(result["recovery_plan"]["source_name"], "learning_explanation")
             self.assertEqual(result["recovery_plan"]["skill_name"], "learning_explanation")
             self.assertIn("docs/current-learning-state.md", result["recovery_plan"]["reason"])
             self.assertIn("Skill recovery plan", result["answer"])

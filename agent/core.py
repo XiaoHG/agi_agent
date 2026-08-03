@@ -12,6 +12,7 @@ from .prompts import (  # 加载提示词
     load_tool_loop_synthesis_prompt,
     load_tool_router_prompt,
 )
+from .events import build_runtime_events  # 统一运行事件导出
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
@@ -615,6 +616,14 @@ class WorkspaceAgent:
         if run.tool_error is not None:
             parts.append("\n[Tool Error]")
             parts.append(run.tool_error)
+        runtime_events = build_runtime_events(
+            run.steps,
+            None if run.tool_result is None else run.tool_result.metadata,
+            run.tool_error,
+        )
+        if runtime_events:
+            parts.append("\n[Runtime Events]")
+            parts.extend(event.to_text() for event in runtime_events)
         # 追加最终答案
         parts.append("\n[Final Answer]")
         parts.append(run.answer)
@@ -623,6 +632,8 @@ class WorkspaceAgent:
     def to_trace_dict(self, run: AgentRun) -> dict[str, Any]:
         """Render the run as structured trace data."""
 
+        tool_metadata = None if run.tool_result is None else run.tool_result.metadata
+        runtime_events = build_runtime_events(run.steps, tool_metadata, run.tool_error)
         return {
             "run_id": run.run_id,
             "user_input": run.user_input,
@@ -650,16 +661,17 @@ class WorkspaceAgent:
             },
             "selected_tool_name": None if run.tool_call is None else run.tool_call.tool_name,
             "steps": [{"title": step.title, "detail": step.detail} for step in run.steps],
+            "runtime_events": [event.to_dict() for event in runtime_events],
             "tool_result": None
             if run.tool_result is None
             else {
                 "tool_name": run.tool_result.tool_name,
                 "output_preview": self._summarize_text(run.tool_result.output, limit=6),
-                "metadata": run.tool_result.metadata,
+                "metadata": tool_metadata,
             },
             "skill_run": None
-            if run.tool_result is None or run.tool_result.metadata is None
-            else run.tool_result.metadata.get("skill_run"),
+            if tool_metadata is None
+            else tool_metadata.get("skill_run"),
             "tool_error": run.tool_error,
             "answer_preview": self._summarize_text(run.answer, limit=8),
         }

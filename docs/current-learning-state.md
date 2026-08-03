@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进行 v24，目标是让 LangGraph 在普通 tool 调用失败时进入独立 recovery node，并把 tool recovery plan 留存在 graph state、主 Agent trace 和 eval 中。
+当前状态：正在进行 v25，目标是建立统一的 Agent runtime events 和 recovery model，让普通 tool、Skill、graph exception 的失败恢复结构一致，并把运行事件暴露到文本 trace 和结构化 trace。
 
 ## 当前教师判断
 
@@ -77,15 +77,22 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - Tool failure classification
 - Tool recovery plan exported through `WorkspaceAgent` metadata
 - `langgraph-tool-failure-recovery` regression eval case
+- Unified `RecoveryPlan` model
+- Tool / Skill / exception recovery plan builders
+- Unified failure classification entrypoint
+- Unified `RuntimeEvent` model
+- Runtime events exported through `WorkspaceAgent.format_trace()`
+- Runtime events exported through `WorkspaceAgent.to_trace_dict()`
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成 recovery plan；但还没有外部 skill registry、动态配置和真实权限模型。
+- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；但还没有外部 skill registry、动态配置和真实权限模型。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
+- Runtime events 目前已经能从 Agent steps、LangGraph metadata、SkillRun、recovery plan 和 tool error 中生成，但还没有持久化 checkpoint / replay 能力。
 
 ## 当前总目标
 
@@ -107,15 +114,16 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v24：`integrations/langgraph_workflow.py` 中的 `recover_tool_failure()`、`_next_after_tool()` 和 tool recovery helper。
-2. 理解 `tool_status == failed` 如何让 graph 从 `call_tool` 进入 recovery node。
-3. 理解普通 tool recovery 和 Skill recovery 的相同点与区别。
-4. 理解 `agent/core.py` 如何把 `tool_status`、`tool_error` 和 `recovery_plan` 暴露给主 trace。
-5. 阅读 `evals/regression_cases.json` 中的 `langgraph-tool-failure-recovery`。
-6. 手动运行 `python -m unittest tests.test_langgraph_workflow tests.test_agent tests.test_evals -v`。
-7. 手动运行 `python -m unittest discover -s tests -v`。
-8. 手动运行 `python -m cli.eval_runner`。
-9. 手动运行 `python -m cli.main --input "Use LangGraph to read not-exist.md." --trace`。
+1. 学习 v25：`agent/recovery.py` 中的 `RecoveryPlan`、`build_tool_recovery_plan()`、`build_skill_recovery_plan()` 和 `classify_failure()`。
+2. 学习 `agent/events.py` 中的 `RuntimeEvent` 和 `build_runtime_events()`。
+3. 理解 `integrations/langgraph_workflow.py` 如何把普通 tool failure、Skill failure 和 exception 转换成统一 recovery plan。
+4. 理解 `agent/core.py` 如何在 `format_trace()` 和 `to_trace_dict()` 中导出 runtime events。
+5. 完成 `docs/unified-agent-runtime-events-recovery-exercises_v25.md`。
+6. 阅读 `versions/unified-agent-runtime-events-recovery_v25.md`。
+7. 手动运行 `python -m unittest tests.test_recovery tests.test_events tests.test_langgraph_workflow tests.test_agent -v`。
+8. 手动运行 `python -m unittest discover -s tests -v`。
+9. 手动运行 `python -m cli.eval_runner`。
+10. 手动运行 `python -m cli.main --input "Use LangGraph to read not-exist.md." --trace`。
 
 ## 当前学习重点
 
@@ -144,6 +152,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - recovery node 的核心职责是把失败事实转换成下一步行动计划，而不是隐藏失败或自动冒险重试。
 - 普通 tool failure 和 Skill failure 都需要结构化恢复，但二者的上下文不同：tool failure 主要看 tool name / input / error，Skill failure 还要看 SkillRun step trace。
 - `failure_type` 是后续专业恢复策略的入口，它可以帮助 graph 决定是提示用户修正路径、检查权限、补 API key，还是进入人工审批。
+- 恢复计划应该作为独立数据模型维护，而不是散落在 graph node 内部。
+- Runtime events 是后续 checkpoint、replay、审计和长期任务监控的基础。
+- Graph state 中应优先保存 JSON-ready 数据，避免未来持久化和跨进程传输时出现不可序列化对象。
 
 ## 已完成
 
@@ -170,7 +181,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v21：SkillRun trace / JSON export。
 - 完成 v22：LangGraph skill node。
 - 完成 v23：LangGraph skill failure recovery。
-- 正在进行 v24：LangGraph tool failure recovery。
+- 完成 v24：LangGraph tool failure recovery。
+- 正在进行 v25：Unified Agent Runtime Events and Recovery Model。
 
 ## 未完成
 
@@ -178,8 +190,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 让 LangGraph 成为可配置的默认主执行器。
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
-- 统一 RecoveryPlan 数据模型。
 - LangGraph checkpoint / persistence。
+- Runtime events persistence / replay。
 
 ## 恢复指令
 
@@ -246,6 +258,12 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 59. `docs/langgraph-skill-failure-recovery-exercises_v23.md`
 60. `versions/langgraph-tool-failure-recovery_v24.md`
 61. `docs/langgraph-tool-failure-recovery-exercises_v24.md`
+62. `agent/recovery.py`
+63. `agent/events.py`
+64. `tests/test_recovery.py`
+65. `tests/test_events.py`
+66. `versions/unified-agent-runtime-events-recovery_v25.md`
+67. `docs/unified-agent-runtime-events-recovery-exercises_v25.md`
 
 然后继续执行当前具体任务。
 
@@ -257,7 +275,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 建议优先进入：
 
-- v25：Unified Agent Runtime Events and Recovery Model
+- v26：LangGraph Checkpoint and Recoverable Run Persistence
 
 下一步优先让 Teacher Agent 讲解这次新增代码：
 
@@ -323,6 +341,12 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `tests/test_agent.py` 中的 tool recovery metadata 测试
 - `evals/regression_cases.json` 中的 `langgraph-tool-failure-recovery`
 - `versions/langgraph-tool-failure-recovery_v24.md`
+- `agent/recovery.py`
+- `agent/events.py`
+- `tests/test_recovery.py`
+- `tests/test_events.py`
+- `versions/unified-agent-runtime-events-recovery_v25.md`
+- `docs/unified-agent-runtime-events-recovery-exercises_v25.md`
 - `versions/tool-backed-skills_v20.md`
 - `skills/execution.py` 中的 `to_dict()` 方法
 - `agent/tools.py` 中的 `ToolResult.metadata`

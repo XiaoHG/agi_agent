@@ -152,7 +152,9 @@ class WorkspaceAgentTests(unittest.TestCase):
         run = agent.run("Use LangGraph to search docs for MCP.")
 
         self.assertTrue(any(step.title == "Run graph" for step in run.steps))
-        self.assertIn("route=search_docs", agent.format_trace(run))
+        trace_text = agent.format_trace(run)
+        self.assertIn("route=search_docs", trace_text)
+        self.assertIn("[Runtime Events]", trace_text)
 
     def test_agent_langgraph_skill_trace_dict_contains_skill_run(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -178,6 +180,7 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertEqual(trace["skill_run"]["status"], "failed")
             self.assertEqual(trace["tool_result"]["metadata"]["skill_status"], "failed")
             self.assertEqual(trace["tool_result"]["metadata"]["recovery_plan"]["skill_name"], "learning_explanation")
+            self.assertTrue(any(event["event_type"] == "recovery" for event in trace["runtime_events"]))
             self.assertIn("Skill recovery plan", run.answer)
 
     def test_agent_langgraph_metadata_contains_tool_recovery_plan(self) -> None:
@@ -193,6 +196,8 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertEqual(metadata["tool_status"], "failed")
             self.assertEqual(metadata["recovery_plan"]["tool_name"], "read_workspace_file")
             self.assertEqual(metadata["recovery_plan"]["failure_type"], "missing_resource")
+            self.assertEqual(metadata["recovery_plan"]["source_type"], "tool")
+            self.assertTrue(any(event["event_type"] == "recovery" for event in trace["runtime_events"]))
             self.assertIn("Tool recovery plan", run.answer)
 
     def test_agent_exports_structured_trace(self) -> None:
@@ -203,6 +208,7 @@ class WorkspaceAgentTests(unittest.TestCase):
 
         self.assertEqual(trace["route"]["tool_name"], "list_skills")
         self.assertIn("steps", trace)
+        self.assertIn("runtime_events", trace)
         self.assertIn("answer_preview", trace)
 
 
