@@ -103,5 +103,12 @@
     "expected_route": "graph",
     "expected_tool": "langgraph_workflow",
     "required_answer_terms": ["Graph route: answer_docs_with_llm", "insufficient", "Sources:"]
+  },
+  {
+    "id": "langgraph-skill-execution",
+    "input": "Use LangGraph to execute skill for code review.",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: skill_execution", "Skill status: completed", "Skill run: code_review"]
   }
 ]

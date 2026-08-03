@@ -98,7 +98,11 @@ class WorkspaceAgent:
             try:
                 graph_state = self._run_langgraph(run.route.tool_input or user_input)
                 run.steps.append(AgentStep("Run graph", self._describe_langgraph_state(graph_state)))
-                run.tool_result = ToolResult("langgraph_workflow", self._format_langgraph_answer(graph_state))
+                run.tool_result = ToolResult(
+                    "langgraph_workflow",
+                    self._format_langgraph_answer(graph_state),
+                    self._build_langgraph_metadata(graph_state),
+                )
                 run.answer = run.tool_result.output
             except ToolError as error:
                 run.tool_error = str(error)
@@ -413,13 +417,27 @@ class WorkspaceAgent:
 
         steps = " -> ".join(graph_state.get("steps", []))
         answer = graph_state.get("answer", "")
+        skill_status = graph_state.get("skill_status", "none")
         return (
             f"Graph route: {graph_state.get('route', 'unknown')}\n"
             f"Route reason: {graph_state.get('route_reason', '')}\n"
             f"Selected tool: {graph_state.get('selected_tool', 'none')}\n"
+            f"Skill status: {skill_status}\n"
             f"Graph steps: {steps}\n\n"
             f"{answer}"
         )
+
+    def _build_langgraph_metadata(self, graph_state: dict[str, Any]) -> dict[str, Any] | None:
+        """Expose important graph state fields through the normal tool metadata channel."""
+
+        metadata: dict[str, Any] = {
+            "graph_route": graph_state.get("route"),
+            "graph_steps": graph_state.get("steps", []),
+        }
+        if graph_state.get("skill_run") is not None:
+            metadata["skill_run"] = graph_state["skill_run"]
+            metadata["skill_status"] = graph_state.get("skill_status")
+        return metadata
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
         """Convert a workflow failure into a user-facing answer."""

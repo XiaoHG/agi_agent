@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+
+from agent.tools import run_skill_with_workspace
 
 from .langchain_tools import build_langchain_tools
 
@@ -19,6 +21,8 @@ class RAGGraphState(TypedDict, total=False):
     selected_tool: str  # 选哪个工具
     tool_input: dict[str, str]  # 传给 LangChain tool 的输入
     tool_output: str  # 工具返回结果
+    skill_run: dict[str, Any]  # skill 执行的结构化 trace
+    skill_status: str  # skill 执行状态，用于 graph 条件边判断
     answer: str  # 最终回答
     error: str  # 错误信息
     steps: list[str]  # 执行步骤记录（调试用）
@@ -45,6 +49,16 @@ def build_rag_graph(workspace_root: Path | str = "."):
                 "route_reason": "The question asks to read a workspace file.",
                 "selected_tool": "read_workspace_file",
                 "tool_input": {"path": path},
+                "steps": steps,
+            }
+
+        if _looks_like_skill_execution(lowered):
+            return {
+                **state,
+                "route": "skill_execution",
+                "route_reason": "The question asks the graph to execute a reusable skill.",
+                "selected_tool": "execute_workspace_skill",
+                "tool_input": {"question": question},
                 "steps": steps,
             }
 
@@ -87,6 +101,28 @@ def build_rag_graph(workspace_root: Path | str = "."):
                 "steps": steps,
             }
 
+    def call_skill(state: RAGGraphState) -> RAGGraphState:
+        """Execute a project skill and keep its structured run inside graph state."""
+
+        steps = [*state.get("steps", []), "call_skill"]
+        try:
+            result = run_skill_with_workspace(root, state["tool_input"]["question"])
+            skill_run = (result.metadata or {}).get("skill_run")
+            return {
+                **state,
+                "tool_output": result.output,
+                "skill_run": skill_run,
+                "skill_status": str(skill_run.get("status", "unknown")) if isinstance(skill_run, dict) else "unknown",
+                "steps": steps,
+            }
+        except Exception as error:
+            return {
+                **state,
+                "error": str(error),
+                "skill_status": "failed",
+                "steps": steps,
+            }
+
     def finalize(state: RAGGraphState) -> RAGGraphState:
         """Convert tool output or error into the final graph answer."""
 
@@ -107,6 +143,7 @@ def build_rag_graph(workspace_root: Path | str = "."):
 
     graph.add_node("route", route)
     graph.add_node("call_tool", call_tool)
+    graph.add_node("call_skill", call_skill)
     graph.add_node("finalize", finalize)
 
     graph.add_edge(START, "route")
@@ -115,12 +152,21 @@ def build_rag_graph(workspace_root: Path | str = "."):
         _next_after_route,
         {
             "call_tool": "call_tool",
+            "call_skill": "call_skill",
             "finalize": "finalize",
         },
     )
     graph.add_edge("call_tool", "finalize")
+    graph.add_conditional_edges(
+        "call_skill",
+        _next_after_skill,
+        {
+            "skill_completed": "finalize",
+            "skill_failed": "finalize",
+        },
+    )
     graph.add_edge("finalize", END)
-    
+
     return graph.compile()
 
 
@@ -136,7 +182,30 @@ def _next_after_route(state: RAGGraphState) -> str:
 
     if state.get("error"):
         return "finalize"
+    if state.get("route") == "skill_execution":
+        return "call_skill"
     return "call_tool"
+
+
+def _next_after_skill(state: RAGGraphState) -> str:
+    """Route after skill execution based on the structured skill status."""
+
+    if state.get("skill_status") == "completed":
+        return "skill_completed"
+    return "skill_failed"
+
+
+def _looks_like_skill_execution(lowered_question: str) -> bool:
+    """Return True when the graph should execute a reusable project skill."""
+
+    keywords = [
+        "execute skill",
+        "run skill",
+        "use skill",
+        "perform skill",
+        "skill execution",
+    ]
+    return any(keyword in lowered_question for keyword in keywords)
 
 
 def _looks_like_search_only(lowered_question: str) -> bool:

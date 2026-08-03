@@ -154,6 +154,18 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertTrue(any(step.title == "Run graph" for step in run.steps))
         self.assertIn("route=search_docs", agent.format_trace(run))
 
+    def test_agent_langgraph_skill_trace_dict_contains_skill_run(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+        run = agent.run("Use LangGraph to execute skill for code review.")
+
+        trace = agent.to_trace_dict(run)
+
+        self.assertEqual(trace["route"]["action"], "graph")
+        self.assertEqual(trace["tool_result"]["metadata"]["graph_route"], "skill_execution")
+        self.assertEqual(trace["skill_run"]["skill"]["name"], "code_review")
+        self.assertEqual(trace["skill_run"]["status"], "completed")
+        self.assertIn("Skill status: completed", run.answer)
+
     def test_agent_exports_structured_trace(self) -> None:
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List available skills.")

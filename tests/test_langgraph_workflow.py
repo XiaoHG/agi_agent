@@ -50,6 +50,43 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["selected_tool"], "read_workspace_file")
             self.assertIn("[read_file] README.md", result["answer"])
 
+    def test_rag_graph_routes_to_skill_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+
+            result = run_rag_graph(root, "Execute skill for code review.")
+
+            self.assertEqual(result["route"], "skill_execution")
+            self.assertEqual(result["selected_tool"], "execute_workspace_skill")
+            self.assertEqual(result["skill_status"], "completed")
+            self.assertEqual(result["steps"], ["route", "call_skill", "finalize"])
+            self.assertIn("Skill run: code_review", result["answer"])
+
+    def test_rag_graph_keeps_skill_run_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+
+            result = run_rag_graph(root, "Run skill for code review.")
+
+            skill_run = result["skill_run"]
+            self.assertEqual(skill_run["skill"]["name"], "code_review")
+            self.assertEqual(skill_run["status"], "completed")
+            self.assertGreaterEqual(skill_run["tool_backed_steps"], 1)
+            self.assertGreaterEqual(skill_run["step_count"], 1)
+
+    def test_rag_graph_skill_status_controls_next_edge(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+
+            result = run_rag_graph(root, "Use skill for code review.")
+
+            self.assertEqual(result["skill_status"], "completed")
+            self.assertEqual(result["steps"][-1], "finalize")
+            self.assertNotIn("error", result)
+
     def test_rag_graph_records_route_reason(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

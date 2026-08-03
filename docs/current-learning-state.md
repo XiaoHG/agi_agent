@@ -4,13 +4,13 @@
 
 ## Last Updated
 
-2026-07-30
+2026-08-02
 
 ## 当前阶段
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进入 v21，目标是让 SkillRun 进入结构化 trace 和 regression eval。
+当前状态：正在进行 v22，目标是让 LangGraph 通过独立 skill node 执行项目 Skills，并把 SkillRun 留存在 graph state 和主 Agent trace 中。
 
 ## 当前教师判断
 
@@ -64,13 +64,18 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - SkillRun JSON-ready trace export
 - `WorkspaceAgent.to_trace_dict()` skill run summary
 - `execute_skill` regression eval case
+- LangGraph `skill_execution` route
+- LangGraph `call_skill` node
+- LangGraph skill status conditional edge
+- LangGraph skill run metadata exported through `WorkspaceAgent.to_trace_dict()`
+- `langgraph-skill-execution` regression eval case
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；但还没有外部 skill registry、动态配置和真实权限模型。
+- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 也已经可以通过独立 skill node 执行 Skills；但还没有外部 skill registry、动态配置和真实权限模型。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 
@@ -88,11 +93,12 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v21：`SkillRun.to_dict()`、`SkillStepResult.to_dict()` 和 `ToolResult.metadata`。
-2. 理解 `WorkspaceAgent.to_trace_dict()` 如何暴露 `skill_run`。
-3. 理解 `evals/regression_cases.json` 中的 `skills-execution` case。
-4. 手动运行 `python -m unittest tests.test_collaboration tests.test_evals -v`。
-5. 手动运行 `python -m cli.eval_runner`，确认 eval 为 15/15。
+1. 学习 v22：`integrations/langgraph_workflow.py` 中的 `skill_execution` route、`call_skill()` node 和 `_next_after_skill()`。
+2. 理解 `agent/core.py` 如何通过 `_build_langgraph_metadata()` 把 graph 内部的 `skill_run` 暴露给主 trace。
+3. 理解 `evals/regression_cases.json` 中的 `langgraph-skill-execution` case。
+4. 手动运行 `python -m unittest tests.test_langgraph_workflow tests.test_agent tests.test_evals -v`。
+5. 手动运行 `python -m cli.eval_runner`，确认 eval 为 16/16。
+6. 手动运行 `python -m cli.main --input "Use LangGraph to execute skill for code review." --trace`，观察 graph route、skill status 和 SkillRun 输出。
 
 ## 当前学习重点
 
@@ -115,6 +121,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - Skills execution 必须有 run、step、status、observation 和 final output，不能只返回一段不可追踪文本。
 - Skill runner 应该通过清晰 request/response 边界调用工具，不能让 Skills 包直接依赖 Agent 主循环。
 - Agent 可观测性不能只靠文本 trace；关键 run object 应该能导出结构化 dict，服务测试、eval、恢复和后续 LangGraph state。
+- LangGraph node 应该有清晰职责边界；当某类能力需要结构化 state 和独立分支时，应该优先建独立 node，而不是挤进通用 tool node。
+- 条件边可以基于运行结果，而不只是基于用户意图；`skill_status` 是后续 failure recovery 的分支依据。
 
 ## 已完成
 
@@ -138,16 +146,17 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v18：MCP / Skills 作为 tool loop 一等能力。
 - 完成 v19：标准化 Skills execution run。
 - 完成 v20：tool-backed skill runner。
-- 正在进行 v21：SkillRun trace / JSON export。
+- 完成 v21：SkillRun trace / JSON export。
+- 正在进行 v22：LangGraph skill node。
 
 ## 未完成
 
 - 标准化 MCP server/client。
-- 专业 Skills 执行系统。
 - 让 LangGraph 成为可配置的默认主执行器。
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
-- LangGraph skill node。
+- LangGraph skill failure recovery。
+- LangGraph checkpoint / persistence。
 
 ## 恢复指令
 
@@ -207,6 +216,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 52. `docs/tool-backed-skills-exercises.md`
 53. `versions/skill-trace-export_v21.md`
 54. `docs/skill-trace-export-exercises_v21.md`
+55. `versions/langgraph-skill-node_v22.md`
+56. `docs/langgraph-skill-node-exercises_v22.md`
 
 然后继续执行当前具体任务。
 
@@ -258,6 +269,11 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `skills/execution.py` 中的 tool-backed step runner
 - `agent/tools.py` 中的 `_build_skill_tool_runner`
 - `cli/collaboration_demo.py` 中的 `--tool-backed`
+- `integrations/langgraph_workflow.py` 中的 `call_skill`
+- `integrations/langgraph_workflow.py` 中的 `_next_after_skill`
+- `agent/core.py` 中的 `_build_langgraph_metadata`
+- `tests/test_langgraph_workflow.py` 中的 LangGraph skill node 测试
+- `versions/langgraph-skill-node_v22.md`
 - `versions/tool-backed-skills_v20.md`
 - `skills/execution.py` 中的 `to_dict()` 方法
 - `agent/tools.py` 中的 `ToolResult.metadata`
