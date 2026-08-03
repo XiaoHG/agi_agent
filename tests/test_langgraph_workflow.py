@@ -87,6 +87,19 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["steps"][-1], "finalize")
             self.assertNotIn("error", result)
 
+    def test_rag_graph_recovers_failed_skill_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+
+            result = run_rag_graph(root, "Use skill for learning explanation.")
+
+            self.assertEqual(result["skill_status"], "failed")
+            self.assertEqual(result["steps"], ["route", "call_skill", "recover_skill_failure", "finalize"])
+            self.assertEqual(result["recovery_plan"]["skill_name"], "learning_explanation")
+            self.assertIn("docs/current-learning-state.md", result["recovery_plan"]["reason"])
+            self.assertIn("Skill recovery plan", result["answer"])
+
     def test_rag_graph_records_route_reason(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

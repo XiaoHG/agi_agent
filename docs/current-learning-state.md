@@ -4,13 +4,13 @@
 
 ## Last Updated
 
-2026-08-02
+2026-08-03
 
 ## 当前阶段
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进行 v22，目标是让 LangGraph 通过独立 skill node 执行项目 Skills，并把 SkillRun 留存在 graph state 和主 Agent trace 中。
+当前状态：正在进行 v23，目标是让 LangGraph 在 Skill 执行失败时进入独立 recovery node，并把 recovery plan 留存在 graph state 和主 Agent trace 中。
 
 ## 当前教师判断
 
@@ -69,13 +69,16 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - LangGraph skill status conditional edge
 - LangGraph skill run metadata exported through `WorkspaceAgent.to_trace_dict()`
 - `langgraph-skill-execution` regression eval case
+- LangGraph `recover_skill_failure` node
+- LangGraph `recovery_plan` state
+- Skill failure recovery plan exported through `WorkspaceAgent` metadata
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 检索仍是关键词检索，不是 embedding/vector search。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 也已经可以通过独立 skill node 执行 Skills；但还没有外部 skill registry、动态配置和真实权限模型。
+- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 也已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 生成 recovery plan；但还没有外部 skill registry、动态配置和真实权限模型。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 
@@ -93,12 +96,14 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v22：`integrations/langgraph_workflow.py` 中的 `skill_execution` route、`call_skill()` node 和 `_next_after_skill()`。
-2. 理解 `agent/core.py` 如何通过 `_build_langgraph_metadata()` 把 graph 内部的 `skill_run` 暴露给主 trace。
-3. 理解 `evals/regression_cases.json` 中的 `langgraph-skill-execution` case。
-4. 手动运行 `python -m unittest tests.test_langgraph_workflow tests.test_agent tests.test_evals -v`。
-5. 手动运行 `python -m cli.eval_runner`，确认 eval 为 16/16。
-6. 手动运行 `python -m cli.main --input "Use LangGraph to execute skill for code review." --trace`，观察 graph route、skill status 和 SkillRun 输出。
+1. 学习 v23：`integrations/langgraph_workflow.py` 中的 `recover_skill_failure()` 和 recovery plan helper。
+2. 理解 `skill_status == failed` 如何通过 `_next_after_skill()` 进入 recovery node。
+3. 理解 `agent/core.py` 如何通过 `_build_langgraph_metadata()` 把 `recovery_plan` 暴露给主 trace。
+4. 阅读 `tests/test_langgraph_workflow.py` 中的 failure recovery 测试。
+5. 阅读 `tests/test_agent.py` 中的 recovery plan metadata 测试。
+6. 手动运行 `python -m unittest tests.test_langgraph_workflow tests.test_agent -v`。
+7. 手动运行 `python -m unittest discover -s tests -v`。
+8. 手动运行 `python -m cli.eval_runner`。
 
 ## 当前学习重点
 
@@ -123,6 +128,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - Agent 可观测性不能只靠文本 trace；关键 run object 应该能导出结构化 dict，服务测试、eval、恢复和后续 LangGraph state。
 - LangGraph node 应该有清晰职责边界；当某类能力需要结构化 state 和独立分支时，应该优先建独立 node，而不是挤进通用 tool node。
 - 条件边可以基于运行结果，而不只是基于用户意图；`skill_status` 是后续 failure recovery 的分支依据。
+- 失败路径也应该是 graph 的一等路径；失败不应该只变成错误字符串，而应该变成可观察、可测试、可恢复的结构化状态。
+- recovery node 的核心职责是把失败事实转换成下一步行动计划，而不是隐藏失败或自动冒险重试。
 
 ## 已完成
 
@@ -147,7 +154,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v19：标准化 Skills execution run。
 - 完成 v20：tool-backed skill runner。
 - 完成 v21：SkillRun trace / JSON export。
-- 正在进行 v22：LangGraph skill node。
+- 完成 v22：LangGraph skill node。
+- 正在进行 v23：LangGraph skill failure recovery。
 
 ## 未完成
 
@@ -155,7 +163,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 让 LangGraph 成为可配置的默认主执行器。
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
-- LangGraph skill failure recovery。
+- LangGraph tool failure recovery。
 - LangGraph checkpoint / persistence。
 
 ## 恢复指令
@@ -218,6 +226,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 54. `docs/skill-trace-export-exercises_v21.md`
 55. `versions/langgraph-skill-node_v22.md`
 56. `docs/langgraph-skill-node-exercises_v22.md`
+57. `versions/langgraph-skill-failure-recovery_v23.md`
+58. `docs/langgraph-skill-failure-recovery-exercises_v23.md`
 
 然后继续执行当前具体任务。
 
@@ -274,6 +284,12 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - `agent/core.py` 中的 `_build_langgraph_metadata`
 - `tests/test_langgraph_workflow.py` 中的 LangGraph skill node 测试
 - `versions/langgraph-skill-node_v22.md`
+- `integrations/langgraph_workflow.py` 中的 `recover_skill_failure`
+- `integrations/langgraph_workflow.py` 中的 recovery plan helper
+- `agent/core.py` 中的 recovery plan metadata 透传
+- `tests/test_langgraph_workflow.py` 中的 failure recovery 测试
+- `tests/test_agent.py` 中的 recovery plan metadata 测试
+- `versions/langgraph-skill-failure-recovery_v23.md`
 - `versions/tool-backed-skills_v20.md`
 - `skills/execution.py` 中的 `to_dict()` 方法
 - `agent/tools.py` 中的 `ToolResult.metadata`

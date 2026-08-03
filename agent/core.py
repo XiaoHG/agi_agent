@@ -437,6 +437,8 @@ class WorkspaceAgent:
         if graph_state.get("skill_run") is not None:
             metadata["skill_run"] = graph_state["skill_run"]
             metadata["skill_status"] = graph_state.get("skill_status")
+        if graph_state.get("recovery_plan") is not None:
+            metadata["recovery_plan"] = graph_state["recovery_plan"]
         return metadata
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:

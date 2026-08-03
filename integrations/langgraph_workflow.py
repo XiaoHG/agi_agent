@@ -23,6 +23,7 @@ class RAGGraphState(TypedDict, total=False):
     tool_output: str  # 工具返回结果
     skill_run: dict[str, Any]  # skill 执行的结构化 trace
     skill_status: str  # skill 执行状态，用于 graph 条件边判断
+    recovery_plan: dict[str, Any]  # skill 失败后的结构化恢复计划
     answer: str  # 最终回答
     error: str  # 错误信息
     steps: list[str]  # 执行步骤记录（调试用）
@@ -120,8 +121,21 @@ def build_rag_graph(workspace_root: Path | str = "."):
                 **state,
                 "error": str(error),
                 "skill_status": "failed",
+                "recovery_plan": _build_exception_recovery_plan(state, error),
                 "steps": steps,
             }
+
+    def recover_skill_failure(state: RAGGraphState) -> RAGGraphState:
+        """Build a deterministic recovery plan for a failed skill run."""
+
+        steps = [*state.get("steps", []), "recover_skill_failure"]
+        recovery_plan = _build_skill_recovery_plan(state)
+        return {
+            **state,
+            "recovery_plan": recovery_plan,
+            "tool_output": _format_recovery_plan(recovery_plan),
+            "steps": steps,
+        }
 
     def finalize(state: RAGGraphState) -> RAGGraphState:
         """Convert tool output or error into the final graph answer."""
@@ -144,6 +158,7 @@ def build_rag_graph(workspace_root: Path | str = "."):
     graph.add_node("route", route)
     graph.add_node("call_tool", call_tool)
     graph.add_node("call_skill", call_skill)
+    graph.add_node("recover_skill_failure", recover_skill_failure)
     graph.add_node("finalize", finalize)
 
     graph.add_edge(START, "route")
@@ -162,9 +177,10 @@ def build_rag_graph(workspace_root: Path | str = "."):
         _next_after_skill,
         {
             "skill_completed": "finalize",
-            "skill_failed": "finalize",
+            "skill_failed": "recover_skill_failure",
         },
     )
+    graph.add_edge("recover_skill_failure", "finalize")
     graph.add_edge("finalize", END)
 
     return graph.compile()
@@ -206,6 +222,112 @@ def _looks_like_skill_execution(lowered_question: str) -> bool:
         "skill execution",
     ]
     return any(keyword in lowered_question for keyword in keywords)
+
+
+def _build_skill_recovery_plan(state: RAGGraphState) -> dict[str, Any]:
+    """Create structured recovery data from a failed skill run."""
+
+    skill_run = state.get("skill_run")
+    if not isinstance(skill_run, dict):
+        return {
+            "status": "failed",
+            "skill_name": "unknown",
+            "failed_step": None,
+            "reason": state.get("error", "Skill execution failed without a structured run."),
+            "completed_steps": 0,
+            "next_safe_action": "Inspect the graph error and rerun the skill after fixing the execution context.",
+        }
+
+    failed_step = _find_failed_skill_step(skill_run)
+    return {
+        "status": "failed",
+        "skill_name": _extract_skill_name(skill_run),
+        "failed_step": failed_step,
+        "reason": _extract_failure_reason(failed_step, state),
+        "completed_steps": skill_run.get("completed_steps", 0),
+        "next_safe_action": _build_next_safe_action(failed_step),
+    }
+
+
+def _build_exception_recovery_plan(state: RAGGraphState, error: Exception) -> dict[str, Any]:
+    """Create recovery data when skill execution raises before returning SkillRun."""
+
+    return {
+        "status": "failed",
+        "skill_name": "unknown",
+        "failed_step": None,
+        "reason": str(error),
+        "completed_steps": 0,
+        "next_safe_action": "Inspect the exception, fix the runtime context, and rerun the graph skill request.",
+    }
+
+
+def _find_failed_skill_step(skill_run: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the first failed step from a structured SkillRun trace."""
+
+    steps = skill_run.get("steps", [])
+    if not isinstance(steps, list):
+        return None
+    for step in steps:
+        if isinstance(step, dict) and step.get("status") == "failed":
+            return step
+    return None
+
+
+def _extract_skill_name(skill_run: dict[str, Any]) -> str:
+    """Read the selected skill name from a SkillRun trace."""
+
+    skill = skill_run.get("skill", {})
+    if isinstance(skill, dict):
+        name = skill.get("name")
+        if isinstance(name, str):
+            return name
+    return "unknown"
+
+
+def _extract_failure_reason(failed_step: dict[str, Any] | None, state: RAGGraphState) -> str:
+    """Find the clearest available reason for a failed skill run."""
+
+    if failed_step:
+        error = failed_step.get("error")
+        observation = failed_step.get("observation")
+        if isinstance(error, str) and error:
+            return error
+        if isinstance(observation, str) and observation:
+            return observation
+    return state.get("error", "Skill execution failed.")
+
+
+def _build_next_safe_action(failed_step: dict[str, Any] | None) -> str:
+    """Suggest the next deterministic recovery action from the failed step."""
+
+    if not failed_step:
+        return "Inspect the skill trace and rerun after fixing the missing execution context."
+    tool_name = failed_step.get("tool_name") or "the failed tool"
+    tool_input = failed_step.get("tool_input") or "the requested input"
+    return f"Inspect {tool_input} for {tool_name}, fix the missing resource or path, then rerun the skill."
+
+
+def _format_recovery_plan(recovery_plan: dict[str, Any]) -> str:
+    """Render a recovery plan as deterministic graph output."""
+
+    failed_step = recovery_plan.get("failed_step")
+    failed_step_text = "none"
+    if isinstance(failed_step, dict):
+        failed_step_text = (
+            f"{failed_step.get('index')}. {failed_step.get('instruction')} "
+            f"(tool={failed_step.get('tool_name')}, input={failed_step.get('tool_input')})"
+        )
+
+    return (
+        "Skill recovery plan\n"
+        f"Status: {recovery_plan.get('status')}\n"
+        f"Skill: {recovery_plan.get('skill_name')}\n"
+        f"Failed step: {failed_step_text}\n"
+        f"Reason: {recovery_plan.get('reason')}\n"
+        f"Completed steps: {recovery_plan.get('completed_steps')}\n"
+        f"Next safe action: {recovery_plan.get('next_safe_action')}"
+    )
 
 
 def _looks_like_search_only(lowered_question: str) -> bool:

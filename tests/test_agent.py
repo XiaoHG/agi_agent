@@ -166,6 +166,20 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(trace["skill_run"]["status"], "completed")
         self.assertIn("Skill status: completed", run.answer)
 
+    def test_agent_langgraph_metadata_contains_recovery_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            agent = WorkspaceAgent(root)
+
+            run = agent.run("Use LangGraph to execute skill for learning explanation.")
+            trace = agent.to_trace_dict(run)
+
+            self.assertEqual(trace["skill_run"]["status"], "failed")
+            self.assertEqual(trace["tool_result"]["metadata"]["skill_status"], "failed")
+            self.assertEqual(trace["tool_result"]["metadata"]["recovery_plan"]["skill_name"], "learning_explanation")
+            self.assertIn("Skill recovery plan", run.answer)
+
     def test_agent_exports_structured_trace(self) -> None:
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List available skills.")
