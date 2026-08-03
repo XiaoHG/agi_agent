@@ -417,11 +417,13 @@ class WorkspaceAgent:
 
         steps = " -> ".join(graph_state.get("steps", []))
         answer = graph_state.get("answer", "")
+        tool_status = graph_state.get("tool_status", "none")
         skill_status = graph_state.get("skill_status", "none")
         return (
             f"Graph route: {graph_state.get('route', 'unknown')}\n"
             f"Route reason: {graph_state.get('route_reason', '')}\n"
             f"Selected tool: {graph_state.get('selected_tool', 'none')}\n"
+            f"Tool status: {tool_status}\n"
             f"Skill status: {skill_status}\n"
             f"Graph steps: {steps}\n\n"
             f"{answer}"
@@ -434,6 +436,9 @@ class WorkspaceAgent:
             "graph_route": graph_state.get("route"),
             "graph_steps": graph_state.get("steps", []),
         }
+        if graph_state.get("tool_status") is not None:
+            metadata["tool_status"] = graph_state.get("tool_status")
+            metadata["tool_error"] = graph_state.get("tool_error")
         if graph_state.get("skill_run") is not None:
             metadata["skill_run"] = graph_state["skill_run"]
             metadata["skill_status"] = graph_state.get("skill_status")

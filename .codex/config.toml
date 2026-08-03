@@ -1,0 +1,12 @@
+# Project-level Codex configuration for the agi_agent workspace.
+#
+# This file keeps project-specific Codex metadata close to the codebase.
+# The global Codex config can still decide whether and how to load it.
+
+[project]
+name = "agi_agent"
+trust_level = "trusted"
+description = "Learning-oriented professional Agent engineering project with LLM, RAG, MCP, Skills, LangChain, and LangGraph stages."
+
+[skills]
+paths = [".codex/skills"]

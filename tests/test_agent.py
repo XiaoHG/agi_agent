@@ -180,6 +180,21 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertEqual(trace["tool_result"]["metadata"]["recovery_plan"]["skill_name"], "learning_explanation")
             self.assertIn("Skill recovery plan", run.answer)
 
+    def test_agent_langgraph_metadata_contains_tool_recovery_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agent = WorkspaceAgent(root)
+
+            run = agent.run("Use LangGraph to read missing.md.")
+            trace = agent.to_trace_dict(run)
+
+            metadata = trace["tool_result"]["metadata"]
+            self.assertEqual(metadata["graph_route"], "read_file")
+            self.assertEqual(metadata["tool_status"], "failed")
+            self.assertEqual(metadata["recovery_plan"]["tool_name"], "read_workspace_file")
+            self.assertEqual(metadata["recovery_plan"]["failure_type"], "missing_resource")
+            self.assertIn("Tool recovery plan", run.answer)
+
     def test_agent_exports_structured_trace(self) -> None:
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List available skills.")

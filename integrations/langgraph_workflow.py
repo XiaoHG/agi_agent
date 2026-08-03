@@ -21,9 +21,11 @@ class RAGGraphState(TypedDict, total=False):
     selected_tool: str  # 选哪个工具
     tool_input: dict[str, str]  # 传给 LangChain tool 的输入
     tool_output: str  # 工具返回结果
+    tool_status: str  # 普通工具执行状态，用于 graph 条件边判断
+    tool_error: str  # 普通工具失败原因
     skill_run: dict[str, Any]  # skill 执行的结构化 trace
     skill_status: str  # skill 执行状态，用于 graph 条件边判断
-    recovery_plan: dict[str, Any]  # skill 失败后的结构化恢复计划
+    recovery_plan: dict[str, Any]  # 失败后的结构化恢复计划
     answer: str  # 最终回答
     error: str  # 错误信息
     steps: list[str]  # 执行步骤记录（调试用）
@@ -93,12 +95,15 @@ def build_rag_graph(workspace_root: Path | str = "."):
             return {
                 **state,
                 "tool_output": output,
+                "tool_status": "completed",
                 "steps": steps,
             }
         except Exception as error:
             return {
                 **state,
                 "error": str(error),
+                "tool_error": str(error),
+                "tool_status": "failed",
                 "steps": steps,
             }
 
@@ -137,6 +142,19 @@ def build_rag_graph(workspace_root: Path | str = "."):
             "steps": steps,
         }
 
+    def recover_tool_failure(state: RAGGraphState) -> RAGGraphState:
+        """Build a deterministic recovery plan for a failed LangChain tool call."""
+
+        steps = [*state.get("steps", []), "recover_tool_failure"]
+        recovery_plan = _build_tool_recovery_plan(state)
+        return {
+            **state,
+            "error": "",
+            "recovery_plan": recovery_plan,
+            "tool_output": _format_tool_recovery_plan(recovery_plan),
+            "steps": steps,
+        }
+
     def finalize(state: RAGGraphState) -> RAGGraphState:
         """Convert tool output or error into the final graph answer."""
 
@@ -157,6 +175,7 @@ def build_rag_graph(workspace_root: Path | str = "."):
 
     graph.add_node("route", route)
     graph.add_node("call_tool", call_tool)
+    graph.add_node("recover_tool_failure", recover_tool_failure)
     graph.add_node("call_skill", call_skill)
     graph.add_node("recover_skill_failure", recover_skill_failure)
     graph.add_node("finalize", finalize)
@@ -171,7 +190,15 @@ def build_rag_graph(workspace_root: Path | str = "."):
             "finalize": "finalize",
         },
     )
-    graph.add_edge("call_tool", "finalize")
+    graph.add_conditional_edges(
+        "call_tool",
+        _next_after_tool,
+        {
+            "tool_completed": "finalize",
+            "tool_failed": "recover_tool_failure",
+        },
+    )
+    graph.add_edge("recover_tool_failure", "finalize")
     graph.add_conditional_edges(
         "call_skill",
         _next_after_skill,
@@ -203,6 +230,14 @@ def _next_after_route(state: RAGGraphState) -> str:
     return "call_tool"
 
 
+def _next_after_tool(state: RAGGraphState) -> str:
+    """Route after a normal tool call based on the structured tool status."""
+
+    if state.get("tool_status") == "completed":
+        return "tool_completed"
+    return "tool_failed"
+
+
 def _next_after_skill(state: RAGGraphState) -> str:
     """Route after skill execution based on the structured skill status."""
 
@@ -222,6 +257,67 @@ def _looks_like_skill_execution(lowered_question: str) -> bool:
         "skill execution",
     ]
     return any(keyword in lowered_question for keyword in keywords)
+
+
+def _build_tool_recovery_plan(state: RAGGraphState) -> dict[str, Any]:
+    """Create structured recovery data from a failed LangChain tool call."""
+
+    tool_name = state.get("selected_tool", "unknown")
+    tool_input = state.get("tool_input", {})
+    reason = state.get("tool_error") or state.get("error") or "Tool execution failed."
+    return {
+        "status": "failed",
+        "failure_type": _classify_tool_failure(reason),
+        "tool_name": tool_name,
+        "tool_input": tool_input,
+        "reason": reason,
+        "next_safe_action": _build_tool_next_safe_action(tool_name, tool_input, reason),
+    }
+
+
+def _classify_tool_failure(reason: str) -> str:
+    """Classify common tool failures for recovery and eval readability."""
+
+    lowered = reason.lower()
+    if "does not exist" in lowered or "not found" in lowered:
+        return "missing_resource"
+    if "escapes workspace root" in lowered or "permission" in lowered:
+        return "unsafe_or_denied_access"
+    if "api key" in lowered or "network" in lowered or "connection" in lowered:
+        return "external_dependency"
+    if "too large" in lowered:
+        return "input_too_large"
+    return "tool_execution_error"
+
+
+def _build_tool_next_safe_action(tool_name: str, tool_input: dict[str, str], reason: str) -> str:
+    """Suggest a deterministic next action for a failed normal tool call."""
+
+    failure_type = _classify_tool_failure(reason)
+    if failure_type == "missing_resource":
+        path = tool_input.get("path") or tool_input.get("question") or "the requested input"
+        return f"Inspect whether {path} exists in the workspace, correct the input, then rerun {tool_name}."
+    if failure_type == "unsafe_or_denied_access":
+        return "Use a workspace-relative path that stays inside the project root, then rerun the graph."
+    if failure_type == "external_dependency":
+        return "Check the required API key or network dependency before rerunning the tool."
+    if failure_type == "input_too_large":
+        return "Use a smaller file or add a chunked reader before rerunning the tool."
+    return f"Inspect the tool input and error message, then rerun {tool_name} with corrected arguments."
+
+
+def _format_tool_recovery_plan(recovery_plan: dict[str, Any]) -> str:
+    """Render a normal tool recovery plan as deterministic graph output."""
+
+    return (
+        "Tool recovery plan\n"
+        f"Status: {recovery_plan.get('status')}\n"
+        f"Failure type: {recovery_plan.get('failure_type')}\n"
+        f"Tool: {recovery_plan.get('tool_name')}\n"
+        f"Tool input: {recovery_plan.get('tool_input')}\n"
+        f"Reason: {recovery_plan.get('reason')}\n"
+        f"Next safe action: {recovery_plan.get('next_safe_action')}"
+    )
 
 
 def _build_skill_recovery_plan(state: RAGGraphState) -> dict[str, Any]:

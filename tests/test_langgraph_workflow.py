@@ -50,6 +50,30 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["selected_tool"], "read_workspace_file")
             self.assertIn("[read_file] README.md", result["answer"])
 
+    def test_rag_graph_recovers_failed_tool_call(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            result = run_rag_graph(root, "Read missing.md.")
+
+            self.assertEqual(result["route"], "read_file")
+            self.assertEqual(result["tool_status"], "failed")
+            self.assertEqual(result["steps"], ["route", "call_tool", "recover_tool_failure", "finalize"])
+            self.assertEqual(result["recovery_plan"]["tool_name"], "read_workspace_file")
+            self.assertEqual(result["recovery_plan"]["failure_type"], "missing_resource")
+            self.assertIn("Tool recovery plan", result["answer"])
+
+    def test_rag_graph_tool_status_controls_next_edge(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+
+            result = run_rag_graph(root, "Read README.md.")
+
+            self.assertEqual(result["tool_status"], "completed")
+            self.assertEqual(result["steps"], ["route", "call_tool", "finalize"])
+            self.assertNotIn("recovery_plan", result)
+
     def test_rag_graph_routes_to_skill_execution(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

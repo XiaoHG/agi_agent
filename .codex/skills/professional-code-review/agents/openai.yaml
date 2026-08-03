@@ -1,0 +1,4 @@
+interface:
+  display_name: "Professional Code Review"
+  short_description: "Rigorous project code review workflow"
+  default_prompt: "Use $professional-code-review to review the current code changes before commit."

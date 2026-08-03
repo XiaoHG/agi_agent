@@ -110,5 +110,12 @@
     "expected_route": "graph",
     "expected_tool": "langgraph_workflow",
     "required_answer_terms": ["Graph route: skill_execution", "Skill status: completed", "Skill run: code_review"]
+  },
+  {
+    "id": "langgraph-tool-failure-recovery",
+    "input": "Use LangGraph to read not-exist.md.",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: read_file", "Tool status: failed", "Tool recovery plan", "missing_resource"]
   }
 ]
