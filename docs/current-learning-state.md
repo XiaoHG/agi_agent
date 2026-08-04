@@ -10,7 +10,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进行 v26，目标是把 LangGraph 运行结果变成可持久化、可恢复、可回放的执行记录；当前已完成本地 checkpoint persistence 和最近运行查看入口，后续继续补 replay 能力。
+当前状态：正在进行 v27，目标是把 checkpoint 进一步升级为可浏览的 run history，并支持按 run id 查看历史记录；当前已完成本地 checkpoint persistence，正在补历史列表与单次 run 查看入口。
 
 ## 当前教师判断
 
@@ -93,6 +93,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，但还没有做基于事件流的完整 replay。
+- checkpoint 已可浏览，但还没有做跨 run 的自动 replay。
 
 ## 当前总目标
 
@@ -116,15 +117,16 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 1. 学习 v25：`agent/recovery.py` 中的 `RecoveryPlan`、`build_tool_recovery_plan()`、`build_skill_recovery_plan()` 和 `classify_failure()`。
 2. 学习 `agent/events.py` 中的 `RuntimeEvent` 和 `build_runtime_events()`。
-3. 复盘 `agent/persistence.py` 中的 `RunCheckpointStore`、`build_run_checkpoint()` 和 `build_graph_checkpoint()`。
-4. 理解 `agent/core.py` 如何在 `_persist_run()`、`load_latest_checkpoint()` 和 `format_checkpoint_summary()` 中落盘运行记录。
-5. 理解 `cli/main.py` 的 `--show-last-run` 和 `--history-dir`。
+3. 复盘 `agent/persistence.py` 中的 `RunCheckpointStore`、`build_run_checkpoint()`、`build_graph_checkpoint()`、`load_run()` 和 `list_runs()`。
+4. 理解 `agent/core.py` 如何在 `_persist_run()`、`load_latest_checkpoint()`、`load_checkpoint()` 和 `list_checkpoint_history()` 中落盘和浏览运行记录。
+5. 理解 `cli/main.py` 的 `--show-last-run`、`--show-run`、`--list-runs` 和 `--history-dir`。
 6. 理解 `cli/langgraph_demo.py` 如何把 graph state 保存为 checkpoint。
 7. 阅读 `docs/project-overall-retrospective.md`，先重新把整条项目主线串起来。
-8. 手动运行 `python -m unittest discover -s tests -v`。
-9. 手动运行 `python -m cli.eval_runner`。
-10. 手动运行 `python -m cli.main --show-last-run --trace`。
-11. 手动运行 `python -m cli.langgraph_demo --question "Read README.md."`。
+8. 手动运行 `python -m unittest tests.test_persistence -v`。
+9. 手动运行 `python -m unittest discover -s tests -v`。
+10. 手动运行 `python -m cli.main --list-runs`。
+11. 手动运行 `python -m cli.main --show-run <run_id> --trace`。
+12. 手动运行 `python -m cli.langgraph_demo --question "Read README.md."`。
 
 ## 当前学习重点
 
@@ -185,7 +187,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v24：LangGraph tool failure recovery。
 - 完成 v25：Unified Agent Runtime Events and Recovery Model。
 - 完成 v26 核心实现：LangGraph Checkpoint and Recoverable Run Persistence。
-- 正在进行 v26：补充 replay 与后续演进设计。
+- 正在进行 v27：Run History Browsing and Checkpoint Lookup。
 
 ## 未完成
 
@@ -194,6 +196,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
 - Runtime events replay。
+- checkpoint run history browser。
 
 ## 恢复指令
 

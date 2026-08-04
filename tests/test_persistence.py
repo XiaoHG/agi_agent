@@ -94,6 +94,56 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Run ID:", output.getvalue())
             self.assertIn("Route:", output.getvalue())
 
+    def test_cli_main_can_list_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            agent.run("Use LangGraph to read README.md.")
+            agent.run("Read README.md and then count lines.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--list-runs",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("1.", output.getvalue())
+            self.assertIn("graph", output.getvalue())
+
+    def test_cli_main_can_show_run_by_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            run = agent.run("Use LangGraph to read README.md.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--show-run",
+                        run.run_id,
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn(run.run_id, output.getvalue())
+            self.assertIn("Run kind:", output.getvalue())
+
     def test_langgraph_demo_persists_graph_checkpoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -7,6 +7,7 @@ from .persistence import (
     RunCheckpointStore,
     build_graph_checkpoint,
     build_run_checkpoint,
+    format_checkpoint_history,
     format_checkpoint_summary,
     load_checkpoint,
 )
@@ -67,6 +68,7 @@ __all__ = [
     "build_graph_checkpoint",
     "build_run_checkpoint",
     "build_runtime_events",
+    "format_checkpoint_history",
     "build_skill_recovery_plan",
     "build_tool_calling_messages",
     "build_tool_loop_synthesis_messages",

@@ -13,7 +13,12 @@ from .prompts import (  # 加载提示词
     load_tool_router_prompt,
 )
 from .events import build_runtime_events  # 统一运行事件导出
-from .persistence import RunCheckpointStore, build_run_checkpoint, format_checkpoint_summary  # 运行记录持久化
+from .persistence import (
+    RunCheckpointStore,
+    build_run_checkpoint,
+    format_checkpoint_history,
+    format_checkpoint_summary,
+)  # 运行记录持久化
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
@@ -488,6 +493,18 @@ class WorkspaceAgent:
         if checkpoint is None:
             return "No checkpoint found."
         return format_checkpoint_summary(checkpoint)
+
+    def load_checkpoint(self, run_id: str) -> dict[str, Any] | None:
+        """Load a checkpoint by its run id."""
+
+        return self._history_store.load_run(run_id) if self._history_store is not None else None
+
+    def list_checkpoint_history(self, limit: int = 10) -> str:
+        """Render a compact list of recent checkpoints."""
+
+        if self._history_store is None:
+            return "No checkpoint found."
+        return format_checkpoint_history(self._history_store.list_runs(limit=limit))
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
         """Convert a workflow failure into a user-facing answer."""

@@ -18,7 +18,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="checkpoint directory; defaults to <root>/logs/agent-runs",
     )
+    parser.add_argument("--list-runs", action="store_true", help="list recent checkpoints")
     parser.add_argument("--input", help="single user input")
+    parser.add_argument("--show-run", help="show a checkpoint by run id")
     parser.add_argument("--show-last-run", action="store_true", help="show the latest persisted run")
     parser.add_argument("--trace", action="store_true", help="print reasoning trace")
     return parser
@@ -42,6 +44,29 @@ def show_last_run(agent: WorkspaceAgent, show_trace: bool) -> int:
         print(checkpoint.get("trace_text", ""))
     else:
         print(agent.format_checkpoint_summary())
+    return 0
+
+
+def list_runs(agent: WorkspaceAgent) -> int:
+    """Print recent persisted runs."""
+
+    print(agent.list_checkpoint_history())
+    return 0
+
+
+def show_run(agent: WorkspaceAgent, run_id: str, show_trace: bool) -> int:
+    """Print a checkpoint selected by run id."""
+
+    checkpoint = agent.load_checkpoint(run_id)
+    if checkpoint is None:
+        print(f"No checkpoint found for run id: {run_id}")
+        return 1
+    if show_trace:
+        print(checkpoint.get("trace_text", ""))
+    else:
+        from agent.persistence import format_checkpoint_summary
+
+        print(format_checkpoint_summary(checkpoint))
     return 0
 
 
@@ -70,6 +95,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     history_dir = Path(args.history_dir) if args.history_dir else None
     agent = WorkspaceAgent(Path(args.root), history_dir=history_dir)
+    if args.list_runs:
+        return list_runs(agent)
+    if args.show_run:
+        return show_run(agent, args.show_run, args.trace)
     if args.show_last_run:
         return show_last_run(agent, args.trace)
     if args.input:

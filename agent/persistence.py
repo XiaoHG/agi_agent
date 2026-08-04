@@ -35,6 +35,32 @@ class RunCheckpointStore:
 
         return load_checkpoint(self.history_dir / "latest.json")
 
+    def load_run(self, run_id: str) -> dict[str, Any] | None:
+        """Load a checkpoint by run id if it exists."""
+
+        return load_checkpoint(self.history_dir / f"{run_id}.json")
+
+    def list_runs(self, limit: int = 10) -> list[dict[str, Any]]:
+        """List recent checkpoints ordered by modified time."""
+
+        if not self.history_dir.exists():
+            return []
+        records: list[dict[str, Any]] = []
+        run_paths = sorted(
+            (
+                path
+                for path in self.history_dir.glob("*.json")
+                if path.name != "latest.json"
+            ),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for path in run_paths[:limit]:
+            record = load_checkpoint(path)
+            if record is not None:
+                records.append(record)
+        return records
+
 
 def build_run_checkpoint(
     *,
@@ -128,6 +154,26 @@ def format_checkpoint_summary(record: dict[str, Any]) -> str:
         f"Route: {route.get('action', 'unknown')} / {route.get('tool_name', 'none')}\n"
         f"Answer preview: {answer_preview}"
     )
+
+
+def format_checkpoint_history(records: list[dict[str, Any]]) -> str:
+    """Render a compact list of saved checkpoints."""
+
+    if not records:
+        return "No saved checkpoints found."
+    lines = []
+    for index, record in enumerate(records, start=1):
+        trace = record.get("trace", {}) if isinstance(record.get("trace"), dict) else {}
+        route = trace.get("route", {}) if isinstance(trace.get("route"), dict) else record.get("route", {})
+        if not isinstance(route, dict):
+            route = {}
+        lines.append(
+            f"{index}. {record.get('run_id', 'unknown')} "
+            f"[{record.get('run_kind', 'unknown')}] "
+            f"{record.get('created_at', 'unknown')} "
+            f"{route.get('action', 'unknown')} / {route.get('tool_name', 'none')}"
+        )
+    return "\n".join(lines)
 
 
 def _normalize_run_id(record: dict[str, Any]) -> str:

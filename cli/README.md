@@ -31,6 +31,18 @@ Show the latest persisted run:
 python -m cli.main --show-last-run --trace
 ```
 
+List recent saved runs:
+
+```bash
+python -m cli.main --list-runs
+```
+
+Show one saved run by id:
+
+```bash
+python -m cli.main --show-run abc12345 --trace
+```
+
 Run LLM tool calling:
 
 ```bash
