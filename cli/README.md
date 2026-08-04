@@ -25,6 +25,12 @@ Run with trace output:
 python -m cli.main --input "Read README.md and summarize the project learning goals." --trace
 ```
 
+Show the latest persisted run:
+
+```bash
+python -m cli.main --show-last-run --trace
+```
+
 Run LLM tool calling:
 
 ```bash
@@ -35,4 +41,10 @@ Run a bounded LLM tool loop:
 
 ```bash
 python -m cli.tool_loop_demo --input "Use tool loop to count lines in README.md and then answer." --trace
+```
+
+Run a LangGraph demo with checkpoint persistence:
+
+```bash
+python -m cli.langgraph_demo --question "Read README.md."
 ```

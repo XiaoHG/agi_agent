@@ -13,6 +13,7 @@ from .prompts import (  # 加载提示词
     load_tool_router_prompt,
 )
 from .events import build_runtime_events  # 统一运行事件导出
+from .persistence import RunCheckpointStore, build_run_checkpoint, format_checkpoint_summary  # 运行记录持久化
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
@@ -56,7 +57,12 @@ class AgentRun:
 class WorkspaceAgent:
     """Minimal agent that can answer directly or call local tools."""
 
-    def __init__(self, workspace_root: Path | str = ".", llm_client: Any | None = None) -> None:
+    def __init__(
+        self,
+        workspace_root: Path | str = ".",
+        llm_client: Any | None = None,
+        history_dir: Path | str | None = None,
+    ) -> None:
         self.workspace_root = Path(workspace_root).resolve()  # 解析为绝对路径
         self.system_prompt = load_system_prompt()            # 加载系统提示词
         self.tool_router_prompt = load_tool_router_prompt()  # 加载工具路由提示词
@@ -64,6 +70,8 @@ class WorkspaceAgent:
         self.tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()  # 加载工具循环最终综合提示词
         self.tool_specs = build_workspace_tool_specs()  # 工具 schema 目录
         self._llm_client = llm_client  # 测试可注入 fake client；生产环境延迟创建真实 client
+        checkpoint_root = history_dir if history_dir is not None else self.workspace_root / "logs" / "agent-runs"
+        self._history_store = RunCheckpointStore(Path(checkpoint_root))  # 本地 checkpoint 存储
 
     def run(self, user_input: str) -> AgentRun:
         """Execute one turn and return a structured run record."""
@@ -92,7 +100,7 @@ class WorkspaceAgent:
             )
             run.answer = self._run_workflow(workflow_state, workflow_plan)
             run.steps = workflow_state.steps
-            return run
+            return self._persist_run(run)
 
         # 3.6 如果显式要求 LangGraph，则进入图编排路径
         if run.route.action == "graph":
@@ -110,7 +118,7 @@ class WorkspaceAgent:
                 run.steps.append(AgentStep("Graph failed", run.tool_error))
                 run.answer = self._compose_tool_error_answer(run)
             run.steps.append(AgentStep("Complete", "final answer generated"))
-            return run
+            return self._persist_run(run)
 
         # 3.7 如果要求多步工具循环，则让模型在观察结果后继续决策
         if run.route.action == "tool_loop":
@@ -127,7 +135,7 @@ class WorkspaceAgent:
                 run.steps.append(AgentStep("Tool loop failed", run.tool_error))
                 run.answer = self._compose_tool_error_answer(run)
             run.steps.append(AgentStep("Complete", "final answer generated"))
-            return run
+            return self._persist_run(run)
 
         # 3.7 如果要求模型参与工具选择，则进入结构化 tool calling 路径
         if run.route.action == "tool_call":
@@ -160,7 +168,7 @@ class WorkspaceAgent:
                 run.steps.append(AgentStep("Tool calling failed", run.tool_error))
                 run.answer = self._compose_tool_error_answer(run)
             run.steps.append(AgentStep("Complete", "final answer generated"))
-            return run
+            return self._persist_run(run)
 
         # 3. 分支逻辑：根据路由结果执行不同策略
         if run.route.action == "use_tool":
@@ -181,7 +189,7 @@ class WorkspaceAgent:
 
         # 4. 记录完成步骤并返回完整会话
         run.steps.append(AgentStep("Complete", "final answer generated"))
-        return run
+        return self._persist_run(run)
 
     def _run_workflow(self, state: AgentState, plan: WorkflowPlan) -> str:
         """Execute a simple multi-step workflow and build the final answer."""
@@ -446,6 +454,40 @@ class WorkspaceAgent:
         if graph_state.get("recovery_plan") is not None:
             metadata["recovery_plan"] = graph_state["recovery_plan"]
         return metadata
+
+    def _persist_run(self, run: AgentRun) -> AgentRun:
+        """Persist the structured run as a local checkpoint."""
+
+        if self._history_store is None:
+            return run
+        trace = self.to_trace_dict(run)
+        checkpoint = build_run_checkpoint(
+            run_id=run.run_id,
+            run_kind=run.route.action,
+            user_input=run.user_input,
+            route=trace["route"],
+            steps=trace["steps"],
+            answer=run.answer,
+            trace=trace,
+            trace_text=self.format_trace(run),
+            tool_error=run.tool_error,
+            tool_result=trace["tool_result"],
+        )
+        self._history_store.save(checkpoint)
+        return run
+
+    def load_latest_checkpoint(self) -> dict[str, Any] | None:
+        """Load the most recent persisted checkpoint."""
+
+        return self._history_store.load_latest() if self._history_store is not None else None
+
+    def format_checkpoint_summary(self) -> str:
+        """Render the latest checkpoint summary for CLI use."""
+
+        checkpoint = self.load_latest_checkpoint()
+        if checkpoint is None:
+            return "No checkpoint found."
+        return format_checkpoint_summary(checkpoint)
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
         """Convert a workflow failure into a user-facing answer."""

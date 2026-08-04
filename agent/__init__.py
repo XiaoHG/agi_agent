@@ -3,6 +3,13 @@
 from .core import AgentRun, WorkspaceAgent
 from .events import RuntimeEvent, build_runtime_events
 from .llm import DeepSeekConfig, DeepSeekLLMClient, LLMError, LLMMessage, LLMResponse
+from .persistence import (
+    RunCheckpointStore,
+    build_graph_checkpoint,
+    build_run_checkpoint,
+    format_checkpoint_summary,
+    load_checkpoint,
+)
 from .recovery import (
     RecoveryPlan,
     build_exception_recovery_plan,
@@ -46,6 +53,7 @@ __all__ = [
     "LLMResponse",
     "RecoveryPlan",
     "RuntimeEvent",
+    "RunCheckpointStore",
     "WorkspaceAgent",
     "ToolRoute",
     "ToolCallSelection",
@@ -56,6 +64,8 @@ __all__ = [
     "ToolError",
     "ToolResult",
     "build_exception_recovery_plan",
+    "build_graph_checkpoint",
+    "build_run_checkpoint",
     "build_runtime_events",
     "build_skill_recovery_plan",
     "build_tool_calling_messages",
@@ -63,6 +73,7 @@ __all__ = [
     "build_tool_recovery_plan",
     "build_workspace_tool_specs",
     "answer_docs_with_llm",
+    "format_checkpoint_summary",
     "list_agent_skills",
     "list_dir",
     "list_mcp_server_tools",
@@ -76,6 +87,7 @@ __all__ = [
     "run_skill_with_workspace",
     "count_lines",
     "classify_failure",
+    "load_checkpoint",
     "search_docs",
     "parse_tool_call_selection",
     "route_intent",
