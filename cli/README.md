@@ -78,3 +78,21 @@ Rebuild the local RAG vector index:
 ```bash
 python -m cli.rag_index_demo --question "agent workflow"
 ```
+
+List local MCP tools with permission classes:
+
+```bash
+python -m cli.mcp_demo --list-tools
+```
+
+Attempt an MCP write with the default read-only policy:
+
+```bash
+python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hello mcp"
+```
+
+Allow the MCP write tool explicitly:
+
+```bash
+python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hello mcp" --allow-write
+```

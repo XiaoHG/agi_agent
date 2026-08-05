@@ -1,11 +1,20 @@
 """Tests for the local MCP learning layer."""
 
 from pathlib import Path
+import subprocess
+import sys
 import tempfile  # 临时工作区，隔离测试文件
 import unittest  # Python 官方测试框架
 
 from agent import WorkspaceAgent, route_intent
-from mcp import LocalMCPClient, LocalMCPServer, call_mcp_tool, list_mcp_tools
+from mcp import (
+    LocalMCPClient,
+    LocalMCPServer,
+    MCPPermissionPolicy,
+    call_mcp_tool,
+    call_mcp_tool_response,
+    list_mcp_tools,
+)
 
 
 class FakeMCPReadClient:
@@ -36,6 +45,9 @@ class LocalMCPTests(unittest.TestCase):
 
         self.assertIn("workspace_summary", names)
         self.assertIn("read_project_file", names)
+        self.assertIn("write_project_file", names)
+        write_tool = next(tool for tool in tools if tool.name == "write_project_file")
+        self.assertEqual(write_tool.permission_level, "write")
 
     def test_client_calls_workspace_summary(self) -> None:
         client = LocalMCPClient(LocalMCPServer(Path(".")))
@@ -61,6 +73,7 @@ class LocalMCPTests(unittest.TestCase):
 
         self.assertIn("Available MCP tools", output)
         self.assertIn("workspace_summary", output)
+        self.assertIn("write_project_file [write]", output)
 
     def test_adapter_renders_mcp_error(self) -> None:
         output = call_mcp_tool(Path("."), "missing_tool")
@@ -73,6 +86,12 @@ class LocalMCPTests(unittest.TestCase):
 
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "list_mcp_tools")
+
+    def test_route_to_mcp_write_tool(self) -> None:
+        route = route_intent("Use MCP to write notes.txt with content hello.")
+
+        self.assertEqual(route.action, "use_tool")
+        self.assertEqual(route.tool_name, "mcp_write_project_file")
 
     def test_agent_lists_mcp_tools(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -89,6 +108,19 @@ class LocalMCPTests(unittest.TestCase):
 
         self.assertEqual(run.route.tool_name, "mcp_workspace_summary")
         self.assertIn("[mcp:ok]", run.answer)
+
+    def test_agent_denies_mcp_write_by_default(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+
+        run = agent.run("Use MCP to write notes.txt with content hello mcp.")
+        trace = agent.to_trace_dict(run)
+
+        self.assertEqual(run.route.tool_name, "mcp_write_project_file")
+        self.assertIn("[mcp:error]", run.answer)
+        self.assertIn("Permission denied for MCP tool", run.answer)
+        metadata = trace["tool_result"]["metadata"]
+        self.assertEqual(metadata["permission_decision"]["permission_level"], "write")
+        self.assertEqual(metadata["permission_decision"]["allowed"], False)
 
     def test_agent_reads_project_file_through_mcp_tool(self) -> None:
         client = FakeMCPReadClient()
@@ -108,6 +140,36 @@ class LocalMCPTests(unittest.TestCase):
         self.assertIn("[mcp:error]", output)
         self.assertIn("Missing required argument", output)
 
+    def test_adapter_denies_write_tool_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            response = call_mcp_tool_response(
+                root,
+                "write_project_file",
+                {"path": "notes.txt", "content": "hello mcp"},
+            )
+
+            self.assertTrue(response.is_error)
+            self.assertIn("Permission denied", response.content)
+            self.assertEqual(response.metadata["permission_decision"]["allowed"], False)
+
+    def test_adapter_allows_write_tool_with_explicit_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            response = call_mcp_tool_response(
+                root,
+                "write_project_file",
+                {"path": "notes.txt", "content": "hello mcp"},
+                policy=MCPPermissionPolicy(allow_read_only=True, allow_write=True),
+            )
+
+            self.assertFalse(response.is_error)
+            self.assertIn("Wrote", response.content)
+            self.assertEqual((root / "notes.txt").read_text(encoding="utf-8"), "hello mcp")
+            self.assertEqual(response.metadata["permission_decision"]["allowed"], True)
+
     def test_client_rejects_escaped_project_file_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -117,6 +179,55 @@ class LocalMCPTests(unittest.TestCase):
 
             self.assertTrue(response.is_error)
             self.assertIn("Path escapes workspace root", response.content)
+
+    def test_mcp_demo_denies_write_without_policy_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "cli.mcp_demo",
+                    "--root",
+                    tmp,
+                    "--tool",
+                    "write_project_file",
+                    "--path",
+                    "notes.txt",
+                    "--content",
+                    "hello mcp",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertIn("[mcp:error]", result.stdout)
+            self.assertIn("Permission denied", result.stdout)
+
+    def test_mcp_demo_allows_write_with_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "cli.mcp_demo",
+                    "--root",
+                    tmp,
+                    "--tool",
+                    "write_project_file",
+                    "--path",
+                    "notes.txt",
+                    "--content",
+                    "hello mcp",
+                    "--allow-write",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertIn("[mcp:ok]", result.stdout)
+            self.assertEqual((Path(tmp) / "notes.txt").read_text(encoding="utf-8"), "hello mcp")
 
 
 if __name__ == "__main__":

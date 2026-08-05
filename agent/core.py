@@ -35,6 +35,7 @@ from .tools import (  # 工具定义与异常
     list_project_subagents,
     mcp_workspace_summary,
     mcp_read_project_file,
+    mcp_write_project_file,
     plan_skill,
     plan_subagent_collaboration,
     read_file,
@@ -540,6 +541,8 @@ class WorkspaceAgent:
             return mcp_workspace_summary(self.workspace_root)
         if route.tool_name == "mcp_read_project_file":
             return mcp_read_project_file(self.workspace_root, route.tool_input or "")
+        if route.tool_name == "mcp_write_project_file":
+            return mcp_write_project_file(self.workspace_root, route.tool_input or "")
         if route.tool_name == "list_skills":
             return list_agent_skills(self.workspace_root)
         if route.tool_name == "plan_skill":

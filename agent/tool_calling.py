@@ -212,6 +212,7 @@ _TASK_INPUT_TOOLS = {
     "search_docs",
     "search_vector_docs",
     "answer_docs_with_llm",
+    "mcp_write_project_file",
     "execute_skill",
     "plan_skill",
     "plan_subagents",

@@ -86,6 +86,11 @@ def build_workspace_tool_specs() -> list[ToolSpec]:
             arguments=(ToolArgumentSpec("path", "string", "Workspace-relative file path."),),
         ),
         ToolSpec(
+            name="mcp_write_project_file",
+            description="Write a workspace file through the local MCP adapter. This may be denied by the MCP permission policy.",
+            arguments=(ToolArgumentSpec("task", "string", "Natural-language write request containing path and content."),),
+        ),
+        ToolSpec(
             name="list_skills",
             description="List reusable skills available in the project.",
         ),

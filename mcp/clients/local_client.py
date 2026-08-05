@@ -17,6 +17,11 @@ class LocalMCPClient:
 
         return self.server.list_tools()
 
+    def get_tool_spec(self, tool_name: str) -> MCPToolSpec | None:
+        """Ask the server for one registered tool spec."""
+
+        return self.server.get_tool_spec(tool_name)
+
     def call_tool(self, tool_name: str, arguments: dict[str, object] | None = None) -> MCPResponse:
         """Call one server tool through a request object."""
 

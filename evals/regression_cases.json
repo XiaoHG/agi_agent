@@ -91,6 +91,13 @@
     "required_answer_terms": ["[mcp:ok]", "Workspace"]
   },
   {
+    "id": "mcp-write-denied",
+    "input": "Use MCP to write notes.txt with content hello mcp.",
+    "expected_route": "use_tool",
+    "expected_tool": "mcp_write_project_file",
+    "required_answer_terms": ["[mcp:error]", "Permission denied for MCP tool", "write_project_file"]
+  },
+  {
     "id": "llm-rag-no-context",
     "input": "Answer with local docs and DeepSeek RAG: the and of",
     "expected_route": "use_tool",

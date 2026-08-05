@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v30 Project Skill Registry 已完成，本地待提交。
+当前状态：v31 MCP 工具注册与权限策略 已完成，待提交推送。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：进入 MCP 工具注册与权限策略，补齐专业工具层的权限边界。
+下一阶段建议：进入默认 LangGraph 主执行器，把 direct answer、RAG、tool、Skill、MCP 统一纳入主执行 runtime。
 
 ## 当前教师判断
 
@@ -103,13 +103,18 @@ v29 功能基线提交：
 - built-in skills 与 project skills merged catalog
 - `professional-code-review` Agent 可发现能力
 - project skill structured trace metadata
+- MCP tool permission classification
+- default read-only MCP policy
+- MCP permission decision trace metadata
+- MCP write-tool refusal path
+- MCP write-tool explicit allow path
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 已开始接入本地 vector index，但还不是外部 embedding provider / production vector store。
-- MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，但还没有更完整的动态配置和真实权限模型。
+- MCP tool result 已可通过 tool loop 进入 LLM 综合，并已具备最小权限分类和拒绝路径；但 MCP 协议仍是本地 in-process 学习版。
+- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，但还没有更完整的动态配置和 skill-level 权限模型。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，但还没有做基于事件流的完整 replay。
@@ -136,10 +141,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v29 Professional RAG v1：`versions/professional-rag-v1_v29.md`。
-2. 查看 v29 练习答案：`docs/professional-rag-v1-exercises_v29.md`。
+1. 复盘 v31 MCP 工具注册与权限策略：`versions/mcp-tool-permission-policy_v31.md`。
+2. 查看 v31 练习：`docs/mcp-tool-permission-policy-exercises_v31.md`。
 3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
-4. 进入下一阶段：MCP 工具注册与权限策略。
+4. 进入下一阶段：默认 LangGraph 主执行器。
 
 ## 当前学习重点
 
@@ -206,6 +211,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v28：LLM Planner for LangGraph。
 - 完成 v29：Professional RAG v1。
 - 完成 v30：Project Skill Registry。
+- 完成 v31：MCP 工具注册与权限策略。
 
 ## 未完成
 
@@ -232,14 +238,16 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 2. `docs/current-learning-state.md`
 3. `docs/work-snapshot-2026-08-05.md`
 4. `docs/professional-agent-iteration-plan.md`
-5. `versions/project-skill-registry_v30.md`
-6. `docs/project-skill-registry-exercises_v30.md`
-7. `skills/catalog.py`
-8. `skills/execution.py`
-9. `agent/tools.py`
-10. `cli/collaboration_demo.py`
-11. `tests/test_collaboration.py`
-12. `evals/regression_cases.json`
+5. `versions/mcp-tool-permission-policy_v31.md`
+6. `docs/mcp-tool-permission-policy-exercises_v31.md`
+7. `mcp/schema.py`
+8. `mcp/policy.py`
+9. `mcp/adapter.py`
+10. `mcp/servers/local_server.py`
+11. `agent/tools.py`
+12. `cli/mcp_demo.py`
+13. `tests/test_mcp.py`
+14. `evals/regression_cases.json`
 然后继续执行当前具体任务。
 
 ## 下一步建议
@@ -250,4 +258,4 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 建议优先进入：
 
-- MCP 工具注册与权限策略：为 workspace / MCP tool schema 增加权限分类、判定记录和拒绝/恢复路径。
+- 默认 LangGraph 主执行器：把 direct answer、RAG、tool、Skill、MCP 统一纳入 graph runtime，并让旧的 if/else 主控逐步退化为 fallback。

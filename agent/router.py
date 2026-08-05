@@ -394,7 +394,14 @@ def route_intent(user_input: str) -> ToolRoute:
     if _looks_like_mcp_request(text):
         tool_name = "list_mcp_tools"
         reason = "The user is asking to inspect local MCP tools."
-        if "summary" in text.lower() or "workspace" in text.lower():
+        lowered = text.lower()
+        if "write" in lowered or "save" in lowered or "create" in lowered:
+            tool_name = "mcp_write_project_file"
+            reason = "The user is asking to call a write-capable MCP tool."
+        elif "read" in lowered or "open" in lowered:
+            tool_name = "mcp_read_project_file"
+            reason = "The user is asking to read a workspace file through MCP."
+        elif "summary" in lowered or "workspace" in lowered:
             tool_name = "mcp_workspace_summary"
             reason = "The user is asking to call the local MCP workspace summary tool."
         return ToolRoute(

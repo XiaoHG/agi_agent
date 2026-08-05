@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from mcp import call_mcp_tool, list_mcp_tools
+from mcp import call_mcp_tool_response, list_mcp_tools
 from rag import answer_question, answer_question_with_llm, answer_question_with_vector_index
 from skills import SkillToolRequest, SkillToolResponse, describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents
@@ -17,6 +17,10 @@ from .llm import LLMError
 
 MAX_FILE_BYTES = 64_000
 SKILL_NAME_PATTERN = re.compile(r"skill\s*[:=]\s*(?P<name>[A-Za-z0-9_.-]+)", re.IGNORECASE)
+FILE_PATH_PATTERN = re.compile(
+    r"(?P<path>(?:[\w.\-]+/)*[\w.\-]+\.(?:md|txt|py|json|yaml|yml|toml|ini|cfg|csv|tsv|log))",
+    re.IGNORECASE,
+)
 
 
 class ToolError(Exception):
@@ -132,15 +136,39 @@ def list_mcp_server_tools(root: Path) -> ToolResult:
 def mcp_workspace_summary(root: Path) -> ToolResult:
     """Call the local MCP workspace summary tool."""
 
-    output = call_mcp_tool(root, "workspace_summary")
-    return ToolResult("mcp_workspace_summary", output)
+    response = call_mcp_tool_response(root, "workspace_summary")
+    status = "error" if response.is_error else "ok"
+    return ToolResult(
+        "mcp_workspace_summary",
+        f"[mcp:{status}] {response.tool_name}\n{response.content}",
+        response.metadata,
+    )
 
 
 def mcp_read_project_file(root: Path, raw_path: str) -> ToolResult:
     """Read a workspace file through the local MCP adapter."""
 
-    output = call_mcp_tool(root, "read_project_file", {"path": raw_path})
-    return ToolResult("mcp_read_project_file", output)
+    resolved_path = _extract_workspace_path(raw_path) or raw_path
+    response = call_mcp_tool_response(root, "read_project_file", {"path": resolved_path})
+    status = "error" if response.is_error else "ok"
+    return ToolResult(
+        "mcp_read_project_file",
+        f"[mcp:{status}] {response.tool_name}\n{response.content}",
+        response.metadata,
+    )
+
+
+def mcp_write_project_file(root: Path, task: str) -> ToolResult:
+    """Attempt to write a workspace file through the local MCP adapter."""
+
+    arguments = _parse_mcp_write_task(task)
+    response = call_mcp_tool_response(root, "write_project_file", arguments)
+    status = "error" if response.is_error else "ok"
+    return ToolResult(
+        "mcp_write_project_file",
+        f"[mcp:{status}] {response.tool_name}\n{response.content}",
+        response.metadata,
+    )
 
 
 def list_agent_skills(root: Path = Path(".")) -> ToolResult:
@@ -223,4 +251,32 @@ def _extract_skill_name(task: str) -> str | None:
     match = SKILL_NAME_PATTERN.search(task)
     if match:
         return match.group("name")
+    return None
+
+
+def _parse_mcp_write_task(task: str) -> dict[str, str]:
+    """Extract file path and content from a natural-language MCP write task."""
+
+    path_match = FILE_PATH_PATTERN.search(task)
+    path = path_match.group("path") if path_match else ""
+    lowered = task.lower()
+    content = ""
+    markers = ["content:", "with content ", "with "]
+    for marker in markers:
+        if marker in lowered:
+            start = lowered.index(marker) + len(marker)
+            content = task[start:].strip().strip("\"'")
+            break
+    return {
+        "path": path,
+        "content": content.rstrip("."),
+    }
+
+
+def _extract_workspace_path(text: str) -> str | None:
+    """Extract the first workspace-like file path from free-form text."""
+
+    match = FILE_PATH_PATTERN.search(text)
+    if match:
+        return match.group("path")
     return None

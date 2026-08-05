@@ -53,6 +53,12 @@ class ToolCallingTests(unittest.TestCase):
 
         self.assertIn("mcp_read_project_file", names)
 
+    def test_tool_schema_exposes_mcp_write_tool(self) -> None:
+        specs = build_workspace_tool_specs()
+        names = {spec.name for spec in specs}
+
+        self.assertIn("mcp_write_project_file", names)
+
     def test_tool_schema_exposes_skill_execution(self) -> None:
         specs = build_workspace_tool_specs()
         names = {spec.name for spec in specs}
