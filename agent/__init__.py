@@ -42,6 +42,7 @@ from .tools import (
     run_skill,
     run_skill_with_workspace,
     search_docs,
+    search_vector_docs,
 )
 
 __all__ = [
@@ -94,6 +95,7 @@ __all__ = [
     "classify_failure",
     "load_checkpoint",
     "search_docs",
+    "search_vector_docs",
     "parse_tool_call_selection",
     "parse_graph_plan",
     "plan_graph_route",

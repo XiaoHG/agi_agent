@@ -61,6 +61,17 @@ class GroundedRAGTests(unittest.TestCase):
             self.assertEqual(client.messages[0].role, "system")
             self.assertEqual(client.messages[1].role, "user")
 
+    def test_answer_question_with_llm_uses_vector_index_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("professional rag workflow", encoding="utf-8")
+            client = StubLLMClient()
+
+            answer = answer_question_with_llm(root, "professional rag workflow", llm_client=client)
+
+            self.assertEqual(answer.sources, ["README.md:1-1"])
+            self.assertIn("README.md:1-1", answer.answer)
+
 
 if __name__ == "__main__":
     unittest.main()

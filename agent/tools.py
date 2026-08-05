@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp import call_mcp_tool, list_mcp_tools
-from rag import answer_question, answer_question_with_llm
+from rag import answer_question, answer_question_with_llm, answer_question_with_vector_index
 from skills import SkillToolRequest, SkillToolResponse, describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents
 
@@ -98,6 +98,17 @@ def search_docs(root: Path, question: str) -> ToolResult:
 
     answer = answer_question(root, question)
     return ToolResult("search_docs", answer.to_text())
+
+
+def search_vector_docs(root: Path, question: str) -> ToolResult:
+    """Search local project documents through the vector index."""
+
+    answer = answer_question_with_vector_index(root, question)
+    return ToolResult(
+        "search_vector_docs",
+        answer.to_text(),
+        {"citations": [result.citation() for result in answer.results]},
+    )
 
 
 def answer_docs_with_llm(root: Path, question: str) -> ToolResult:

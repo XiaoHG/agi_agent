@@ -40,6 +40,7 @@ from .tools import (  # 工具定义与异常
     read_file,
     run_skill_with_workspace,
     search_docs,
+    search_vector_docs,
 )
 from .state import AgentState, AgentStep  # 运行状态与轨迹记录
 from .workflow import WorkflowPlan, build_workflow_plan, build_workflow_summary  # 工作流规划与汇总
@@ -529,6 +530,8 @@ class WorkspaceAgent:
             return count_lines(self.workspace_root, route.tool_input or ".")
         if route.tool_name == "search_docs":
             return search_docs(self.workspace_root, route.tool_input or "")
+        if route.tool_name == "search_vector_docs":
+            return search_vector_docs(self.workspace_root, route.tool_input or "")
         if route.tool_name == "answer_docs_with_llm":
             return answer_docs_with_llm(self.workspace_root, route.tool_input or "")
         if route.tool_name == "list_mcp_tools":

@@ -138,6 +138,21 @@ def _looks_like_llm_rag_request(text: str) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+def _looks_like_vector_rag_request(text: str) -> bool:
+    """Return True when the user asks for professional vector RAG search."""
+
+    keywords = [
+        "professional rag",
+        "semantic search",
+        "vector rag",
+        "vector search",
+        "search vector docs",
+        "search with vector",
+    ]
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in keywords)
+
+
 def _extract_llm_rag_question(text: str) -> str:
     """Extract the actual question from an LLM-grounded RAG request."""
 
@@ -358,6 +373,14 @@ def route_intent(user_input: str) -> ToolRoute:
             tool_name="answer_docs_with_llm",
             tool_input=_extract_llm_rag_question(text),
             reason="The user is asking for an LLM-grounded answer from local project documents.",
+        )
+
+    if _looks_like_vector_rag_request(text):
+        return ToolRoute(
+            action="use_tool",
+            tool_name="search_vector_docs",
+            tool_input=text,
+            reason="The user is asking for professional vector RAG search over local documents.",
         )
 
     if _looks_like_knowledge_search(text):

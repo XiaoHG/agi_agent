@@ -72,3 +72,9 @@ Run the LangGraph demo with the real DeepSeek planner:
 ```bash
 python -m cli.langgraph_demo --question "Read README.md." --llm-planner
 ```
+
+Rebuild the local RAG vector index:
+
+```bash
+python -m cli.rag_index_demo --question "agent workflow"
+```

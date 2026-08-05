@@ -2,6 +2,10 @@
 
 此文件用于跨会话恢复学习进度。每次学习任务结束后都应更新。
 
+当前详细工作快照：
+
+- `docs/work-snapshot-2026-08-05.md`
+
 ## Last Updated
 
 2026-08-05
@@ -10,7 +14,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进行 v28，目标是按 `docs/professional-agent-iteration-plan.md` 把 LLM Planner 接入 LangGraph；当前重点是让 DeepSeek 生成结构化 graph plan，并保留 deterministic fallback。
+当前状态：正在进行 v29，目标是按 `docs/professional-agent-iteration-plan.md` 推进专业 RAG v1；当前重点是增加本地 embedding、vector index、chunk metadata、source citation、index rebuild CLI、tests 和 eval。
 
 ## 当前教师判断
 
@@ -83,18 +87,22 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - Unified `RuntimeEvent` model
 - Runtime events exported through `WorkspaceAgent.format_trace()`
 - Runtime events exported through `WorkspaceAgent.to_trace_dict()`
+- DeepSeek LangGraph planner
+- LangGraph planner deterministic fallback
+- RAG vector index rebuild CLI
+- Professional RAG vector search tool
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
-- RAG 检索仍是关键词检索，不是 embedding/vector search。
+- RAG 已开始接入本地 vector index，但还不是外部 embedding provider / production vector store。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
 - Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；但还没有外部 skill registry、动态配置和真实权限模型。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，但还没有做基于事件流的完整 replay。
 - checkpoint 已可浏览，但还没有做跨 run 的自动 replay。
-- LangGraph route 已有 deterministic fallback，但 LLM-first planner 还在当前阶段接入中。
+- LangGraph route 已有 DeepSeek planner 和 deterministic fallback，但还没有成为默认主执行器。
 
 ## 当前总目标
 
@@ -116,17 +124,16 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 `docs/professional-agent-iteration-plan.md` 中的 v26 方向：LLM Planner 接入 LangGraph。
-2. 学习 `agent/planner.py` 中的 `GraphPlan`、`build_graph_planner_messages()`、`parse_graph_plan()` 和 `plan_graph_route()`。
-3. 学习 `prompts/langgraph-planner.v1.md`，理解 planner 输出 schema。
-4. 理解 `integrations/langgraph_workflow.py` 如何先尝试 LLM planner，再 fallback 到 deterministic route。
-5. 理解 `agent/core.py` 如何把 `planner_status`、`planner_error` 放入 LangGraph metadata 和 trace。
-6. 理解 `cli/main.py` 和 `cli/langgraph_demo.py` 的 `--llm-planner`。
-7. 手动运行 `python -m unittest tests.test_langgraph_workflow -v`。
+1. 学习 `docs/professional-agent-iteration-plan.md` 中的专业 RAG v1 方向。
+2. 学习 `rag/embeddings.py` 中的 `LocalEmbeddingModel` 和 `cosine_similarity()`。
+3. 学习 `rag/vector_index.py` 中的 `VectorIndex`、`VectorRecord`、`build_vector_index()`、`search_vector_index()`、`save_vector_index()` 和 `load_vector_index()`。
+4. 理解 `rag/qa.py` 如何通过 `answer_question_with_vector_index()` 输出 citation 和 vector score。
+5. 理解 `agent/tools.py`、`agent/router.py` 和 `agent/tool_schema.py` 如何把 `search_vector_docs` 接入 Agent。
+6. 理解 `cli/rag_index_demo.py` 如何 rebuild 本地 vector index。
+7. 手动运行 `python -m unittest tests.test_rag -v`。
 8. 手动运行 `python -m unittest discover -s tests -v`。
 9. 手动运行 `python -m cli.eval_runner`。
-10. 如果本地配置了 `DEEPSEEK_API_KEY`，手动运行 `python -m cli.main --input "Use LangGraph to read README.md." --llm-planner --trace`。
-11. 如果本地配置了 `DEEPSEEK_API_KEY`，手动运行 `python -m cli.langgraph_demo --question "Read README.md." --llm-planner`。
+10. 手动运行 `python -m cli.rag_index_demo --question "agent workflow"`。
 
 ## 当前学习重点
 
@@ -159,6 +166,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - Runtime events 是后续 checkpoint、replay、审计和长期任务监控的基础。
 - Graph state 中应优先保存 JSON-ready 数据，避免未来持久化和跨进程传输时出现不可序列化对象。
 - LLM Planner 的职责是产生结构化 plan；代码的职责是校验 plan、执行 plan，并在 LLM 不可用或输出不合格时 fallback。
+- 专业 RAG 不只是“能搜到文本”，还需要 index rebuild、chunk metadata、source citation、可测试检索行为和可替换的 embedding 层。
 
 ## 已完成
 
@@ -189,7 +197,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v25：Unified Agent Runtime Events and Recovery Model。
 - 完成 v26 核心实现：LangGraph Checkpoint and Recoverable Run Persistence。
 - 完成 v27：Run History Browsing and Checkpoint Lookup。
-- 正在进行 v28：LLM Planner for LangGraph。
+- 完成 v28：LLM Planner for LangGraph。
+- 正在进行 v29：Professional RAG v1。
 
 ## 未完成
 
@@ -199,7 +208,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - Skills 外部 registry 与权限模型。
 - Runtime events replay。
 - checkpoint run history browser。
-- LLM Planner 接入 LangGraph。
+- Professional RAG v1。
 
 ## 恢复指令
 

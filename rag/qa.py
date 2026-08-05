@@ -8,6 +8,7 @@ from pathlib import Path
 from .chunking import chunk_documents
 from .documents import load_text_documents
 from .retrieval import SearchResult, retrieve
+from .vector_index import VectorSearchResult, build_vector_index, search_vector_index
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,38 @@ class RAGAnswer:
         return "\n\n".join(parts)
 
 
+@dataclass(frozen=True)
+class VectorRAGAnswer:
+    """A deterministic answer produced from vector-indexed local context."""
+
+    question: str
+    results: list[VectorSearchResult]
+
+    def to_text(self) -> str:
+        """Render vector retrieval results with explicit citations."""
+
+        if not self.results:
+            return (
+                f"Result: no vector context was found for '{self.question}'.\n\n"
+                "Citations: none\n\n"
+                "Next step: rebuild the RAG index or ask with more specific context."
+            )
+
+        parts = [f"Result: found {len(self.results)} vector context chunk(s) for '{self.question}'."]
+        for index, result in enumerate(self.results, start=1):
+            parts.append(
+                "\n".join(
+                    [
+                        f"Citation {index}: {result.citation()}",
+                        f"Vector score: {result.score:.3f}",
+                        "Context:",
+                        _preview(result.chunk.text),
+                    ]
+                )
+            )
+        return "\n\n".join(parts)
+
+
 def answer_question(root: Path, question: str, top_k: int = 3) -> RAGAnswer:
     """Answer a question by retrieving local project documents."""
 
@@ -50,6 +83,14 @@ def answer_question(root: Path, question: str, top_k: int = 3) -> RAGAnswer:
     chunks = chunk_documents(documents)
     results = retrieve(chunks, question, top_k=top_k)
     return RAGAnswer(question=question, results=results)
+
+
+def answer_question_with_vector_index(root: Path, question: str, top_k: int = 3) -> VectorRAGAnswer:
+    """Answer a question by searching a local vector index."""
+
+    index = build_vector_index(root)
+    results = search_vector_index(index, question, top_k=top_k)
+    return VectorRAGAnswer(question=question, results=results)
 
 
 def _preview(text: str, limit: int = 8) -> str:

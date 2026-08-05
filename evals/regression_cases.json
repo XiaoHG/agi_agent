@@ -21,6 +21,13 @@
     "required_answer_terms": ["relevant local context", "MCP"]
   },
   {
+    "id": "rag-vector-search",
+    "input": "Use professional RAG to search docs for MCP.",
+    "expected_route": "use_tool",
+    "expected_tool": "search_vector_docs",
+    "required_answer_terms": ["vector context", "Citation", "Vector score"]
+  },
+  {
     "id": "mcp-tools",
     "input": "List MCP tools.",
     "expected_route": "use_tool",

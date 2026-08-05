@@ -63,6 +63,11 @@ def build_workspace_tool_specs() -> list[ToolSpec]:
             arguments=(ToolArgumentSpec("question", "string", "Natural-language search question."),),
         ),
         ToolSpec(
+            name="search_vector_docs",
+            description="Search local project documents through the professional RAG vector index.",
+            arguments=(ToolArgumentSpec("question", "string", "Natural-language semantic search question."),),
+        ),
+        ToolSpec(
             name="answer_docs_with_llm",
             description="Answer from local project documents with DeepSeek-grounded RAG.",
             arguments=(ToolArgumentSpec("question", "string", "Natural-language grounded question."),),

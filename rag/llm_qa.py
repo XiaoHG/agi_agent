@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from typing import TYPE_CHECKING
 
-from .qa import answer_question
-from .retrieval import SearchResult
+from .vector_index import search_vector_index, build_vector_index
 
 if TYPE_CHECKING:
     from agent.llm import DeepSeekLLMClient
@@ -45,10 +45,11 @@ def answer_question_with_llm(
 ) -> GroundedRAGAnswer:
     """Retrieve local context and ask DeepSeek to generate a grounded answer."""
 
-    retrieval_answer = answer_question(root, question, top_k=top_k)
-    sources = [result.chunk.source_label() for result in retrieval_answer.results]
+    vector_index = build_vector_index(root)
+    vector_results = search_vector_index(vector_index, question, top_k=top_k)
+    sources = [result.chunk.source_label() for result in vector_results]
 
-    if not retrieval_answer.results:
+    if not vector_results:
         return GroundedRAGAnswer(
             question=question,
             answer="The local context is insufficient to answer this question.",
@@ -58,7 +59,7 @@ def answer_question_with_llm(
     from agent.llm import DeepSeekLLMClient, LLMMessage
 
     client = llm_client or DeepSeekLLMClient()
-    prompt = build_grounded_rag_prompt(question, retrieval_answer.results)
+    prompt = build_grounded_rag_prompt(question, vector_results)
     response = client.chat(
         [
             LLMMessage(role="system", content=RAG_SYSTEM_PROMPT),
@@ -68,16 +69,17 @@ def answer_question_with_llm(
     return GroundedRAGAnswer(question=question, answer=response.content, sources=sources)
 
 
-def build_grounded_rag_prompt(question: str, results: list[SearchResult]) -> str:
+def build_grounded_rag_prompt(question: str, results: list[Any]) -> str:
     """Build the user prompt that combines the question and retrieved context."""
 
     context_blocks: list[str] = []
     for index, result in enumerate(results, start=1):
+        matched_terms = getattr(result, "matched_terms", ())
         context_blocks.append(
             "\n".join(
                 [
                     f"[Source {index}] {result.chunk.source_label()}",
-                    f"Matched terms: {', '.join(result.matched_terms)}",
+                    f"Matched terms: {', '.join(matched_terms)}",
                     "Context:",
                     result.chunk.text,
                 ]

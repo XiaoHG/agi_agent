@@ -210,6 +210,7 @@ _PATH_INPUT_TOOLS = {
 
 _TASK_INPUT_TOOLS = {
     "search_docs",
+    "search_vector_docs",
     "answer_docs_with_llm",
     "execute_skill",
     "plan_skill",
