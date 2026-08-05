@@ -239,7 +239,7 @@ class WorkspaceAgent:
         from integrations.langgraph_workflow import run_rag_graph
 
         try:
-            return dict(run_rag_graph(self.workspace_root, question))
+            return dict(run_rag_graph(self.workspace_root, question, planner_client=self._llm_client))
         except Exception as error:
             raise ToolError(f"LangGraph workflow failed: {error}") from error
 
@@ -423,8 +423,9 @@ class WorkspaceAgent:
 
         route = graph_state.get("route", "unknown")
         tool = graph_state.get("selected_tool", "none")
+        planner = graph_state.get("planner_status", "unknown")
         steps = " -> ".join(graph_state.get("steps", []))
-        return f"route={route}; selected_tool={tool}; steps={steps}"
+        return f"route={route}; selected_tool={tool}; planner={planner}; steps={steps}"
 
     def _format_langgraph_answer(self, graph_state: dict[str, Any]) -> str:
         """Convert LangGraph state into the same answer channel used by the agent."""
@@ -436,6 +437,7 @@ class WorkspaceAgent:
         return (
             f"Graph route: {graph_state.get('route', 'unknown')}\n"
             f"Route reason: {graph_state.get('route_reason', '')}\n"
+            f"Planner status: {graph_state.get('planner_status', 'unknown')}\n"
             f"Selected tool: {graph_state.get('selected_tool', 'none')}\n"
             f"Tool status: {tool_status}\n"
             f"Skill status: {skill_status}\n"
@@ -449,6 +451,8 @@ class WorkspaceAgent:
         metadata: dict[str, Any] = {
             "graph_route": graph_state.get("route"),
             "graph_steps": graph_state.get("steps", []),
+            "planner_status": graph_state.get("planner_status"),
+            "planner_error": graph_state.get("planner_error"),
         }
         if graph_state.get("tool_status") is not None:
             metadata["tool_status"] = graph_state.get("tool_status")

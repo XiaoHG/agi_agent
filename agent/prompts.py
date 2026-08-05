@@ -34,3 +34,9 @@ def load_tool_loop_synthesis_prompt() -> str:
     """Load the prompt that asks the LLM to synthesize tool-loop observations."""
 
     return load_prompt("prompts/tool-loop-synthesis.v1.md")
+
+
+def load_langgraph_planner_prompt() -> str:
+    """Load the prompt that asks the LLM to plan LangGraph execution."""
+
+    return load_prompt("prompts/langgraph-planner.v1.md")

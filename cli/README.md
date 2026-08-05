@@ -25,6 +25,12 @@ Run with trace output:
 python -m cli.main --input "Read README.md and summarize the project learning goals." --trace
 ```
 
+Run the main agent with real DeepSeek planning for LangGraph requests:
+
+```bash
+python -m cli.main --input "Use LangGraph to read README.md." --llm-planner --trace
+```
+
 Show the latest persisted run:
 
 ```bash
@@ -59,4 +65,10 @@ Run a LangGraph demo with checkpoint persistence:
 
 ```bash
 python -m cli.langgraph_demo --question "Read README.md."
+```
+
+Run the LangGraph demo with the real DeepSeek planner:
+
+```bash
+python -m cli.langgraph_demo --question "Read README.md." --llm-planner
 ```

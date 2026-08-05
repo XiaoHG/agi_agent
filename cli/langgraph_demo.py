@@ -21,6 +21,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="checkpoint directory; defaults to <root>/logs/graph-runs",
     )
+    parser.add_argument(
+        "--llm-planner",
+        action="store_true",
+        help="use the real DeepSeek planner before deterministic graph routing",
+    )
     return parser
 
 
@@ -29,7 +34,12 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = build_parser()
     args = parser.parse_args(argv)
-    result = run_rag_graph(Path(args.root), args.question)
+    planner_client = None
+    if args.llm_planner:
+        from agent import DeepSeekLLMClient
+
+        planner_client = DeepSeekLLMClient()
+    result = run_rag_graph(Path(args.root), args.question, planner_client=planner_client)
     if args.history_dir is not None:
         history_dir = Path(args.history_dir)
     else:
@@ -45,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     print("LangGraph result:")
     print(f"Route: {result.get('route')}")
     print(f"Route reason: {result.get('route_reason')}")
+    print(f"Planner status: {result.get('planner_status')}")
     print(f"Selected tool: {result.get('selected_tool')}")
     print(f"Steps: {' -> '.join(result.get('steps', []))}")
     print()
@@ -59,6 +70,7 @@ def _format_graph_output(result: dict[str, object]) -> str:
         "LangGraph result:\n"
         f"Route: {result.get('route')}\n"
         f"Route reason: {result.get('route_reason')}\n"
+        f"Planner status: {result.get('planner_status')}\n"
         f"Selected tool: {result.get('selected_tool')}\n"
         f"Steps: {' -> '.join(result.get('steps', []))}\n\n"
         f"{result.get('answer', '')}"

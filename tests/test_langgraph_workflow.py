@@ -4,7 +4,20 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from agent.llm import LLMResponse
+from agent.planner import parse_graph_plan, plan_graph_route
+from agent.tool_schema import build_workspace_tool_specs
 from integrations.langgraph_workflow import build_rag_graph, run_rag_graph
+
+
+class FakePlannerClient:
+    """Test double that returns a fixed planner response."""
+
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+    def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        return LLMResponse(model="fake", content=self.content, raw={"messages": len(messages)})
 
 
 class LangGraphWorkflowTests(unittest.TestCase):
@@ -137,6 +150,58 @@ class LangGraphWorkflowTests(unittest.TestCase):
 
             self.assertIn("route_reason", result)
             self.assertIn("local context", result["route_reason"])
+
+    def test_parse_graph_plan_validates_llm_json(self) -> None:
+        plan = parse_graph_plan(
+            '{"route":"read_file","selected_tool":"read_workspace_file","tool_input":{"path":"README.md"},"reason":"Read the requested file."}'
+        )
+
+        self.assertEqual(plan.route, "read_file")
+        self.assertEqual(plan.selected_tool, "read_workspace_file")
+        self.assertEqual(plan.tool_input["path"], "README.md")
+
+    def test_plan_graph_route_uses_tool_catalog(self) -> None:
+        client = FakePlannerClient(
+            '{"route":"search_docs","selected_tool":"search_workspace_docs","tool_input":{"question":"agent workflow"},"reason":"Search local docs."}'
+        )
+
+        plan = plan_graph_route(
+            client,  # type: ignore[arg-type]
+            "Find docs about agent workflow.",
+            build_workspace_tool_specs(),
+            prompt="Planner prompt",
+        )
+
+        self.assertEqual(plan.route, "search_docs")
+        self.assertEqual(plan.status, "llm_planned")
+
+    def test_rag_graph_uses_llm_planner_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            client = FakePlannerClient(
+                '{"route":"read_file","selected_tool":"read_workspace_file","tool_input":{"path":"README.md"},"reason":"The planner selected file reading."}'
+            )
+
+            result = run_rag_graph(root, "Inspect the main project file.", planner_client=client)  # type: ignore[arg-type]
+
+            self.assertEqual(result["planner_status"], "llm_planned")
+            self.assertEqual(result["route"], "read_file")
+            self.assertEqual(result["selected_tool"], "read_workspace_file")
+            self.assertIn("[read_file] README.md", result["answer"])
+
+    def test_rag_graph_falls_back_when_llm_planner_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            client = FakePlannerClient("not json")
+
+            result = run_rag_graph(root, "Search docs for agent workflow.", planner_client=client)  # type: ignore[arg-type]
+
+            self.assertEqual(result["planner_status"], "deterministic_fallback")
+            self.assertIn("planner_error", result)
+            self.assertEqual(result["route"], "search_docs")
+            self.assertEqual(result["selected_tool"], "search_workspace_docs")
 
 
 if __name__ == "__main__":

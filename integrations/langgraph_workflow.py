@@ -7,11 +7,15 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from agent.llm import DeepSeekLLMClient
+from agent.planner import plan_graph_route
+from agent.prompts import load_langgraph_planner_prompt
 from agent.recovery import (
     build_exception_recovery_plan,
     build_skill_recovery_plan,
     build_tool_recovery_plan,
 )
+from agent.tool_schema import build_workspace_tool_specs
 from agent.tools import run_skill_with_workspace
 
 from .langchain_tools import build_langchain_tools
@@ -23,6 +27,9 @@ class RAGGraphState(TypedDict, total=False):
     question: str  # 用户问题
     route: str  # graph 路由结果
     route_reason: str  # 路由原因
+    planner_status: str  # LLM planner 状态：llm_planned / deterministic_fallback
+    planner_error: str  # planner 失败原因
+    planner_raw_response: str  # planner 原始响应
     selected_tool: str  # 选哪个工具
     tool_input: dict[str, str]  # 传给 LangChain tool 的输入
     tool_output: str  # 工具返回结果
@@ -36,11 +43,17 @@ class RAGGraphState(TypedDict, total=False):
     steps: list[str]  # 执行步骤记录（调试用）
 
 
-def build_rag_graph(workspace_root: Path | str = "."):
+def build_rag_graph(
+    workspace_root: Path | str = ".",
+    planner_client: DeepSeekLLMClient | None = None,
+    planner_prompt: str | None = None,
+):
     """Build a LangGraph workflow with simple conditional tool routing."""
 
     root = Path(workspace_root).resolve()  # 固定 graph 工作区根目录
     tools = {tool.name: tool for tool in build_langchain_tools(root)}
+    tool_specs = build_workspace_tool_specs()
+    resolved_planner_prompt = planner_prompt or load_langgraph_planner_prompt()
 
     def route(state: RAGGraphState) -> RAGGraphState:
         """Choose a route and tool input for the current question."""
@@ -49,12 +62,33 @@ def build_rag_graph(workspace_root: Path | str = "."):
         lowered = question.lower()
         steps = [*state.get("steps", []), "route"]
 
+        if planner_client is not None:
+            try:
+                plan = plan_graph_route(
+                    planner_client,
+                    question,
+                    tool_specs,
+                    prompt=resolved_planner_prompt,
+                )
+                return {
+                    **state,
+                    **plan.to_state_update(),
+                    "steps": steps,
+                }
+            except Exception as error:
+                state = {
+                    **state,
+                    "planner_status": "deterministic_fallback",
+                    "planner_error": str(error),
+                }
+
         if _looks_like_file_read(question):
             path = _extract_file_path(question)
             return {
                 **state,
                 "route": "read_file",
                 "route_reason": "The question asks to read a workspace file.",
+                "planner_status": state.get("planner_status", "deterministic_route"),
                 "selected_tool": "read_workspace_file",
                 "tool_input": {"path": path},
                 "steps": steps,
@@ -65,6 +99,7 @@ def build_rag_graph(workspace_root: Path | str = "."):
                 **state,
                 "route": "skill_execution",
                 "route_reason": "The question asks the graph to execute a reusable skill.",
+                "planner_status": state.get("planner_status", "deterministic_route"),
                 "selected_tool": "execute_workspace_skill",
                 "tool_input": {"question": question},
                 "steps": steps,
@@ -75,6 +110,7 @@ def build_rag_graph(workspace_root: Path | str = "."):
                 **state,
                 "route": "search_docs",
                 "route_reason": "The question asks to search local context rather than synthesize an answer.",
+                "planner_status": state.get("planner_status", "deterministic_route"),
                 "selected_tool": "search_workspace_docs",
                 "tool_input": {"question": question},
                 "steps": steps,
@@ -84,6 +120,7 @@ def build_rag_graph(workspace_root: Path | str = "."):
             **state,
             "route": "answer_docs_with_llm",
             "route_reason": "The question asks for a grounded answer from local documents.",
+            "planner_status": state.get("planner_status", "deterministic_route"),
             "selected_tool": "answer_workspace_docs_with_llm",
             "tool_input": {"question": question},
             "steps": steps,
@@ -225,10 +262,14 @@ def build_rag_graph(workspace_root: Path | str = "."):
     return graph.compile()
 
 
-def run_rag_graph(workspace_root: Path | str, question: str) -> RAGGraphState:
+def run_rag_graph(
+    workspace_root: Path | str,
+    question: str,
+    planner_client: DeepSeekLLMClient | None = None,
+) -> RAGGraphState:
     """Run the minimal LangGraph RAG workflow."""
 
-    graph = build_rag_graph(workspace_root)
+    graph = build_rag_graph(workspace_root, planner_client=planner_client)
     return graph.invoke({"question": question, "steps": []})
 
 

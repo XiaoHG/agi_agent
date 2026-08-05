@@ -117,5 +117,12 @@
     "expected_route": "graph",
     "expected_tool": "langgraph_workflow",
     "required_answer_terms": ["Graph route: read_file", "Tool status: failed", "Tool recovery plan", "missing_resource"]
+  },
+  {
+    "id": "langgraph-planner-status-trace",
+    "input": "Use LangGraph to search docs for agent workflow.",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: search_docs", "Planner status:", "search_workspace_docs"]
   }
 ]

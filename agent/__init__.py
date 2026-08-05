@@ -11,6 +11,7 @@ from .persistence import (
     format_checkpoint_summary,
     load_checkpoint,
 )
+from .planner import GraphPlan, build_graph_planner_messages, parse_graph_plan, plan_graph_route
 from .recovery import (
     RecoveryPlan,
     build_exception_recovery_plan,
@@ -52,6 +53,7 @@ __all__ = [
     "LLMError",
     "LLMMessage",
     "LLMResponse",
+    "GraphPlan",
     "RecoveryPlan",
     "RuntimeEvent",
     "RunCheckpointStore",
@@ -66,6 +68,7 @@ __all__ = [
     "ToolResult",
     "build_exception_recovery_plan",
     "build_graph_checkpoint",
+    "build_graph_planner_messages",
     "build_run_checkpoint",
     "build_runtime_events",
     "format_checkpoint_history",
@@ -92,6 +95,8 @@ __all__ = [
     "load_checkpoint",
     "search_docs",
     "parse_tool_call_selection",
+    "parse_graph_plan",
+    "plan_graph_route",
     "route_intent",
     "select_tool_call",
     "synthesize_tool_loop_answer",

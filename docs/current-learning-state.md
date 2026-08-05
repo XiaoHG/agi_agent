@@ -4,13 +4,13 @@
 
 ## Last Updated
 
-2026-08-03
+2026-08-05
 
 ## 当前阶段
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进行 v27，目标是把 checkpoint 进一步升级为可浏览的 run history，并支持按 run id 查看历史记录；当前已完成本地 checkpoint persistence，正在补历史列表与单次 run 查看入口。
+当前状态：正在进行 v28，目标是按 `docs/professional-agent-iteration-plan.md` 把 LLM Planner 接入 LangGraph；当前重点是让 DeepSeek 生成结构化 graph plan，并保留 deterministic fallback。
 
 ## 当前教师判断
 
@@ -94,6 +94,7 @@ Week 6：真实 LLM 驱动的专业 Agent 开发。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，但还没有做基于事件流的完整 replay。
 - checkpoint 已可浏览，但还没有做跨 run 的自动 replay。
+- LangGraph route 已有 deterministic fallback，但 LLM-first planner 还在当前阶段接入中。
 
 ## 当前总目标
 
@@ -115,18 +116,17 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 v25：`agent/recovery.py` 中的 `RecoveryPlan`、`build_tool_recovery_plan()`、`build_skill_recovery_plan()` 和 `classify_failure()`。
-2. 学习 `agent/events.py` 中的 `RuntimeEvent` 和 `build_runtime_events()`。
-3. 复盘 `agent/persistence.py` 中的 `RunCheckpointStore`、`build_run_checkpoint()`、`build_graph_checkpoint()`、`load_run()` 和 `list_runs()`。
-4. 理解 `agent/core.py` 如何在 `_persist_run()`、`load_latest_checkpoint()`、`load_checkpoint()` 和 `list_checkpoint_history()` 中落盘和浏览运行记录。
-5. 理解 `cli/main.py` 的 `--show-last-run`、`--show-run`、`--list-runs` 和 `--history-dir`。
-6. 理解 `cli/langgraph_demo.py` 如何把 graph state 保存为 checkpoint。
-7. 阅读 `docs/project-overall-retrospective.md`，先重新把整条项目主线串起来。
-8. 手动运行 `python -m unittest tests.test_persistence -v`。
-9. 手动运行 `python -m unittest discover -s tests -v`。
-10. 手动运行 `python -m cli.main --list-runs`。
-11. 手动运行 `python -m cli.main --show-run <run_id> --trace`。
-12. 手动运行 `python -m cli.langgraph_demo --question "Read README.md."`。
+1. 学习 `docs/professional-agent-iteration-plan.md` 中的 v26 方向：LLM Planner 接入 LangGraph。
+2. 学习 `agent/planner.py` 中的 `GraphPlan`、`build_graph_planner_messages()`、`parse_graph_plan()` 和 `plan_graph_route()`。
+3. 学习 `prompts/langgraph-planner.v1.md`，理解 planner 输出 schema。
+4. 理解 `integrations/langgraph_workflow.py` 如何先尝试 LLM planner，再 fallback 到 deterministic route。
+5. 理解 `agent/core.py` 如何把 `planner_status`、`planner_error` 放入 LangGraph metadata 和 trace。
+6. 理解 `cli/main.py` 和 `cli/langgraph_demo.py` 的 `--llm-planner`。
+7. 手动运行 `python -m unittest tests.test_langgraph_workflow -v`。
+8. 手动运行 `python -m unittest discover -s tests -v`。
+9. 手动运行 `python -m cli.eval_runner`。
+10. 如果本地配置了 `DEEPSEEK_API_KEY`，手动运行 `python -m cli.main --input "Use LangGraph to read README.md." --llm-planner --trace`。
+11. 如果本地配置了 `DEEPSEEK_API_KEY`，手动运行 `python -m cli.langgraph_demo --question "Read README.md." --llm-planner`。
 
 ## 当前学习重点
 
@@ -158,6 +158,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 恢复计划应该作为独立数据模型维护，而不是散落在 graph node 内部。
 - Runtime events 是后续 checkpoint、replay、审计和长期任务监控的基础。
 - Graph state 中应优先保存 JSON-ready 数据，避免未来持久化和跨进程传输时出现不可序列化对象。
+- LLM Planner 的职责是产生结构化 plan；代码的职责是校验 plan、执行 plan，并在 LLM 不可用或输出不合格时 fallback。
 
 ## 已完成
 
@@ -187,7 +188,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v24：LangGraph tool failure recovery。
 - 完成 v25：Unified Agent Runtime Events and Recovery Model。
 - 完成 v26 核心实现：LangGraph Checkpoint and Recoverable Run Persistence。
-- 正在进行 v27：Run History Browsing and Checkpoint Lookup。
+- 完成 v27：Run History Browsing and Checkpoint Lookup。
+- 正在进行 v28：LLM Planner for LangGraph。
 
 ## 未完成
 
@@ -197,6 +199,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - Skills 外部 registry 与权限模型。
 - Runtime events replay。
 - checkpoint run history browser。
+- LLM Planner 接入 LangGraph。
 
 ## 恢复指令
 
