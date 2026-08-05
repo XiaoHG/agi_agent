@@ -541,9 +541,9 @@ class WorkspaceAgent:
         if route.tool_name == "mcp_read_project_file":
             return mcp_read_project_file(self.workspace_root, route.tool_input or "")
         if route.tool_name == "list_skills":
-            return list_agent_skills()
+            return list_agent_skills(self.workspace_root)
         if route.tool_name == "plan_skill":
-            return plan_skill(route.tool_input or "")
+            return plan_skill(self.workspace_root, route.tool_input or "")
         if route.tool_name == "execute_skill":
             return run_skill_with_workspace(self.workspace_root, route.tool_input or "")
         if route.tool_name == "list_subagents":

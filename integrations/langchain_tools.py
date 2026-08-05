@@ -81,12 +81,12 @@ def build_langchain_tools(workspace_root: Path | str = ".") -> list[StructuredTo
     def list_workspace_skills() -> str:
         """List reusable project skills."""
 
-        return list_agent_skills().output
+        return list_agent_skills(root).output
 
     def plan_workspace_skill(question: str) -> str:
         """Select a reusable skill for a task."""
 
-        return plan_skill(question).output
+        return plan_skill(root, question).output
 
     def list_workspace_subagents() -> str:
         """List project subagents."""

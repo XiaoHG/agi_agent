@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any
 
 from mcp import call_mcp_tool, list_mcp_tools
@@ -15,6 +16,7 @@ from .llm import LLMError
 
 
 MAX_FILE_BYTES = 64_000
+SKILL_NAME_PATTERN = re.compile(r"skill\s*[:=]\s*(?P<name>[A-Za-z0-9_.-]+)", re.IGNORECASE)
 
 
 class ToolError(Exception):
@@ -141,30 +143,40 @@ def mcp_read_project_file(root: Path, raw_path: str) -> ToolResult:
     return ToolResult("mcp_read_project_file", output)
 
 
-def list_agent_skills() -> ToolResult:
+def list_agent_skills(root: Path = Path(".")) -> ToolResult:
     """List reusable skills available to the agent."""
 
-    return ToolResult("list_skills", describe_skills())
+    return ToolResult("list_skills", describe_skills(root))
 
 
-def plan_skill(task: str) -> ToolResult:
+def plan_skill(root: Path, task: str) -> ToolResult:
     """Select a skill for a task and explain the skill steps."""
 
-    skill = select_skill(task)
+    skill = select_skill(task, root=root, skill_name=_extract_skill_name(task))
     return ToolResult("plan_skill", skill.describe())
 
 
-def run_skill(task: str) -> ToolResult:
+def run_skill(task: str, root: Path = Path(".")) -> ToolResult:
     """Execute a selected skill with workspace tool support."""
 
-    skill_run = execute_skill(task, tool_runner=_build_skill_tool_runner(Path(".")))
+    skill_run = execute_skill(
+        task,
+        tool_runner=_build_skill_tool_runner(root),
+        root=root,
+        skill_name=_extract_skill_name(task),
+    )
     return ToolResult("execute_skill", skill_run.to_text(), {"skill_run": skill_run.to_dict()})
 
 
 def run_skill_with_workspace(root: Path, task: str) -> ToolResult:
     """Execute a selected skill with access to workspace tools."""
 
-    skill_run = execute_skill(task, tool_runner=_build_skill_tool_runner(root))
+    skill_run = execute_skill(
+        task,
+        tool_runner=_build_skill_tool_runner(root),
+        root=root,
+        skill_name=_extract_skill_name(task),
+    )
     return ToolResult("execute_skill", skill_run.to_text(), {"skill_run": skill_run.to_dict()})
 
 
@@ -203,3 +215,12 @@ def plan_subagent_collaboration(task: str) -> ToolResult:
 
     plan = build_collaboration_plan(task)
     return ToolResult("plan_subagents", plan.to_text())
+
+
+def _extract_skill_name(task: str) -> str | None:
+    """Extract an explicit skill name from task text when present."""
+
+    match = SKILL_NAME_PATTERN.search(task)
+    if match:
+        return match.group("name")
+    return None

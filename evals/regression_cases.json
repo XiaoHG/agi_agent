@@ -39,7 +39,7 @@
     "input": "List available skills.",
     "expected_route": "use_tool",
     "expected_tool": "list_skills",
-    "required_answer_terms": ["Available skills", "code_review"]
+    "required_answer_terms": ["Available skills", "code_review", "professional-code-review"]
   },
   {
     "id": "skills-execution",
@@ -47,6 +47,13 @@
     "expected_route": "use_tool",
     "expected_tool": "execute_skill",
     "required_answer_terms": ["Skill run: code_review", "tool-backed steps", "[list_dir]"]
+  },
+  {
+    "id": "project-skill-execution",
+    "input": "Execute skill professional-code-review.",
+    "expected_route": "use_tool",
+    "expected_tool": "execute_skill",
+    "required_answer_terms": ["Skill run: professional-code-review", "Expected output format:", "Status: completed"]
   },
   {
     "id": "subagent-plan",

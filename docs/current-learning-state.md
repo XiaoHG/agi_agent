@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v29 Professional RAG v1 已完成并提交推送。
+当前状态：v30 Project Skill Registry 已完成，本地待提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：进入项目内 Skill Registry，让项目内 `.codex/skills/professional-code-review` 成为 Agent 可发现能力。
+下一阶段建议：进入 MCP 工具注册与权限策略，补齐专业工具层的权限边界。
 
 ## 当前教师判断
 
@@ -97,13 +97,19 @@ v29 功能基线提交：
 - LangGraph planner deterministic fallback
 - RAG vector index rebuild CLI
 - Professional RAG vector search tool
+- 项目内 Skill Registry
+- `.codex/skills/*/SKILL.md` discovery
+- project skill frontmatter / step parsing
+- built-in skills 与 project skills merged catalog
+- `professional-code-review` Agent 可发现能力
+- project skill structured trace metadata
 
 当前缺口：
 
 - `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 已开始接入本地 vector index，但还不是外部 embedding provider / production vector store。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；但还没有外部 skill registry、动态配置和真实权限模型。
+- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，但还没有更完整的动态配置和真实权限模型。
 - LangGraph workflow 已接回 `WorkspaceAgent`，但还没有成为默认主执行器。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，但还没有做基于事件流的完整 replay。
@@ -133,7 +139,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 1. 复盘 v29 Professional RAG v1：`versions/professional-rag-v1_v29.md`。
 2. 查看 v29 练习答案：`docs/professional-rag-v1-exercises_v29.md`。
 3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
-4. 进入下一阶段：项目内 Skill Registry。
+4. 进入下一阶段：MCP 工具注册与权限策略。
 
 ## 当前学习重点
 
@@ -199,6 +205,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v27：Run History Browsing and Checkpoint Lookup。
 - 完成 v28：LLM Planner for LangGraph。
 - 完成 v29：Professional RAG v1。
+- 完成 v30：Project Skill Registry。
 
 ## 未完成
 
@@ -225,19 +232,14 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 2. `docs/current-learning-state.md`
 3. `docs/work-snapshot-2026-08-05.md`
 4. `docs/professional-agent-iteration-plan.md`
-5. `versions/professional-rag-v1_v29.md`
-6. `docs/professional-rag-v1-exercises_v29.md`
-7. `rag/embeddings.py`
-8. `rag/vector_index.py`
-9. `rag/qa.py`
-10. `rag/llm_qa.py`
-11. `agent/tools.py`
-12. `agent/router.py`
-13. `agent/tool_schema.py`
-14. `cli/rag_index_demo.py`
-15. `tests/test_rag.py`
-16. `tests/test_rag_llm.py`
-17. `evals/regression_cases.json`
+5. `versions/project-skill-registry_v30.md`
+6. `docs/project-skill-registry-exercises_v30.md`
+7. `skills/catalog.py`
+8. `skills/execution.py`
+9. `agent/tools.py`
+10. `cli/collaboration_demo.py`
+11. `tests/test_collaboration.py`
+12. `evals/regression_cases.json`
 然后继续执行当前具体任务。
 
 ## 下一步建议
@@ -248,4 +250,4 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 建议优先进入：
 
-- 项目内 Skill Registry：读取项目内 `.codex/skills`，解析 `SKILL.md`，合并 built-in skills 和 project skills，让 `professional-code-review` 成为 Agent 可发现能力。
+- MCP 工具注册与权限策略：为 workspace / MCP tool schema 增加权限分类、判定记录和拒绝/恢复路径。

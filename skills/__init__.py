@@ -1,6 +1,13 @@
 """Reusable skill definitions for the Agent learning workspace."""
 
-from .catalog import SkillSpec, describe_skills, get_builtin_skills, select_skill
+from .catalog import (
+    SkillSpec,
+    describe_skills,
+    discover_project_skills,
+    get_available_skills,
+    get_builtin_skills,
+    select_skill,
+)
 from .execution import (
     SkillRun,
     SkillStep,
@@ -20,7 +27,9 @@ __all__ = [
     "SkillToolResponse",
     "build_skill_steps",
     "describe_skills",
+    "discover_project_skills",
     "execute_skill",
+    "get_available_skills",
     "get_builtin_skills",
     "select_skill",
 ]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .catalog import SkillSpec, select_skill
 
@@ -139,6 +140,8 @@ class SkillRun:
                 "name": self.skill.name,
                 "purpose": self.skill.purpose,
                 "output_format": self.skill.output_format,
+                "source": self.skill.source,
+                "path": self.skill.path,
             },
             "status": self.status,
             "step_count": len(self.steps),
@@ -153,10 +156,16 @@ class SkillRun:
 SkillToolRunner = Callable[[SkillToolRequest], SkillToolResponse]
 
 
-def execute_skill(task: str, tool_runner: SkillToolRunner | None = None) -> SkillRun:
-    """Select and execute one built-in skill with optional tool-backed steps."""
+def execute_skill(
+    task: str,
+    tool_runner: SkillToolRunner | None = None,
+    *,
+    root: Path = Path("."),
+    skill_name: str | None = None,
+) -> SkillRun:
+    """Select and execute one built-in or project skill with optional tool-backed steps."""
 
-    skill = select_skill(task)
+    skill = select_skill(task, root=root, skill_name=skill_name)
     step_specs = build_skill_steps(skill, task)
     steps: list[SkillStepResult] = []
     status = "completed"
