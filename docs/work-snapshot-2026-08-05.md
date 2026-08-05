@@ -1,17 +1,27 @@
 # 工作快照：2026-08-05
 
-此文件用于新窗口恢复 v29 项目状态。v29 已准备提交并推送。
+此文件用于新窗口恢复当前项目状态。
+
+新会话恢复命令：
+
+```text
+恢复项目
+```
+
+恢复目标：回到 v29 Professional RAG v1 已完成、已提交、已推送后的学习状态。
 
 ## Git 状态
 
 - 当前分支：`main`
+- v29 功能基线提交：`597ea59 Add professional RAG vector index`
 - v29 提交前基线：`4853fec Add LLM planner for LangGraph`
+- 当前 `main` 已推送到 `origin/main`。
 - `.vscode/` 仍未跟踪，不需要提交。
-- v29 交付内容见下方文件和功能说明。
+- 除 `.vscode/` 本地编辑器配置外，源码工作区应保持干净。
 
 ## 当前阶段
 
-当前阶段：v29 Professional RAG v1。
+当前阶段：v29 Professional RAG v1 已完成。
 
 迭代依据：
 
@@ -170,6 +180,18 @@ python -m cli.eval_runner
 - 全量测试：140 passed
 - eval：19/19 passed
 
+提交前最终验证结果：
+
+```bash
+python -m unittest discover -s tests -v
+python -m cli.eval_runner
+```
+
+结果：
+
+- 全量测试：140 passed
+- eval：19/19 passed
+
 ## 重要修复记录
 
 实现 vector retrieval 后，发现 hashing vector 可能因 hash collision 让无上下文 query 命中无关 chunk，从而触发真实 DeepSeek LLM。
@@ -182,35 +204,57 @@ python -m cli.eval_runner
 
 ## 新窗口恢复步骤
 
+当用户输入“恢复项目”时，按下面步骤恢复上下文。
+
 1. 进入项目目录：
 
    ```bash
    cd /Users/xiaohg/ai_agent/agi_agent
    ```
 
-2. 读取关键文件：
+2. 确认 git 状态：
+
+   ```bash
+   git status --short --branch
+   git log --oneline -n 3
+   ```
+
+   预期：
+
+   ```text
+   ## main...origin/main
+   ?? .vscode/
+
+   最新提交应包含当前恢复快照；`597ea59 Add professional RAG vector index` 是 v29 功能基线提交。
+   ```
+
+3. 读取关键文件：
 
    ```bash
    sed -n '1,260p' docs/current-learning-state.md
    sed -n '1,260p' docs/work-snapshot-2026-08-05.md
    sed -n '1,260p' docs/professional-agent-iteration-plan.md
    sed -n '1,260p' versions/professional-rag-v1_v29.md
+   sed -n '1,320p' docs/professional-rag-v1-exercises_v29.md
    ```
 
-3. 查看当前分支状态：
+4. 重点代码入口：
 
    ```bash
-   git status --short
+   sed -n '1,260p' rag/embeddings.py
+   sed -n '1,320p' rag/vector_index.py
+   sed -n '1,260p' rag/qa.py
+   sed -n '1,220p' agent/tools.py
+   sed -n '1,220p' cli/rag_index_demo.py
    ```
 
-4. 如果需要继续验证：
+5. 如果需要继续验证：
 
    ```bash
-   python -m unittest tests.test_rag -v
-   python -m unittest tests.test_rag_llm -v
+   python -m unittest discover -s tests -v
    python -m cli.eval_runner
    ```
 
 ## 下一步建议
 
-v29 提交后，下一阶段建议进入项目内 Skill Registry，让项目内 `.codex/skills/professional-code-review` 成为 Agent 可发现能力。
+下一阶段建议进入项目内 Skill Registry，让项目内 `.codex/skills/professional-code-review` 成为 Agent 可发现能力。

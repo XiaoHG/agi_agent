@@ -14,7 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：正在进行 v29，目标是按 `docs/professional-agent-iteration-plan.md` 推进专业 RAG v1；当前重点是增加本地 embedding、vector index、chunk metadata、source citation、index rebuild CLI、tests 和 eval。
+当前状态：v29 Professional RAG v1 已完成并提交推送。
+
+v29 功能基线提交：
+
+- `597ea59 Add professional RAG vector index`
+
+下一阶段建议：进入项目内 Skill Registry，让项目内 `.codex/skills/professional-code-review` 成为 Agent 可发现能力。
 
 ## 当前教师判断
 
@@ -124,16 +130,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 学习 `docs/professional-agent-iteration-plan.md` 中的专业 RAG v1 方向。
-2. 学习 `rag/embeddings.py` 中的 `LocalEmbeddingModel` 和 `cosine_similarity()`。
-3. 学习 `rag/vector_index.py` 中的 `VectorIndex`、`VectorRecord`、`build_vector_index()`、`search_vector_index()`、`save_vector_index()` 和 `load_vector_index()`。
-4. 理解 `rag/qa.py` 如何通过 `answer_question_with_vector_index()` 输出 citation 和 vector score。
-5. 理解 `agent/tools.py`、`agent/router.py` 和 `agent/tool_schema.py` 如何把 `search_vector_docs` 接入 Agent。
-6. 理解 `cli/rag_index_demo.py` 如何 rebuild 本地 vector index。
-7. 手动运行 `python -m unittest tests.test_rag -v`。
-8. 手动运行 `python -m unittest discover -s tests -v`。
-9. 手动运行 `python -m cli.eval_runner`。
-10. 手动运行 `python -m cli.rag_index_demo --question "agent workflow"`。
+1. 复盘 v29 Professional RAG v1：`versions/professional-rag-v1_v29.md`。
+2. 查看 v29 练习答案：`docs/professional-rag-v1-exercises_v29.md`。
+3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
+4. 进入下一阶段：项目内 Skill Registry。
 
 ## 当前学习重点
 
@@ -198,7 +198,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v26 核心实现：LangGraph Checkpoint and Recoverable Run Persistence。
 - 完成 v27：Run History Browsing and Checkpoint Lookup。
 - 完成 v28：LLM Planner for LangGraph。
-- 正在进行 v29：Professional RAG v1。
+- 完成 v29：Professional RAG v1。
 
 ## 未完成
 
@@ -207,84 +207,37 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
 - Runtime events replay。
-- checkpoint run history browser。
-- Professional RAG v1。
+- checkpoint 跨 run 自动 replay。
 
 ## 恢复指令
+
+新会话中输入：
+
+```text
+恢复项目
+```
+
+恢复含义：恢复到 `main` 分支最新状态；`597ea59 Add professional RAG vector index` 是 v29 功能基线提交。
 
 下一个会话恢复时，请先读取：
 
 1. `AGENTS.md`
 2. `docs/current-learning-state.md`
-3. `docs/learning-master-plan.md`
-4. `evals/README.md`
-5. `evals/regression_cases.json`
-6. `docs/professional-agent-iteration-plan.md`
-7. `evals/runner.py`
-8. `tests/test_evals.py`
-9. `versions/engineering-evals-observability_v6.md`
-10. `agent/project.py`
-11. `cli/project_demo.py`
-12. `tests/test_project.py`
-13. `versions/project-learning-assistant_v7.md`
-14. `agent/llm.py`
-15. `cli/llm_demo.py`
-16. `tests/test_llm.py`
-17. `versions/deepseek-llm-provider_v8.md`
-18. `rag/llm_qa.py`
-19. `cli/rag_llm_demo.py`
-20. `tests/test_rag_llm.py`
-21. `versions/deepseek-rag_v9.md`
-22. `versions/workspace-agent-deepseek-rag_v10.md`
-23. `integrations/langchain_tools.py`
-24. `cli/langchain_tools_demo.py`
-25. `tests/test_langchain_tools.py`
-26. `versions/langchain-tool-adapter_v11.md`
-27. `integrations/langgraph_workflow.py`
-28. `cli/langgraph_demo.py`
-29. `tests/test_langgraph_workflow.py`
-30. `versions/langgraph-workflow_v12.md`
-31. `versions/langgraph-conditional-routing_v13.md`
-32. `versions/workspace-agent-langgraph_v14.md`
-33. `agent/tool_schema.py`
-34. `agent/tool_calling.py`
-35. `prompts/tool-calling.v1.md`
-36. `cli/tool_calling_demo.py`
-37. `tests/test_tool_calling.py`
-38. `versions/llm-tool-calling_v15.md`
-39. `agent/tool_loop.py`
-40. `cli/tool_loop_demo.py`
-41. `tests/test_tool_loop.py`
-42. `versions/llm-tool-loop_v16.md`
-43. `agent/tool_synthesis.py`
-44. `prompts/tool-loop-synthesis.v1.md`
-45. `tests/test_tool_synthesis.py`
-46. `versions/llm-tool-synthesis_v17.md`
-47. `versions/mcp-skills-tool-loop_v18.md`
-48. `docs/mcp-skills-tool-loop-exercises.md`
-49. `skills/execution.py`
-50. `versions/skills-execution_v19.md`
-51. `docs/skills-execution-exercises.md`
-52. `versions/tool-backed-skills_v20.md`
-53. `docs/tool-backed-skills-exercises.md`
-54. `versions/skill-trace-export_v21.md`
-55. `docs/skill-trace-export-exercises_v21.md`
-56. `versions/langgraph-skill-node_v22.md`
-57. `docs/langgraph-skill-node-exercises_v22.md`
-58. `versions/langgraph-skill-failure-recovery_v23.md`
-59. `docs/langgraph-skill-failure-recovery-exercises_v23.md`
-60. `versions/langgraph-tool-failure-recovery_v24.md`
-61. `docs/langgraph-tool-failure-recovery-exercises_v24.md`
-62. `agent/recovery.py`
-63. `agent/events.py`
-64. `tests/test_recovery.py`
-65. `tests/test_events.py`
-66. `versions/unified-agent-runtime-events-recovery_v25.md`
-67. `docs/unified-agent-runtime-events-recovery-exercises_v25.md`
-68. `docs/project-overall-retrospective.md`
-69. `versions/langgraph-checkpoint-persistence_v26.md`
-70. `docs/langgraph-checkpoint-persistence-exercises_v26.md`
-
+3. `docs/work-snapshot-2026-08-05.md`
+4. `docs/professional-agent-iteration-plan.md`
+5. `versions/professional-rag-v1_v29.md`
+6. `docs/professional-rag-v1-exercises_v29.md`
+7. `rag/embeddings.py`
+8. `rag/vector_index.py`
+9. `rag/qa.py`
+10. `rag/llm_qa.py`
+11. `agent/tools.py`
+12. `agent/router.py`
+13. `agent/tool_schema.py`
+14. `cli/rag_index_demo.py`
+15. `tests/test_rag.py`
+16. `tests/test_rag_llm.py`
+17. `evals/regression_cases.json`
 然后继续执行当前具体任务。
 
 ## 下一步建议
@@ -295,81 +248,4 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 建议优先进入：
 
-- v26：LangGraph Checkpoint and Recoverable Run Persistence
-
-下一步优先让 Teacher Agent 讲解这次新增代码：
-
-- `agent/project.py`
-- `cli/project_demo.py`
-- `tests/test_project.py`
-- `examples/project-learning-assistant/README.md`
-- `agent/llm.py`
-- `cli/llm_demo.py`
-- `rag/llm_qa.py`
-- `cli/rag_llm_demo.py`
-- `agent/tools.py` 中的 `answer_docs_with_llm`
-- `agent/router.py` 中的 LLM RAG 路由
-- `integrations/langchain_tools.py`
-- `cli/langchain_tools_demo.py`
-- `integrations/langgraph_workflow.py`
-- `cli/langgraph_demo.py`
-- `versions/langgraph-conditional-routing_v13.md`
-- `versions/workspace-agent-langgraph_v14.md`
-- `agent/tool_schema.py`
-- `agent/tool_calling.py`
-- `prompts/tool-calling.v1.md`
-- `cli/tool_calling_demo.py`
-- `versions/llm-tool-calling_v15.md`
-- `agent/tool_loop.py`
-- `cli/tool_loop_demo.py`
-- `tests/test_tool_loop.py`
-- `versions/llm-tool-loop_v16.md`
-- `agent/tool_synthesis.py`
-- `prompts/tool-loop-synthesis.v1.md`
-- `tests/test_tool_synthesis.py`
-- `versions/llm-tool-synthesis_v17.md`
-- `agent/tools.py` 中的 `mcp_read_project_file`
-- `agent/tool_schema.py` 中的 MCP / Skills tool specs
-- `agent/tool_calling.py` 中的 tool input normalization
-- `tests/test_mcp.py` 中的 MCP 文件读取 agent 测试
-- `tests/test_tool_loop.py` 中的 MCP / Skills tool loop 测试
-- `versions/mcp-skills-tool-loop_v18.md`
-- `skills/execution.py`
-- `agent/tools.py` 中的 `run_skill`
-- `agent/tool_schema.py` 中的 `execute_skill`
-- `cli/collaboration_demo.py` 中的 `--execute-skill`
-- `tests/test_collaboration.py` 中的 skill execution 测试
-- `versions/skills-execution_v19.md`
-- `skills/execution.py` 中的 tool-backed step runner
-- `agent/tools.py` 中的 `_build_skill_tool_runner`
-- `cli/collaboration_demo.py` 中的 `--tool-backed`
-- `integrations/langgraph_workflow.py` 中的 `call_skill`
-- `integrations/langgraph_workflow.py` 中的 `_next_after_skill`
-- `agent/core.py` 中的 `_build_langgraph_metadata`
-- `tests/test_langgraph_workflow.py` 中的 LangGraph skill node 测试
-- `versions/langgraph-skill-node_v22.md`
-- `integrations/langgraph_workflow.py` 中的 `recover_skill_failure`
-- `integrations/langgraph_workflow.py` 中的 recovery plan helper
-- `agent/core.py` 中的 recovery plan metadata 透传
-- `tests/test_langgraph_workflow.py` 中的 failure recovery 测试
-- `tests/test_agent.py` 中的 recovery plan metadata 测试
-- `versions/langgraph-skill-failure-recovery_v23.md`
-- `integrations/langgraph_workflow.py` 中的 `recover_tool_failure`
-- `integrations/langgraph_workflow.py` 中的 `_next_after_tool`
-- `integrations/langgraph_workflow.py` 中的 tool recovery helper
-- `tests/test_langgraph_workflow.py` 中的 tool failure recovery 测试
-- `tests/test_agent.py` 中的 tool recovery metadata 测试
-- `evals/regression_cases.json` 中的 `langgraph-tool-failure-recovery`
-- `versions/langgraph-tool-failure-recovery_v24.md`
-- `agent/recovery.py`
-- `agent/events.py`
-- `tests/test_recovery.py`
-- `tests/test_events.py`
-- `versions/unified-agent-runtime-events-recovery_v25.md`
-- `docs/unified-agent-runtime-events-recovery-exercises_v25.md`
-- `versions/tool-backed-skills_v20.md`
-- `skills/execution.py` 中的 `to_dict()` 方法
-- `agent/tools.py` 中的 `ToolResult.metadata`
-- `agent/core.py` 中的 `skill_run` trace 字段
-- `evals/regression_cases.json` 中的 `skills-execution`
-- `versions/skill-trace-export_v21.md`
+- 项目内 Skill Registry：读取项目内 `.codex/skills`，解析 `SKILL.md`，合并 built-in skills 和 project skills，让 `professional-code-review` 成为 Agent 可发现能力。
