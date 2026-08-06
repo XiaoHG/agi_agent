@@ -78,6 +78,50 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["recovery_plan"]["failure_type"], "missing_resource")
             self.assertIn("Tool recovery plan", result["answer"])
 
+    def test_rag_graph_executes_workflow_steps_inside_graph(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\nrag retrieval\n", encoding="utf-8")
+
+            result = run_rag_graph(root, "Read README.md and then count lines.", route_hint_action="workflow")
+
+            self.assertEqual(result["route"], "workflow_execution")
+            self.assertEqual(result["workflow_status"], "completed")
+            self.assertEqual(
+                result["steps"],
+                [
+                    "route",
+                    "build_workflow",
+                    "run_workflow_step",
+                    "run_workflow_step",
+                    "finalize_workflow",
+                    "finalize",
+                ],
+            )
+            self.assertIn("workflow completed", result["answer"])
+            self.assertIn("count_lines", result["answer"])
+
+    def test_rag_graph_workflow_failure_stops_remaining_steps(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            result = run_rag_graph(root, "Read missing.md and then count lines.", route_hint_action="workflow")
+
+            self.assertEqual(result["route"], "workflow_execution")
+            self.assertEqual(result["workflow_status"], "failed")
+            self.assertEqual(
+                result["steps"],
+                [
+                    "route",
+                    "build_workflow",
+                    "run_workflow_step",
+                    "finalize_workflow",
+                    "finalize",
+                ],
+            )
+            self.assertEqual(result["recovery_plan"]["tool_name"], "read_workspace_file")
+            self.assertIn("workflow failed", result["answer"])
+
     def test_rag_graph_tool_status_controls_next_edge(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

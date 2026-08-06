@@ -7,6 +7,7 @@ import re
 
 from .router import FILE_PATTERN
 from .state import AgentState
+from .tools import ToolResult
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,23 @@ class WorkflowPlan:
             else:
                 parts.append(f"{index}. {step.kind}:{step.note}")
         return " | ".join(parts)
+
+    def to_dict(self) -> dict[str, object]:
+        """Convert the workflow plan into JSON-ready data."""
+
+        return {
+            "objective": self.objective,
+            "steps": [
+                {
+                    "title": step.title,
+                    "kind": step.kind,
+                    "tool_name": step.tool_name,
+                    "tool_input": step.tool_input,
+                    "note": step.note,
+                }
+                for step in self.steps
+            ],
+        }
 
 
 WORKFLOW_MARKERS = [
@@ -153,8 +171,18 @@ def build_workflow_plan(user_input: str) -> WorkflowPlan:
 def build_workflow_summary(state: AgentState, plan: WorkflowPlan) -> str:
     """Create a user-facing answer from workflow execution results."""
 
+    return build_workflow_summary_from_results(plan, state.tool_results, state.workflow_summary)
+
+
+def build_workflow_summary_from_results(
+    plan: WorkflowPlan,
+    tool_results: list[ToolResult],
+    workflow_summary: str = "",
+) -> str:
+    """Create a user-facing answer from workflow results without AgentState."""
+
     parts: list[str] = [f"Result: workflow completed for '{plan.objective}'."]
-    for result in state.tool_results:
+    for result in tool_results:
         if result.tool_name == "read_file":
             parts.append(f"Read file: {result.output.splitlines()[0]}")
             parts.append(f"Summary:\n{_summarize_tool_text(result.output)}")
@@ -162,8 +190,8 @@ def build_workflow_summary(state: AgentState, plan: WorkflowPlan) -> str:
             parts.append(f"Directory inspection:\n{result.output}")
         elif result.tool_name == "count_lines":
             parts.append(result.output)
-    if state.workflow_summary:
-        parts.append(f"Workflow summary: {state.workflow_summary}")
+    if workflow_summary:
+        parts.append(f"Workflow summary: {workflow_summary}")
     return "\n\n".join(parts)
 
 
@@ -175,4 +203,3 @@ def _summarize_tool_text(text: str, limit: int = 12) -> str:
     if len(lines) > limit:
         head.append("... (truncated)")
     return "\n".join(head)
-

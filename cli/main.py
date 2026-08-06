@@ -23,6 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--show-run", help="show a checkpoint by run id")
     parser.add_argument("--show-last-run", action="store_true", help="show the latest persisted run")
     parser.add_argument("--llm-planner", action="store_true", help="use real DeepSeek planning for LangGraph runs")
+    parser.add_argument("--classic-runtime", action="store_true", help="disable the default LangGraph runtime wrapper")
     parser.add_argument("--trace", action="store_true", help="print reasoning trace")
     return parser
 
@@ -100,7 +101,12 @@ def main(argv: list[str] | None = None) -> int:
         from agent import DeepSeekLLMClient
 
         llm_client = DeepSeekLLMClient()
-    agent = WorkspaceAgent(Path(args.root), llm_client=llm_client, history_dir=history_dir)
+    agent = WorkspaceAgent(
+        Path(args.root),
+        llm_client=llm_client,
+        history_dir=history_dir,
+        use_graph_runtime=not args.classic_runtime,
+    )
     if args.list_runs:
         return list_runs(agent)
     if args.show_run:

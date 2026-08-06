@@ -69,6 +69,7 @@ class WorkspaceAgent:
         workspace_root: Path | str = ".",
         llm_client: Any | None = None,
         history_dir: Path | str | None = None,
+        use_graph_runtime: bool = True,
     ) -> None:
         self.workspace_root = Path(workspace_root).resolve()  # 解析为绝对路径
         self.system_prompt = load_system_prompt()            # 加载系统提示词
@@ -77,6 +78,7 @@ class WorkspaceAgent:
         self.tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()  # 加载工具循环最终综合提示词
         self.tool_specs = build_workspace_tool_specs()  # 工具 schema 目录
         self._llm_client = llm_client  # 测试可注入 fake client；生产环境延迟创建真实 client
+        self._use_graph_runtime = use_graph_runtime  # 默认主执行器：LangGraph；可显式退回 classic runtime
         checkpoint_root = history_dir if history_dir is not None else self.workspace_root / "logs" / "agent-runs"
         self._history_store = RunCheckpointStore(Path(checkpoint_root))  # 本地 checkpoint 存储
 
@@ -95,18 +97,22 @@ class WorkspaceAgent:
         run.steps.append(AgentStep("Load prompts", "system prompt and tool-router prompt loaded"))
         run.steps.append(AgentStep("Route request", f"{run.route.action} / {run.route.tool_name or 'none'}"))
 
-        # 3.5 如果是工作流请求，则进入多步执行路径
+        # 3.5 如果是工作流请求，则默认交给 graph 主执行器；classic runtime 作为显式回退
         if run.route.action == "workflow":
-            workflow_plan = build_workflow_plan(user_input)
-            run.steps.append(AgentStep("Build workflow", workflow_plan.describe()))
-            workflow_state = AgentState(
-                run_id=run.run_id,
-                user_input=user_input,
-                route=run.route,
-                steps=run.steps,
-            )
-            run.answer = self._run_workflow(workflow_state, workflow_plan)
-            run.steps = workflow_state.steps
+            if self._use_graph_runtime:
+                try:
+                    graph_state = self._run_langgraph(
+                        user_input,
+                        route_hint_action=run.route.action,
+                    )
+                    run.steps.append(AgentStep("Run workflow graph", self._describe_langgraph_state(graph_state)))
+                    self._apply_graph_runtime_result(run, graph_state)
+                except ToolError as error:
+                    run.tool_error = str(error)
+                    run.steps.append(AgentStep("Workflow graph failed", run.tool_error))
+                    self._run_classic_workflow(run)
+            else:
+                self._run_classic_workflow(run)
             return self._persist_run(run)
 
         # 3.6 如果显式要求 LangGraph，则进入图编排路径
@@ -177,22 +183,23 @@ class WorkspaceAgent:
             run.steps.append(AgentStep("Complete", "final answer generated"))
             return self._persist_run(run)
 
-        # 3. 分支逻辑：根据路由结果执行不同策略
-        if run.route.action == "use_tool":
-            # 分支A：需要调用工具
+        # 3. 默认主执行器：LangGraph；classic runtime 作为显式回退
+        if self._use_graph_runtime and run.route.action in {"use_tool", "direct_answer"}:
             try:
-                run.tool_result = self._call_tool(run.route)  # 调用具体工具
-                run.steps.append(AgentStep("Run tool", f"{run.tool_result.tool_name} completed"))
-                run.answer = self._compose_tool_answer(run)   # 生成工具结果的自然语言回答
+                graph_state = self._run_langgraph(
+                    user_input,
+                    route_hint_action=run.route.action,
+                    route_hint_tool_name=run.route.tool_name,
+                    route_hint_tool_input=run.route.tool_input,
+                )
+                run.steps.append(AgentStep("Run graph runtime", self._describe_langgraph_state(graph_state)))
+                self._apply_graph_runtime_result(run, graph_state)
             except ToolError as error:
-                # 工具调用失败，记录错误并生成错误回答
                 run.tool_error = str(error)
-                run.steps.append(AgentStep("Tool failed", run.tool_error))
-                run.answer = self._compose_tool_error_answer(run)
+                run.steps.append(AgentStep("Graph runtime failed", run.tool_error))
+                self._run_classic_route(run)
         else:
-            # 分支B：无需调用工具，直接回答
-            run.answer = self._compose_direct_answer(user_input)
-            run.steps.append(AgentStep("Answer directly", "no tool was called"))
+            self._run_classic_route(run)
 
         # 4. 记录完成步骤并返回完整会话
         run.steps.append(AgentStep("Complete", "final answer generated"))
@@ -234,16 +241,111 @@ class WorkspaceAgent:
         state.add_step("Complete workflow", "final answer generated")
         return state.answer
 
-    def _run_langgraph(self, question: str) -> dict[str, Any]:
+    def _run_langgraph(
+        self,
+        question: str,
+        route_hint_action: str | None = None,
+        route_hint_tool_name: str | None = None,
+        route_hint_tool_input: str | None = None,
+    ) -> dict[str, Any]:
         """Run the LangGraph workflow and return its final state."""
 
         # 延迟导入，避免 integrations -> agent -> core 的循环导入
         from integrations.langgraph_workflow import run_rag_graph
 
         try:
-            return dict(run_rag_graph(self.workspace_root, question, planner_client=self._llm_client))
+            return dict(
+                run_rag_graph(
+                    self.workspace_root,
+                    question,
+                    planner_client=self._llm_client,
+                    route_hint_action=route_hint_action,
+                    route_hint_tool_name=route_hint_tool_name,
+                    route_hint_tool_input=route_hint_tool_input,
+                )
+            )
         except Exception as error:
             raise ToolError(f"LangGraph workflow failed: {error}") from error
+
+    def _run_classic_route(self, run: AgentRun) -> None:
+        """Run the pre-graph classic branch logic as an explicit fallback."""
+
+        if run.route.action == "use_tool":
+            try:
+                run.tool_result = self._call_tool(run.route)
+                run.steps.append(AgentStep("Run tool", f"{run.tool_result.tool_name} completed"))
+                run.answer = self._compose_tool_answer(run)
+            except ToolError as error:
+                run.tool_error = str(error)
+                run.steps.append(AgentStep("Tool failed", run.tool_error))
+                run.answer = self._compose_tool_error_answer(run)
+            return
+
+        run.answer = self._compose_direct_answer(run.user_input)
+        run.steps.append(AgentStep("Answer directly", "no tool was called"))
+
+    def _run_classic_workflow(self, run: AgentRun) -> None:
+        """Run the legacy workflow executor as an explicit fallback."""
+
+        workflow_plan = build_workflow_plan(run.user_input)
+        run.steps.append(AgentStep("Build workflow", workflow_plan.describe()))
+        workflow_state = AgentState(
+            run_id=run.run_id,
+            user_input=run.user_input,
+            route=run.route,
+            steps=run.steps,
+        )
+        run.answer = self._run_workflow(workflow_state, workflow_plan)
+        run.steps = workflow_state.steps
+
+    def _apply_graph_runtime_result(self, run: AgentRun, graph_state: dict[str, Any]) -> None:
+        """Map graph runtime state back into the classic AgentRun surface."""
+
+        if graph_state.get("route") == "direct_answer":
+            run.answer = graph_state.get("answer", self._compose_direct_answer(run.user_input))
+            return
+
+        logical_tool_name = graph_state.get("logical_tool_name") or run.route.tool_name or "langgraph_workflow"
+        run.tool_result = ToolResult(
+            logical_tool_name,
+            graph_state.get("tool_output", ""),
+            self._build_langgraph_metadata(graph_state),
+        )
+
+        if graph_state.get("tool_status") == "failed":
+            recovery_plan = graph_state.get("recovery_plan", {})
+            run.tool_error = (
+                str(graph_state.get("tool_error"))
+                or str(graph_state.get("error"))
+                or str(recovery_plan.get("reason", "Graph tool execution failed."))
+            )
+            if run.route.action == "workflow":
+                run.tool_result = ToolResult(
+                    "workflow",
+                    graph_state.get("tool_output", ""),
+                    self._build_langgraph_metadata(graph_state),
+                )
+                run.answer = graph_state.get("answer", self._compose_tool_error_answer(run))
+                return
+            run.answer = self._compose_tool_error_answer(run)
+            return
+
+        if graph_state.get("skill_status") == "failed":
+            recovery_plan = graph_state.get("recovery_plan", {})
+            run.tool_error = str(recovery_plan.get("reason", "Skill execution failed."))
+            run.answer = graph_state.get("tool_output", run.tool_error)
+            return
+
+        if run.route.action == "workflow":
+            run.answer = graph_state.get("answer", "")
+            run.tool_result = ToolResult(
+                "workflow",
+                graph_state.get("tool_output", run.answer),
+                self._build_langgraph_metadata(graph_state),
+            )
+            return
+
+        run.answer = self._compose_tool_answer(run) if run.route.action == "use_tool" else graph_state.get("answer", "")
 
     def _select_tool_call(self, user_input: str) -> ToolCallSelection:
         """Ask the real LLM to choose a tool from the workspace tool catalog."""
@@ -455,7 +557,10 @@ class WorkspaceAgent:
             "graph_steps": graph_state.get("steps", []),
             "planner_status": graph_state.get("planner_status"),
             "planner_error": graph_state.get("planner_error"),
+            "logical_tool_name": graph_state.get("logical_tool_name"),
         }
+        if graph_state.get("tool_metadata") is not None:
+            metadata.update(graph_state.get("tool_metadata", {}))
         if graph_state.get("tool_status") is not None:
             metadata["tool_status"] = graph_state.get("tool_status")
             metadata["tool_error"] = graph_state.get("tool_error")

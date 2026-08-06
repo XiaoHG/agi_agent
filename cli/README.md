@@ -31,6 +31,30 @@ Run the main agent with real DeepSeek planning for LangGraph requests:
 python -m cli.main --input "Use LangGraph to read README.md." --llm-planner --trace
 ```
 
+Run the default LangGraph-backed main runtime:
+
+```bash
+python -m cli.main --input "Read README.md and summarize the project learning goals." --trace
+```
+
+Run a multi-step workflow through the default LangGraph runtime:
+
+```bash
+python -m cli.main --input "Read README.md and then count lines." --trace
+```
+
+Compare against the classic pre-graph runtime:
+
+```bash
+python -m cli.main --input "Read README.md and summarize the project learning goals." --classic-runtime --trace
+```
+
+Compare the workflow against the classic runtime:
+
+```bash
+python -m cli.main --input "Read README.md and then count lines." --classic-runtime --trace
+```
+
 Show the latest persisted run:
 
 ```bash

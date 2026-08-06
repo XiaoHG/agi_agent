@@ -16,9 +16,30 @@ from agent.recovery import (
     build_tool_recovery_plan,
 )
 from agent.tool_schema import build_workspace_tool_specs
-from agent.tools import run_skill_with_workspace
-
-from .langchain_tools import build_langchain_tools
+from agent.tools import (
+    ToolResult,
+    answer_docs_with_llm,
+    count_lines,
+    list_agent_skills,
+    list_dir,
+    list_mcp_server_tools,
+    list_project_subagents,
+    mcp_read_project_file,
+    mcp_write_project_file,
+    mcp_workspace_summary,
+    plan_skill,
+    plan_subagent_collaboration,
+    read_file,
+    run_skill_with_workspace,
+    search_docs,
+    search_vector_docs,
+)
+from agent.workflow import (
+    WorkflowPlan,
+    WorkflowStep,
+    build_workflow_plan,
+    build_workflow_summary_from_results,
+)
 
 
 class RAGGraphState(TypedDict, total=False):
@@ -30,14 +51,25 @@ class RAGGraphState(TypedDict, total=False):
     planner_status: str  # LLM planner 状态：llm_planned / deterministic_fallback
     planner_error: str  # planner 失败原因
     planner_raw_response: str  # planner 原始响应
+    route_hint_action: str  # 外层 router action，用于默认 graph runtime
+    route_hint_tool_name: str  # 外层 router tool name
+    route_hint_tool_input: str  # 外层 router tool input
     selected_tool: str  # 选哪个工具
     tool_input: dict[str, str]  # 传给 LangChain tool 的输入
     tool_output: str  # 工具返回结果
+    tool_metadata: dict[str, Any]  # 工具 metadata，供主 Agent trace 继续使用
     tool_status: str  # 普通工具执行状态，用于 graph 条件边判断
     tool_error: str  # 普通工具失败原因
+    logical_tool_name: str  # graph 内部执行的逻辑工具名，对应 Agent tool 层
     skill_run: dict[str, Any]  # skill 执行的结构化 trace
     skill_status: str  # skill 执行状态，用于 graph 条件边判断
     recovery_plan: dict[str, Any]  # 失败后的结构化恢复计划
+    workflow_plan: dict[str, Any]  # workflow plan 的 JSON-ready 数据
+    workflow_results: list[dict[str, Any]]  # workflow 已执行 tool result 列表
+    workflow_summary: str  # workflow 的综合说明
+    workflow_current_step: int  # 当前 workflow step 下标
+    workflow_status: str  # workflow 执行状态
+    workflow_error: str  # workflow 失败原因
     answer: str  # 最终回答
     error: str  # 错误信息
     steps: list[str]  # 执行步骤记录（调试用）
@@ -51,9 +83,9 @@ def build_rag_graph(
     """Build a LangGraph workflow with simple conditional tool routing."""
 
     root = Path(workspace_root).resolve()  # 固定 graph 工作区根目录
-    tools = {tool.name: tool for tool in build_langchain_tools(root)}
     tool_specs = build_workspace_tool_specs()
     resolved_planner_prompt = planner_prompt or load_langgraph_planner_prompt()
+    tools = _build_graph_tool_registry(root)
 
     def route(state: RAGGraphState) -> RAGGraphState:
         """Choose a route and tool input for the current question."""
@@ -61,6 +93,14 @@ def build_rag_graph(
         question = state["question"]
         lowered = question.lower()
         steps = [*state.get("steps", []), "route"]
+
+        route_hint = _build_route_hint_state(state)
+        if route_hint is not None:
+            return {
+                **state,
+                **route_hint,
+                "steps": steps,
+            }
 
         if planner_client is not None:
             try:
@@ -91,6 +131,7 @@ def build_rag_graph(
                 "planner_status": state.get("planner_status", "deterministic_route"),
                 "selected_tool": "read_workspace_file",
                 "tool_input": {"path": path},
+                "logical_tool_name": "read_file",
                 "steps": steps,
             }
 
@@ -102,6 +143,7 @@ def build_rag_graph(
                 "planner_status": state.get("planner_status", "deterministic_route"),
                 "selected_tool": "execute_workspace_skill",
                 "tool_input": {"question": question},
+                "logical_tool_name": "execute_skill",
                 "steps": steps,
             }
 
@@ -113,6 +155,7 @@ def build_rag_graph(
                 "planner_status": state.get("planner_status", "deterministic_route"),
                 "selected_tool": "search_workspace_docs",
                 "tool_input": {"question": question},
+                "logical_tool_name": "search_docs",
                 "steps": steps,
             }
 
@@ -123,6 +166,7 @@ def build_rag_graph(
             "planner_status": state.get("planner_status", "deterministic_route"),
             "selected_tool": "answer_workspace_docs_with_llm",
             "tool_input": {"question": question},
+            "logical_tool_name": "answer_docs_with_llm",
             "steps": steps,
         }
 
@@ -133,10 +177,11 @@ def build_rag_graph(
         tool_name = state["selected_tool"]
         tool = tools[tool_name]
         try:
-            output = tool.invoke(state["tool_input"])
+            result = tool(state["tool_input"])
             return {
                 **state,
-                "tool_output": output,
+                "tool_output": result.output,
+                "tool_metadata": result.metadata or {},
                 "tool_status": "completed",
                 "steps": steps,
             }
@@ -159,6 +204,7 @@ def build_rag_graph(
             return {
                 **state,
                 "tool_output": result.output,
+                "tool_metadata": result.metadata or {},
                 "skill_run": skill_run,
                 "skill_status": str(skill_run.get("status", "unknown")) if isinstance(skill_run, dict) else "unknown",
                 "steps": steps,
@@ -204,6 +250,126 @@ def build_rag_graph(
             "steps": steps,
         }
 
+    def build_workflow(state: RAGGraphState) -> RAGGraphState:
+        """Build a workflow plan inside graph state for multi-step execution."""
+
+        steps = [*state.get("steps", []), "build_workflow"]
+        workflow_plan = build_workflow_plan(state["question"])
+        return {
+            **state,
+            "workflow_plan": workflow_plan.to_dict(),
+            "workflow_results": [],
+            "workflow_summary": "",
+            "workflow_current_step": 0,
+            "workflow_status": "planned",
+            "steps": steps,
+        }
+
+    def run_workflow_step(state: RAGGraphState) -> RAGGraphState:
+        """Execute one workflow step and keep progress in graph state."""
+
+        steps = [*state.get("steps", []), "run_workflow_step"]
+        plan = _workflow_plan_from_state(state)
+        index = int(state.get("workflow_current_step", 0))
+        if index >= len(plan.steps):
+            return {
+                **state,
+                "workflow_status": "completed",
+                "steps": steps,
+            }
+
+        step = plan.steps[index]
+        workflow_results = [*state.get("workflow_results", [])]
+        if step.kind == "synthesize":
+            return {
+                **state,
+                "workflow_summary": "Synthesis step completed.",
+                "workflow_current_step": index + 1,
+                "workflow_status": "running",
+                "steps": steps,
+            }
+
+        if step.tool_name is None:
+            return {
+                **state,
+                "workflow_status": "failed",
+                "workflow_error": f"Workflow step is missing a tool name: {step.title}",
+                "steps": steps,
+            }
+
+        selected_tool = _map_agent_tool_to_graph_tool(step.tool_name)
+        tool = tools[selected_tool]
+        try:
+            result = tool(_build_workflow_payload(step))
+            workflow_results.append(_tool_result_to_dict(result))
+            return {
+                **state,
+                "selected_tool": selected_tool,
+                "logical_tool_name": step.tool_name,
+                "tool_input": _build_workflow_payload(step),
+                "tool_output": result.output,
+                "tool_metadata": result.metadata or {},
+                "tool_status": "completed",
+                "workflow_results": workflow_results,
+                "workflow_current_step": index + 1,
+                "workflow_status": "running",
+                "steps": steps,
+            }
+        except Exception as error:
+            recovery_plan = build_tool_recovery_plan(
+                selected_tool,
+                _build_workflow_payload(step),
+                str(error),
+            )
+            return {
+                **state,
+                "selected_tool": selected_tool,
+                "logical_tool_name": step.tool_name,
+                "tool_input": _build_workflow_payload(step),
+                "tool_status": "failed",
+                "tool_error": str(error),
+                "workflow_status": "failed",
+                "workflow_error": str(error),
+                "recovery_plan": recovery_plan.to_dict(),
+                "steps": steps,
+            }
+
+    def finalize_workflow(state: RAGGraphState) -> RAGGraphState:
+        """Summarize workflow execution back into the standard answer channel."""
+
+        steps = [*state.get("steps", []), "finalize_workflow"]
+        plan = _workflow_plan_from_state(state)
+        if state.get("workflow_status") == "failed":
+            reason = state.get("workflow_error") or state.get("tool_error") or "Workflow execution failed."
+            return {
+                **state,
+                "tool_output": (
+                    "Result: the workflow failed before completion.\n\n"
+                    f"Reason: {reason}\n\n"
+                    "Next step: inspect the requested file or directory path and try again."
+                ),
+                "answer": (
+                    "Result: the workflow failed before completion.\n\n"
+                    f"Reason: {reason}\n\n"
+                    "Next step: inspect the requested file or directory path and try again."
+                ),
+                "steps": steps,
+            }
+
+        tool_results = [_tool_result_from_dict(item) for item in state.get("workflow_results", [])]
+        answer = build_workflow_summary_from_results(
+            plan,
+            tool_results,
+            state.get("workflow_summary", ""),
+        )
+        return {
+            **state,
+            "workflow_status": "completed",
+            "tool_output": answer,
+            "answer": answer,
+            "steps": steps,
+        }
+
     def finalize(state: RAGGraphState) -> RAGGraphState:
         """Convert tool output or error into the final graph answer."""
 
@@ -212,6 +378,11 @@ def build_rag_graph(
             return {
                 **state,
                 "answer": f"Graph failed: {state['error']}",
+                "steps": steps,
+            }
+        if state.get("answer"):
+            return {
+                **state,
                 "steps": steps,
             }
         return {
@@ -227,6 +398,9 @@ def build_rag_graph(
     graph.add_node("recover_tool_failure", recover_tool_failure)
     graph.add_node("call_skill", call_skill)
     graph.add_node("recover_skill_failure", recover_skill_failure)
+    graph.add_node("build_workflow", build_workflow)
+    graph.add_node("run_workflow_step", run_workflow_step)
+    graph.add_node("finalize_workflow", finalize_workflow)
     graph.add_node("finalize", finalize)
 
     graph.add_edge(START, "route")
@@ -236,6 +410,7 @@ def build_rag_graph(
         {
             "call_tool": "call_tool",
             "call_skill": "call_skill",
+            "build_workflow": "build_workflow",
             "finalize": "finalize",
         },
     )
@@ -257,6 +432,16 @@ def build_rag_graph(
         },
     )
     graph.add_edge("recover_skill_failure", "finalize")
+    graph.add_edge("build_workflow", "run_workflow_step")
+    graph.add_conditional_edges(
+        "run_workflow_step",
+        _next_after_workflow_step,
+        {
+            "run_next_workflow_step": "run_workflow_step",
+            "workflow_finalize": "finalize_workflow",
+        },
+    )
+    graph.add_edge("finalize_workflow", "finalize")
     graph.add_edge("finalize", END)
 
     return graph.compile()
@@ -266,11 +451,22 @@ def run_rag_graph(
     workspace_root: Path | str,
     question: str,
     planner_client: DeepSeekLLMClient | None = None,
+    route_hint_action: str | None = None,
+    route_hint_tool_name: str | None = None,
+    route_hint_tool_input: str | None = None,
 ) -> RAGGraphState:
     """Run the minimal LangGraph RAG workflow."""
 
     graph = build_rag_graph(workspace_root, planner_client=planner_client)
-    return graph.invoke({"question": question, "steps": []})
+    return graph.invoke(
+        {
+            "question": question,
+            "steps": [],
+            "route_hint_action": route_hint_action,
+            "route_hint_tool_name": route_hint_tool_name,
+            "route_hint_tool_input": route_hint_tool_input,
+        }
+    )
 
 
 def _next_after_route(state: RAGGraphState) -> str:
@@ -278,8 +474,12 @@ def _next_after_route(state: RAGGraphState) -> str:
 
     if state.get("error"):
         return "finalize"
+    if state.get("route") == "direct_answer":
+        return "finalize"
     if state.get("route") == "skill_execution":
         return "call_skill"
+    if state.get("route") == "workflow_execution":
+        return "build_workflow"
     return "call_tool"
 
 
@@ -297,6 +497,17 @@ def _next_after_skill(state: RAGGraphState) -> str:
     if state.get("skill_status") == "completed":
         return "skill_completed"
     return "skill_failed"
+
+
+def _next_after_workflow_step(state: RAGGraphState) -> str:
+    """Continue workflow execution until every step has been processed."""
+
+    if state.get("workflow_status") == "failed":
+        return "workflow_finalize"
+    plan = _workflow_plan_from_state(state)
+    if int(state.get("workflow_current_step", 0)) < len(plan.steps):
+        return "run_next_workflow_step"
+    return "workflow_finalize"
 
 
 def _looks_like_skill_execution(lowered_question: str) -> bool:
@@ -340,3 +551,218 @@ def _extract_file_path(question: str) -> str:
 
     match = re.search(r"((?:[\w.\-]+/)*[\w.\-]+\.(?:md|txt|py|json|toml|yaml|yml))", question)
     return match.group(1) if match else "."
+
+
+def _build_graph_tool_registry(root: Path) -> dict[str, Any]:
+    """Build the tool registry used by the graph runtime."""
+
+    return {
+        "read_workspace_file": lambda payload: read_file(root, payload.get("path", ".")),
+        "list_workspace_directory": lambda payload: list_dir(root, payload.get("path", ".")),
+        "count_workspace_file_lines": lambda payload: count_lines(root, payload.get("path", ".")),
+        "search_workspace_docs": lambda payload: search_docs(root, payload.get("question", "")),
+        "search_workspace_vector_docs": lambda payload: search_vector_docs(root, payload.get("question", "")),
+        "answer_workspace_docs_with_llm": lambda payload: answer_docs_with_llm(root, payload.get("question", "")),
+        "list_workspace_mcp_tools": lambda payload: list_mcp_server_tools(root),
+        "summarize_workspace_with_mcp": lambda payload: mcp_workspace_summary(root),
+        "read_workspace_file_through_mcp": lambda payload: mcp_read_project_file(root, payload.get("path", "")),
+        "write_workspace_file_through_mcp": lambda payload: mcp_write_project_file(root, payload.get("task", "")),
+        "list_workspace_skills": lambda payload: list_agent_skills(root),
+        "plan_workspace_skill": lambda payload: plan_skill(root, payload.get("question", "")),
+        "list_workspace_subagents": lambda payload: list_project_subagents(),
+        "plan_workspace_subagents": lambda payload: plan_subagent_collaboration(payload.get("question", "")),
+    }
+
+
+def _build_route_hint_state(state: RAGGraphState) -> dict[str, Any] | None:
+    """Translate the outer router decision into a graph route."""
+
+    action = state.get("route_hint_action")
+    tool_name = state.get("route_hint_tool_name")
+    tool_input = state.get("route_hint_tool_input") or state.get("question", "")
+
+    if action == "direct_answer":
+        return {
+            "route": "direct_answer",
+            "route_reason": "The outer router determined that no local tool is required.",
+            "planner_status": "router_wrapped",
+            "selected_tool": "none",
+            "logical_tool_name": "direct_answer",
+            "answer": _compose_direct_answer(tool_input),
+        }
+
+    if action == "workflow":
+        return {
+            "route": "workflow_execution",
+            "route_reason": "The outer router determined that this request needs ordered multi-step execution.",
+            "planner_status": "router_wrapped",
+            "selected_tool": "workflow_plan",
+            "logical_tool_name": "workflow",
+        }
+
+    if action != "use_tool" or not tool_name:
+        return None
+
+    mapping: dict[str, dict[str, Any]] = {
+        "read_file": {"route": "read_file", "selected_tool": "read_workspace_file", "tool_input": {"path": tool_input}},
+        "list_dir": {"route": "list_dir", "selected_tool": "list_workspace_directory", "tool_input": {"path": tool_input or "."}},
+        "count_lines": {"route": "count_lines", "selected_tool": "count_workspace_file_lines", "tool_input": {"path": tool_input}},
+        "search_docs": {"route": "search_docs", "selected_tool": "search_workspace_docs", "tool_input": {"question": tool_input}},
+        "search_vector_docs": {
+            "route": "search_vector_docs",
+            "selected_tool": "search_workspace_vector_docs",
+            "tool_input": {"question": tool_input},
+        },
+        "answer_docs_with_llm": {
+            "route": "answer_docs_with_llm",
+            "selected_tool": "answer_workspace_docs_with_llm",
+            "tool_input": {"question": tool_input},
+        },
+        "list_mcp_tools": {"route": "list_mcp_tools", "selected_tool": "list_workspace_mcp_tools", "tool_input": {}},
+        "mcp_workspace_summary": {
+            "route": "mcp_workspace_summary",
+            "selected_tool": "summarize_workspace_with_mcp",
+            "tool_input": {},
+        },
+        "mcp_read_project_file": {
+            "route": "mcp_read_project_file",
+            "selected_tool": "read_workspace_file_through_mcp",
+            "tool_input": {"path": tool_input},
+        },
+        "mcp_write_project_file": {
+            "route": "mcp_write_project_file",
+            "selected_tool": "write_workspace_file_through_mcp",
+            "tool_input": {"task": tool_input},
+        },
+        "list_skills": {"route": "list_skills", "selected_tool": "list_workspace_skills", "tool_input": {}},
+        "plan_skill": {"route": "plan_skill", "selected_tool": "plan_workspace_skill", "tool_input": {"question": tool_input}},
+        "list_subagents": {"route": "list_subagents", "selected_tool": "list_workspace_subagents", "tool_input": {}},
+        "plan_subagents": {
+            "route": "plan_subagents",
+            "selected_tool": "plan_workspace_subagents",
+            "tool_input": {"question": tool_input},
+        },
+    }
+
+    if tool_name == "execute_skill":
+        return {
+            "route": "skill_execution",
+            "route_reason": "The outer router selected reusable skill execution.",
+            "planner_status": "router_wrapped",
+            "selected_tool": "execute_workspace_skill",
+            "tool_input": {"question": tool_input},
+            "logical_tool_name": "execute_skill",
+        }
+
+    mapped = mapping.get(tool_name)
+    if mapped is None:
+        return None
+    return {
+        **mapped,
+        "route_reason": f"The outer router selected tool '{tool_name}'.",
+        "planner_status": "router_wrapped",
+        "logical_tool_name": tool_name,
+    }
+
+
+def _compose_direct_answer(user_input: str) -> str:
+    """Provide the same deterministic direct answer used by the classic runtime."""
+
+    text = user_input.lower()
+    if "agent" in text and ("chat" in text or "chatbot" in text) and ("difference" in text or "different" in text):
+        return (
+            "Result: the main difference is that an agent makes task-oriented decisions, can call tools, can keep state, "
+            "and can complete work through multiple steps.\n\n"
+            "Reason: a chatbot is mostly a text responder, while an agent is closer to an execution loop that moves a task toward completion.\n\n"
+            "In this project: start with the minimal loop, then add state, RAG, MCP, skills, and subagents.\n\n"
+            "Next step: run the CLI with trace enabled and inspect each recorded step."
+        )
+    if "why" in text:
+        return (
+            "Result: start from engineering boundaries before adding frameworks.\n\n"
+            "Reason: agent systems usually fail around tool boundaries, state transitions, and missing evaluation, not only around model quality.\n\n"
+            "In this project: first make the minimal loop work, then add RAG, MCP, skills, and subagents incrementally.\n\n"
+            "Next step: split the question into concept, implementation, and verification layers."
+        )
+    return (
+        "Result: this request does not require a local tool, so the agent answered directly.\n\n"
+        "Reason: the current version focuses on the minimal agent loop rather than broad knowledge coverage.\n\n"
+        "In this project: use tool calls when the request involves project files, directory structure, or specific documents.\n\n"
+        "Next step: ask the agent to read README.md or list the project directory if you want it to inspect local content."
+    )
+
+
+def _map_agent_tool_to_graph_tool(tool_name: str) -> str:
+    """Map the agent tool name used by workflow planning to the graph tool registry."""
+
+    mapping = {
+        "read_file": "read_workspace_file",
+        "list_dir": "list_workspace_directory",
+        "count_lines": "count_workspace_file_lines",
+        "search_docs": "search_workspace_docs",
+        "search_vector_docs": "search_workspace_vector_docs",
+        "answer_docs_with_llm": "answer_workspace_docs_with_llm",
+        "list_mcp_tools": "list_workspace_mcp_tools",
+        "mcp_workspace_summary": "summarize_workspace_with_mcp",
+        "mcp_read_project_file": "read_workspace_file_through_mcp",
+        "mcp_write_project_file": "write_workspace_file_through_mcp",
+        "list_skills": "list_workspace_skills",
+        "plan_skill": "plan_workspace_skill",
+        "list_subagents": "list_workspace_subagents",
+        "plan_subagents": "plan_workspace_subagents",
+    }
+    return mapping.get(tool_name, tool_name)
+
+
+def _build_workflow_payload(step: WorkflowStep) -> dict[str, str]:
+    """Translate a workflow step into the graph tool payload shape."""
+
+    if step.tool_name in {"read_file", "list_dir", "count_lines", "mcp_read_project_file"}:
+        return {"path": step.tool_input or "."}
+    if step.tool_name == "mcp_write_project_file":
+        return {"task": step.tool_input or ""}
+    return {"question": step.tool_input or ""}
+
+
+def _tool_result_to_dict(result: ToolResult) -> dict[str, Any]:
+    """Convert ToolResult into JSON-ready workflow state."""
+
+    return {
+        "tool_name": result.tool_name,
+        "output": result.output,
+        "metadata": result.metadata or {},
+    }
+
+
+def _tool_result_from_dict(data: dict[str, Any]) -> ToolResult:
+    """Restore ToolResult from JSON-ready workflow state."""
+
+    return ToolResult(
+        str(data.get("tool_name", "unknown")),
+        str(data.get("output", "")),
+        data.get("metadata") if isinstance(data.get("metadata"), dict) else None,
+    )
+
+
+def _workflow_plan_from_state(state: RAGGraphState) -> WorkflowPlan:
+    """Restore WorkflowPlan from graph state."""
+
+    raw_plan = state.get("workflow_plan")
+    if not isinstance(raw_plan, dict):
+        return WorkflowPlan(objective=state.get("question", ""), steps=[])
+    raw_steps = raw_plan.get("steps")
+    steps: list[WorkflowStep] = []
+    if isinstance(raw_steps, list):
+        for item in raw_steps:
+            if not isinstance(item, dict):
+                continue
+            steps.append(
+                WorkflowStep(
+                    title=str(item.get("title", "")),
+                    kind=str(item.get("kind", "")),
+                    tool_name=str(item["tool_name"]) if item.get("tool_name") is not None else None,
+                    tool_input=str(item["tool_input"]) if item.get("tool_input") is not None else None,
+                    note=str(item.get("note", "")),
+                )
+            )
+    return WorkflowPlan(objective=str(raw_plan.get("objective", state.get("question", ""))), steps=steps)

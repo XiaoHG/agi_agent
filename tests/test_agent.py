@@ -59,6 +59,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         run = agent.run("Read README.md and then count lines.")
         self.assertIn("workflow completed", run.answer)
         self.assertIn("count_lines", run.answer)
+        self.assertTrue(any(step.title == "Run workflow graph" for step in run.steps))
 
     def test_workflow_lists_directories_then_reads_readme(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -66,6 +67,8 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("workflow completed", run.answer)
         self.assertIn("configs", run.answer)
         self.assertIn("agi_agent", run.answer)
+        self.assertEqual(run.tool_result.tool_name if run.tool_result else None, "workflow")
+        self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "workflow_execution")
 
     def test_workflow_stops_after_missing_file_error(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -75,9 +78,18 @@ class WorkspaceAgentTests(unittest.TestCase):
         run = agent.run(text)
         self.assertIn("workflow failed", run.answer)
         self.assertIn("File does not exist", run.answer)
-        self.assertEqual(run.tool_result, None)
-        self.assertTrue(any(step.title == "Step failed" for step in run.steps))
-        self.assertFalse(any(step.title == "Step completed" and "count_lines" in step.detail for step in run.steps))
+        self.assertEqual(run.tool_result.tool_name if run.tool_result else None, "workflow")
+        self.assertTrue(any(step.title == "Run workflow graph" for step in run.steps))
+        self.assertEqual((run.tool_result.metadata or {}).get("tool_status") if run.tool_result else None, "failed")
+
+    def test_workflow_can_opt_out_of_graph_runtime(self) -> None:
+        agent = WorkspaceAgent(Path("."), use_graph_runtime=False)
+
+        run = agent.run("Read README.md and then count lines.")
+
+        self.assertIn("workflow completed", run.answer)
+        self.assertFalse(any(step.title == "Run workflow graph" for step in run.steps))
+        self.assertTrue(any(step.title == "Build workflow" for step in run.steps))
 
     def test_read_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -101,6 +113,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         run = agent.run("Explain the difference between an agent and a chatbot.")
         self.assertIn("main difference", run.answer)
         self.assertEqual(run.route.action, "direct_answer")
+        self.assertTrue(any(step.title == "Run graph runtime" for step in run.steps))
 
     def test_agent_handles_missing_file(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -113,6 +126,16 @@ class WorkspaceAgentTests(unittest.TestCase):
         run = agent.run("Read README.md and summarize the project learning goals.")
         self.assertIn("Result: read README.md", run.answer)
         self.assertIn("agi_agent", run.answer)
+        self.assertEqual(run.tool_result.tool_name if run.tool_result else None, "read_file")
+        self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "read_file")
+
+    def test_agent_can_opt_out_of_default_graph_runtime(self) -> None:
+        agent = WorkspaceAgent(Path("."), use_graph_runtime=False)
+
+        run = agent.run("Read README.md and summarize the project learning goals.")
+
+        self.assertIn("Result: read README.md", run.answer)
+        self.assertFalse(any(step.title == "Run graph runtime" for step in run.steps))
 
     def test_agent_describes_project_dirs(self) -> None:
         agent = WorkspaceAgent(Path("."))
