@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v33 workflow 并入默认 LangGraph orchestration 已完成，本地未提交。
+当前状态：v34 tool_call 并入默认 LangGraph orchestration 已完成，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：继续 graph 内统一多步 orchestration，把 tool_call / tool_loop 主路径逐步纳入 LangGraph。
+下一阶段建议：继续 graph 内统一多步 orchestration，把 tool_loop 主路径纳入 LangGraph。
 
 ## 当前教师判断
 
@@ -115,6 +115,9 @@ v29 功能基线提交：
 - workflow graph plan/build/step/finalize nodes
 - workflow route hint -> graph workflow execution
 - workflow classic fallback preserved for comparison
+- tool_call graph selection node
+- tool_call action/status structured graph state
+- tool_call classic fallback preserved for comparison
 
 当前缺口：
 
@@ -122,7 +125,7 @@ v29 功能基线提交：
 - RAG 已开始接入本地 vector index，但还不是外部 embedding provider / production vector store。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，并已具备最小权限分类和拒绝路径；但 MCP 协议仍是本地 in-process 学习版。
 - Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，但还没有更完整的动态配置和 skill-level 权限模型。
-- LangGraph workflow 已成为默认主执行器，workflow 已并入统一 graph runtime，但 tool_call / tool_loop 还没有全部并入。
+- LangGraph workflow 已成为默认主执行器，workflow / tool_call 已并入统一 graph runtime，但 tool_loop 还没有并入。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，但还没有做基于事件流的完整 replay。
 - checkpoint 已可浏览，但还没有做跨 run 的自动 replay。
@@ -151,7 +154,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 1. 复盘 v31 MCP 工具注册与权限策略：`versions/mcp-tool-permission-policy_v31.md`。
 2. 查看 v31 练习：`docs/mcp-tool-permission-policy-exercises_v31.md`。
 3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
-4. 进入下一阶段：graph 内统一多步 orchestration，优先推进 tool_call / tool_loop。
+4. 进入下一阶段：graph 内统一多步 orchestration，优先推进 tool_loop。
 
 ## 当前学习重点
 
@@ -220,12 +223,13 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v30：Project Skill Registry。
 - 完成 v31：MCP 工具注册与权限策略。
 - 完成 v32：默认 LangGraph 主执行器。
-- 完成 v33：workflow 并入默认 LangGraph orchestration（本地未提交）。
+- 完成 v33：workflow 并入默认 LangGraph orchestration。
+- 完成 v34：tool_call 并入默认 LangGraph orchestration（本地未提交）。
 
 ## 未完成
 
 - 标准化 MCP server/client。
-- 让 LangGraph 继续吞并 workflow / tool loop / tool calling 主路径。
+- 让 LangGraph 继续吞并 tool_loop 主路径。
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
 - Runtime events replay。
@@ -251,12 +255,15 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 6. `docs/default-langgraph-main-runtime-exercises_v32.md`
 7. `versions/graph-workflow-orchestration_v33.md`
 8. `docs/graph-workflow-orchestration-exercises_v33.md`
-7. `agent/core.py`
-8. `integrations/langgraph_workflow.py`
-9. `cli/main.py`
-10. `tests/test_agent.py`
-11. `tests/test_langgraph_workflow.py`
-12. `cli/README.md`
+9. `versions/graph-tool-call-orchestration_v34.md`
+10. `docs/graph-tool-call-orchestration-exercises_v34.md`
+11. `agent/core.py`
+12. `integrations/langgraph_workflow.py`
+13. `cli/main.py`
+14. `tests/test_agent.py`
+15. `tests/test_langgraph_workflow.py`
+16. `tests/test_tool_calling.py`
+17. `cli/README.md`
 然后继续执行当前具体任务。
 
 ## 下一步建议
@@ -267,4 +274,4 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 建议优先进入：
 
-- graph 内统一多步 orchestration：已完成 workflow graph 化，下一步继续把 tool_call / tool_loop 主路径纳入 graph runtime，继续压缩 classic 主控分支。
+- graph 内统一多步 orchestration：已完成 workflow / tool_call graph 化，下一步继续把 tool_loop 主路径纳入 graph runtime，继续压缩 classic 主控分支。

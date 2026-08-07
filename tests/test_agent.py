@@ -137,6 +137,25 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("Result: read README.md", run.answer)
         self.assertFalse(any(step.title == "Run graph runtime" for step in run.steps))
 
+    def test_agent_tool_call_runs_through_default_graph_runtime(self) -> None:
+        from agent.llm import LLMResponse
+
+        class FakeToolCallingClient:
+            def chat(self, messages):  # noqa: ANN001
+                return LLMResponse(
+                    model="fake",
+                    content='{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Inspect the README."}',
+                    raw={"messages": len(messages)},
+                )
+
+        agent = WorkspaceAgent(Path("."), llm_client=FakeToolCallingClient())
+
+        run = agent.run("Use tool calling to read README.md.")
+
+        self.assertIn("Result: read README.md", run.answer)
+        self.assertTrue(any(step.title == "Run tool-call graph" for step in run.steps))
+        self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "tool_call_execution")
+
     def test_agent_describes_project_dirs(self) -> None:
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List the main project directories and explain what they are responsible for.")

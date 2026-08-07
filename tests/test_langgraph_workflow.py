@@ -20,6 +20,16 @@ class FakePlannerClient:
         return LLMResponse(model="fake", content=self.content, raw={"messages": len(messages)})
 
 
+class FakeToolCallingClient:
+    """Test double that returns a fixed tool-calling response."""
+
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+    def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        return LLMResponse(model="fake", content=self.content, raw={"messages": len(messages)})
+
+
 class LangGraphWorkflowTests(unittest.TestCase):
     """Verify the minimal LangGraph workflow runs through expected graph nodes."""
 
@@ -121,6 +131,63 @@ class LangGraphWorkflowTests(unittest.TestCase):
             )
             self.assertEqual(result["recovery_plan"]["tool_name"], "read_workspace_file")
             self.assertIn("workflow failed", result["answer"])
+
+    def test_rag_graph_runs_tool_call_selection_then_tool(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            client = FakeToolCallingClient(
+                '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the requested file."}'
+            )
+
+            result = run_rag_graph(root, "Use tool calling to read README.md.", planner_client=client, route_hint_action="tool_call", route_hint_tool_input="read README.md")  # type: ignore[arg-type]
+
+            self.assertEqual(result["route"], "tool_call_execution")
+            self.assertEqual(result["tool_call_status"], "ready_to_execute")
+            self.assertEqual(result["logical_tool_name"], "read_file")
+            self.assertEqual(result["selected_tool"], "read_workspace_file")
+            self.assertEqual(result["steps"], ["route", "select_tool_call", "call_tool", "finalize"])
+            self.assertIn("[read_file] README.md", result["answer"])
+
+    def test_rag_graph_runs_tool_call_direct_answer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = FakeToolCallingClient(
+                '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"The request can be answered directly."}'
+            )
+
+            result = run_rag_graph(
+                root,
+                "Use tool calling to explain the difference between an agent and a chatbot.",
+                planner_client=client,  # type: ignore[arg-type]
+                route_hint_action="tool_call",
+                route_hint_tool_input="explain the difference between an agent and a chatbot",
+            )
+
+            self.assertEqual(result["route"], "tool_call_execution")
+            self.assertEqual(result["tool_call_status"], "answer_directly")
+            self.assertEqual(result["steps"], ["route", "select_tool_call", "finalize"])
+            self.assertIn("main difference", result["answer"])
+
+    def test_rag_graph_runs_tool_call_clarification(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = FakeToolCallingClient(
+                '{"action":"ask_clarification","tool_name":null,"tool_input":null,"reason":"The target file is missing."}'
+            )
+
+            result = run_rag_graph(
+                root,
+                "Use tool calling to inspect a file.",
+                planner_client=client,  # type: ignore[arg-type]
+                route_hint_action="tool_call",
+                route_hint_tool_input="inspect a file",
+            )
+
+            self.assertEqual(result["route"], "tool_call_execution")
+            self.assertEqual(result["tool_call_status"], "needs_clarification")
+            self.assertEqual(result["steps"], ["route", "select_tool_call", "finalize"])
+            self.assertIn("needs more information", result["answer"])
 
     def test_rag_graph_tool_status_controls_next_edge(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

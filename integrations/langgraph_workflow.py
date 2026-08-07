@@ -9,13 +9,14 @@ from langgraph.graph import END, START, StateGraph
 
 from agent.llm import DeepSeekLLMClient
 from agent.planner import plan_graph_route
-from agent.prompts import load_langgraph_planner_prompt
+from agent.prompts import load_langgraph_planner_prompt, load_tool_calling_prompt
 from agent.recovery import (
     build_exception_recovery_plan,
     build_skill_recovery_plan,
     build_tool_recovery_plan,
 )
 from agent.tool_schema import build_workspace_tool_specs
+from agent.tool_calling import ToolCallSelection, select_tool_call
 from agent.tools import (
     ToolResult,
     answer_docs_with_llm,
@@ -64,6 +65,9 @@ class RAGGraphState(TypedDict, total=False):
     skill_run: dict[str, Any]  # skill 执行的结构化 trace
     skill_status: str  # skill 执行状态，用于 graph 条件边判断
     recovery_plan: dict[str, Any]  # 失败后的结构化恢复计划
+    tool_call_selection: dict[str, Any]  # tool calling 结构化选择结果
+    tool_call_status: str  # tool calling 执行状态
+    tool_call_error: str  # tool calling 失败原因
     workflow_plan: dict[str, Any]  # workflow plan 的 JSON-ready 数据
     workflow_results: list[dict[str, Any]]  # workflow 已执行 tool result 列表
     workflow_summary: str  # workflow 的综合说明
@@ -85,6 +89,7 @@ def build_rag_graph(
     root = Path(workspace_root).resolve()  # 固定 graph 工作区根目录
     tool_specs = build_workspace_tool_specs()
     resolved_planner_prompt = planner_prompt or load_langgraph_planner_prompt()
+    tool_calling_prompt = load_tool_calling_prompt()
     tools = _build_graph_tool_registry(root)
 
     def route(state: RAGGraphState) -> RAGGraphState:
@@ -265,6 +270,80 @@ def build_rag_graph(
             "steps": steps,
         }
 
+    def select_tool_call_in_graph(state: RAGGraphState) -> RAGGraphState:
+        """Run structured tool calling inside graph state."""
+
+        steps = [*state.get("steps", []), "select_tool_call"]
+        client = planner_client or DeepSeekLLMClient()
+        question = state.get("route_hint_tool_input") or state["question"]
+        try:
+            selection = select_tool_call(
+                client,
+                question,
+                tool_specs,
+                prompt=tool_calling_prompt,
+            )
+        except Exception as error:
+            recovery_plan = build_exception_recovery_plan(str(error))
+            answer = (
+                "Result: the tool call failed, so the task was not completed.\n\n"
+                f"Reason: {error}\n\n"
+                "Next step: retry the request with a clearer tool target or inspect the tool-calling prompt/output."
+            )
+            return {
+                **state,
+                "selected_tool": "llm_tool_selector",
+                "logical_tool_name": "llm_tool_selector",
+                "tool_call_status": "failed",
+                "tool_call_error": str(error),
+                "recovery_plan": recovery_plan.to_dict(),
+                "answer": answer,
+                "steps": steps,
+            }
+
+        if selection.action == "answer_directly":
+            return {
+                **state,
+                "route_reason": "The tool-calling model decided to answer directly without a local tool.",
+                "selected_tool": "none",
+                "logical_tool_name": "llm_tool_selector",
+                "tool_call_selection": _tool_call_selection_to_dict(selection),
+                "tool_call_status": "answer_directly",
+                "answer": _compose_direct_answer(question),
+                "steps": steps,
+            }
+
+        if selection.action == "ask_clarification":
+            return {
+                **state,
+                "route_reason": "The tool-calling model needs more user detail before selecting a tool.",
+                "selected_tool": "none",
+                "logical_tool_name": "llm_tool_selector",
+                "tool_call_selection": _tool_call_selection_to_dict(selection),
+                "tool_call_status": "needs_clarification",
+                "answer": (
+                    "Result: the agent needs more information before acting.\n\n"
+                    f"Reason: {selection.reason}\n\n"
+                    "Next step: provide the missing details and try again."
+                ),
+                "steps": steps,
+            }
+
+        logical_tool_name = selection.tool_name or "unknown"
+        mapped_tool_name = _map_agent_tool_to_graph_tool(logical_tool_name)
+        payload = _build_tool_payload_from_selection(selection)
+        next_status = "call_skill" if logical_tool_name == "execute_skill" else "ready_to_execute"
+        return {
+            **state,
+            "route_reason": f"The tool-calling model selected tool '{logical_tool_name}'.",
+            "selected_tool": mapped_tool_name,
+            "logical_tool_name": logical_tool_name,
+            "tool_input": payload,
+            "tool_call_selection": _tool_call_selection_to_dict(selection),
+            "tool_call_status": next_status,
+            "steps": steps,
+        }
+
     def run_workflow_step(state: RAGGraphState) -> RAGGraphState:
         """Execute one workflow step and keep progress in graph state."""
 
@@ -398,6 +477,7 @@ def build_rag_graph(
     graph.add_node("recover_tool_failure", recover_tool_failure)
     graph.add_node("call_skill", call_skill)
     graph.add_node("recover_skill_failure", recover_skill_failure)
+    graph.add_node("select_tool_call", select_tool_call_in_graph)
     graph.add_node("build_workflow", build_workflow)
     graph.add_node("run_workflow_step", run_workflow_step)
     graph.add_node("finalize_workflow", finalize_workflow)
@@ -410,7 +490,17 @@ def build_rag_graph(
         {
             "call_tool": "call_tool",
             "call_skill": "call_skill",
+            "select_tool_call": "select_tool_call",
             "build_workflow": "build_workflow",
+            "finalize": "finalize",
+        },
+    )
+    graph.add_conditional_edges(
+        "select_tool_call",
+        _next_after_tool_call_selection,
+        {
+            "call_tool": "call_tool",
+            "call_skill": "call_skill",
             "finalize": "finalize",
         },
     )
@@ -478,6 +568,8 @@ def _next_after_route(state: RAGGraphState) -> str:
         return "finalize"
     if state.get("route") == "skill_execution":
         return "call_skill"
+    if state.get("route") == "tool_call_execution":
+        return "select_tool_call"
     if state.get("route") == "workflow_execution":
         return "build_workflow"
     return "call_tool"
@@ -508,6 +600,17 @@ def _next_after_workflow_step(state: RAGGraphState) -> str:
     if int(state.get("workflow_current_step", 0)) < len(plan.steps):
         return "run_next_workflow_step"
     return "workflow_finalize"
+
+
+def _next_after_tool_call_selection(state: RAGGraphState) -> str:
+    """Route after tool-call selection based on the structured selection status."""
+
+    status = state.get("tool_call_status")
+    if status == "ready_to_execute":
+        return "call_tool"
+    if status == "call_skill":
+        return "call_skill"
+    return "finalize"
 
 
 def _looks_like_skill_execution(lowered_question: str) -> bool:
@@ -598,6 +701,15 @@ def _build_route_hint_state(state: RAGGraphState) -> dict[str, Any] | None:
             "planner_status": "router_wrapped",
             "selected_tool": "workflow_plan",
             "logical_tool_name": "workflow",
+        }
+
+    if action == "tool_call":
+        return {
+            "route": "tool_call_execution",
+            "route_reason": "The outer router determined that the LLM should choose the smallest sufficient tool action.",
+            "planner_status": "router_wrapped",
+            "selected_tool": "llm_tool_selector",
+            "logical_tool_name": "llm_tool_selector",
         }
 
     if action != "use_tool" or not tool_name:
@@ -710,8 +822,36 @@ def _map_agent_tool_to_graph_tool(tool_name: str) -> str:
         "plan_skill": "plan_workspace_skill",
         "list_subagents": "list_workspace_subagents",
         "plan_subagents": "plan_workspace_subagents",
+        "execute_skill": "execute_workspace_skill",
     }
     return mapping.get(tool_name, tool_name)
+
+
+def _build_tool_payload_from_selection(selection: ToolCallSelection) -> dict[str, str]:
+    """Translate a structured tool-call selection into graph tool payload."""
+
+    tool_input = selection.tool_input or ""
+    if selection.tool_name in {"read_file", "count_lines", "mcp_read_project_file"}:
+        return {"path": tool_input or "."}
+    if selection.tool_name == "list_dir":
+        return {"path": tool_input or "."}
+    if selection.tool_name in {"list_mcp_tools", "mcp_workspace_summary", "list_skills", "list_subagents"}:
+        return {}
+    if selection.tool_name == "mcp_write_project_file":
+        return {"task": tool_input}
+    return {"question": tool_input}
+
+
+def _tool_call_selection_to_dict(selection: ToolCallSelection) -> dict[str, Any]:
+    """Convert ToolCallSelection into JSON-ready graph state."""
+
+    return {
+        "action": selection.action,
+        "tool_name": selection.tool_name,
+        "tool_input": selection.tool_input,
+        "reason": selection.reason,
+        "raw_response": selection.raw_response,
+    }
 
 
 def _build_workflow_payload(step: WorkflowStep) -> dict[str, str]:

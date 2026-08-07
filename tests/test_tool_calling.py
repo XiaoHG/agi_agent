@@ -107,7 +107,7 @@ class ToolCallingTests(unittest.TestCase):
         self.assertIsNotNone(run.tool_call)
         self.assertEqual(run.tool_call.tool_name if run.tool_call else None, "read_file")
         self.assertIn("Result: read README.md", run.answer)
-        self.assertIn("Select tool", agent.format_trace(run))
+        self.assertIn("Run tool-call graph", agent.format_trace(run))
 
     def test_workspace_agent_runs_tool_calling_direct_answer(self) -> None:
         client = FakeToolCallingClient(
@@ -121,6 +121,18 @@ class ToolCallingTests(unittest.TestCase):
         self.assertIsNotNone(run.tool_call)
         self.assertEqual(run.tool_call.action if run.tool_call else None, "answer_directly")
         self.assertIn("main difference", run.answer)
+
+    def test_workspace_agent_tool_calling_can_opt_out_of_graph_runtime(self) -> None:
+        client = FakeToolCallingClient(
+            '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"The task asks to inspect the README."}'
+        )
+        agent = WorkspaceAgent(Path("."), llm_client=client, use_graph_runtime=False)
+
+        run = agent.run("Use tool calling to read README.md.")
+
+        self.assertIn("Result: read README.md", run.answer)
+        self.assertIn("Select tool", agent.format_trace(run))
+        self.assertNotIn("Run tool-call graph", agent.format_trace(run))
 
 
 if __name__ == "__main__":

@@ -150,37 +150,24 @@ class WorkspaceAgent:
             run.steps.append(AgentStep("Complete", "final answer generated"))
             return self._persist_run(run)
 
-        # 3.7 如果要求模型参与工具选择，则进入结构化 tool calling 路径
+        # 3.7 如果要求模型参与工具选择，则默认交给 graph 主执行器；classic runtime 作为显式回退
         if run.route.action == "tool_call":
-            try:
-                tool_call_input = run.route.tool_input or user_input
-                run.tool_call = self._select_tool_call(tool_call_input)
-                run.steps.append(AgentStep("Select tool", self._describe_tool_call(run.tool_call)))
-                if run.tool_call.action == "use_tool":
-                    tool_route = ToolRoute(
-                        action="use_tool",
-                        tool_name=run.tool_call.tool_name,
-                        tool_input=run.tool_call.tool_input,
-                        reason=run.tool_call.reason,
+            if self._use_graph_runtime:
+                try:
+                    graph_state = self._run_langgraph(
+                        user_input,
+                        route_hint_action=run.route.action,
+                        route_hint_tool_name=run.route.tool_name,
+                        route_hint_tool_input=run.route.tool_input,
                     )
-                    run.tool_result = self._call_tool(tool_route)
-                    run.steps.append(AgentStep("Run tool", f"{run.tool_result.tool_name} completed"))
-                    run.answer = self._compose_tool_answer(run)
-                elif run.tool_call.action == "answer_directly":
-                    run.answer = self._compose_direct_answer(tool_call_input)
-                    run.steps.append(AgentStep("Answer directly", "LLM selected direct answer"))
-                else:
-                    run.answer = (
-                        "Result: the agent needs more information before acting.\n\n"
-                        f"Reason: {run.tool_call.reason}\n\n"
-                        "Next step: provide the missing details and try again."
-                    )
-                    run.steps.append(AgentStep("Ask clarification", run.tool_call.reason))
-            except ToolError as error:
-                run.tool_error = str(error)
-                run.steps.append(AgentStep("Tool calling failed", run.tool_error))
-                run.answer = self._compose_tool_error_answer(run)
-            run.steps.append(AgentStep("Complete", "final answer generated"))
+                    run.steps.append(AgentStep("Run tool-call graph", self._describe_langgraph_state(graph_state)))
+                    self._apply_graph_runtime_result(run, graph_state)
+                except ToolError as error:
+                    run.tool_error = str(error)
+                    run.steps.append(AgentStep("Tool-call graph failed", run.tool_error))
+                    self._run_classic_tool_call(run)
+            else:
+                self._run_classic_tool_call(run)
             return self._persist_run(run)
 
         # 3. 默认主执行器：LangGraph；classic runtime 作为显式回退
@@ -298,8 +285,50 @@ class WorkspaceAgent:
         run.answer = self._run_workflow(workflow_state, workflow_plan)
         run.steps = workflow_state.steps
 
+    def _run_classic_tool_call(self, run: AgentRun) -> None:
+        """Run the legacy tool-calling executor as an explicit fallback."""
+
+        try:
+            tool_call_input = run.route.tool_input or run.user_input
+            run.tool_call = self._select_tool_call(tool_call_input)
+            run.steps.append(AgentStep("Select tool", self._describe_tool_call(run.tool_call)))
+            if run.tool_call.action == "use_tool":
+                tool_route = ToolRoute(
+                    action="use_tool",
+                    tool_name=run.tool_call.tool_name,
+                    tool_input=run.tool_call.tool_input,
+                    reason=run.tool_call.reason,
+                )
+                run.tool_result = self._call_tool(tool_route)
+                run.steps.append(AgentStep("Run tool", f"{run.tool_result.tool_name} completed"))
+                run.answer = self._compose_tool_answer(run)
+            elif run.tool_call.action == "answer_directly":
+                run.answer = self._compose_direct_answer(tool_call_input)
+                run.steps.append(AgentStep("Answer directly", "LLM selected direct answer"))
+            else:
+                run.answer = (
+                    "Result: the agent needs more information before acting.\n\n"
+                    f"Reason: {run.tool_call.reason}\n\n"
+                    "Next step: provide the missing details and try again."
+                )
+                run.steps.append(AgentStep("Ask clarification", run.tool_call.reason))
+        except ToolError as error:
+            run.tool_error = str(error)
+            run.steps.append(AgentStep("Tool calling failed", run.tool_error))
+            run.answer = self._compose_tool_error_answer(run)
+
     def _apply_graph_runtime_result(self, run: AgentRun, graph_state: dict[str, Any]) -> None:
         """Map graph runtime state back into the classic AgentRun surface."""
+
+        tool_call_selection = graph_state.get("tool_call_selection")
+        if isinstance(tool_call_selection, dict):
+            run.tool_call = ToolCallSelection(
+                action=str(tool_call_selection.get("action", "")),
+                tool_name=str(tool_call_selection["tool_name"]) if tool_call_selection.get("tool_name") is not None else None,
+                tool_input=str(tool_call_selection["tool_input"]) if tool_call_selection.get("tool_input") is not None else None,
+                reason=str(tool_call_selection.get("reason", "")),
+                raw_response=str(tool_call_selection.get("raw_response", "")),
+            )
 
         if graph_state.get("route") == "direct_answer":
             run.answer = graph_state.get("answer", self._compose_direct_answer(run.user_input))
@@ -334,6 +363,21 @@ class WorkspaceAgent:
             recovery_plan = graph_state.get("recovery_plan", {})
             run.tool_error = str(recovery_plan.get("reason", "Skill execution failed."))
             run.answer = graph_state.get("tool_output", run.tool_error)
+            return
+
+        if run.route.action == "tool_call":
+            tool_call_status = graph_state.get("tool_call_status")
+            if tool_call_status in {"answer_directly", "needs_clarification", "failed"}:
+                run.tool_error = graph_state.get("tool_call_error")
+                run.answer = graph_state.get("answer", "")
+                return
+            if run.tool_result is None and graph_state.get("tool_output"):
+                run.tool_result = ToolResult(
+                    logical_tool_name,
+                    graph_state.get("tool_output", ""),
+                    self._build_langgraph_metadata(graph_state),
+                )
+            run.answer = self._compose_tool_answer(run) if run.tool_result is not None else graph_state.get("answer", "")
             return
 
         if run.route.action == "workflow":
@@ -567,6 +611,10 @@ class WorkspaceAgent:
         if graph_state.get("skill_run") is not None:
             metadata["skill_run"] = graph_state["skill_run"]
             metadata["skill_status"] = graph_state.get("skill_status")
+        if graph_state.get("tool_call_selection") is not None:
+            metadata["tool_call_selection"] = graph_state["tool_call_selection"]
+            metadata["tool_call_status"] = graph_state.get("tool_call_status")
+            metadata["tool_call_error"] = graph_state.get("tool_call_error")
         if graph_state.get("recovery_plan") is not None:
             metadata["recovery_plan"] = graph_state["recovery_plan"]
         return metadata

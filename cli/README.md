@@ -79,6 +79,18 @@ Run LLM tool calling:
 python -m cli.tool_calling_demo --input "Use tool calling to read README.md." --trace
 ```
 
+Run tool calling through the default LangGraph-backed main runtime:
+
+```bash
+python -m cli.main --input "Use tool calling to read README.md." --trace
+```
+
+Compare tool calling against the classic runtime:
+
+```bash
+python -m cli.main --input "Use tool calling to read README.md." --classic-runtime --trace
+```
+
 Run a bounded LLM tool loop:
 
 ```bash
