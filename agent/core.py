@@ -19,7 +19,7 @@ from .persistence import (
     format_checkpoint_history,
     format_checkpoint_summary,
 )  # 运行记录持久化
-from .replay import format_replay_report  # checkpoint 回放
+from .replay import format_replay_diff_report, format_replay_report  # checkpoint 回放 / 对比
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
@@ -716,6 +716,29 @@ class WorkspaceAgent:
         if checkpoint is None:
             return f"No checkpoint found for run id: {run_id}"
         return format_replay_report(checkpoint)
+
+    def compare_latest_two_checkpoints(self) -> str:
+        """Render a replay diff report for the latest two checkpoints."""
+
+        if self._history_store is None:
+            return "No checkpoint found."
+        records = self._history_store.list_runs(limit=2)
+        if len(records) < 2:
+            return "Need at least two checkpoints to compare."
+        older_record = records[1]
+        newer_record = records[0]
+        return format_replay_diff_report(older_record, newer_record)
+
+    def compare_checkpoints(self, older_run_id: str, newer_run_id: str) -> str:
+        """Render a replay diff report for two selected checkpoints."""
+
+        older_record = self.load_checkpoint(older_run_id)
+        if older_record is None:
+            return f"No checkpoint found for run id: {older_run_id}"
+        newer_record = self.load_checkpoint(newer_run_id)
+        if newer_record is None:
+            return f"No checkpoint found for run id: {newer_run_id}"
+        return format_replay_diff_report(older_record, newer_record)
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
         """Convert a workflow failure into a user-facing answer."""

@@ -1,263 +1,399 @@
-# 专业 Agent 项目后续迭代计划
+# 专业级工业 Agent 项目总纲
 
-日期：2026-08-03
+日期：2026-08-07
 
-用途：此文档记录后续项目迭代的基本分析思路。之后每次进入新阶段前，都应优先参考本文件，避免继续只做局部小修补，而是围绕专业 Agent 能力闭环推进。
+用途：本文件是本项目后续所有版本迭代的总纲。以后每个新版本在立项、实现、验证、文档和练习设计时，都必须先对照本文件执行。若版本目标与本总纲冲突，以本总纲为准。
 
-## 当前判断
+## 1. 项目定位
 
-最近几个阶段主要在补齐局部工程能力：
+本项目不是零散的 Agent Demo 集合，也不是只展示局部技巧的实验仓库。
 
-- `SkillRun` trace
-- LangGraph skill node
-- Skill failure recovery
-- Tool failure recovery
+本项目的定位是：
 
-这些迭代对基础质量有价值，但如果长期保持这种粒度，项目容易停留在“学习型 demo”，而不是逐步成长为“专业 Agent 工程项目”。
+- 作为专业级工业 Agent 的开发学习项目持续推进。
+- 用工程化方式学习真实 Agent 系统的能力分层、执行协议、工具边界、恢复机制和交付规范。
+- 让每一次版本迭代都对应一个工业 Agent 的核心能力模块，而不是只补一个小点。
 
-后续迭代应该从“修一个点”升级为“完成一个专业 Agent 能力模块”。
+本项目最终要形成的不是“会跑几个例子”，而是：
 
-## 当前项目已具备的能力
+- 有清晰执行架构的 Agent 系统
+- 有真实运行入口的 Agent 工程
+- 有测试、eval、trace、checkpoint、replay、恢复、权限和文档体系的可学习项目
 
-项目目前已经具备：
+## 2. 总体开发原则
 
-- DeepSeek LLM client
-- 本地 RAG
-- DeepSeek-grounded RAG
-- LangChain `StructuredTool` adapter
-- LangGraph workflow
-- LLM tool calling
-- bounded tool loop
-- MCP 本地工具雏形
-- Skills 执行系统
-- tool-backed Skills
-- Subagent 规划
-- structured trace
-- regression eval
-- failure recovery
-- `.codex` project config
-- 项目内 professional code review skill
+后续版本必须长期遵守以下原则。
 
-这些能力已经不是零散代码，下一步应进入系统化整合。
+### 2.1 专业级原则
 
-## 专业 Agent 项目关键缺口
+- 所有后续版本都应面向专业级工业 Agent 能力建设。
+- 不再以“补一个小功能”作为单独版本目标，除非该功能是某个更大能力模块的前置基础，并且理由必须写清楚。
+- 每个版本都必须能解释自己在工业 Agent 架构中的位置。
 
-### 1. 统一运行协议
+### 2.2 大功能原则
 
-当前 `AgentRun`、`ToolResult`、`SkillRun`、LangGraph state、`recovery_plan` 都有自己的结构，但还没有统一的运行事件模型。
+- 每次版本迭代必须专注于一个特定的大功能模块。
+- 一个版本只能有一个主目标，不能把多个松散主题拼成一个版本。
+- 版本命名、版本文档、练习设计和验证范围都必须围绕这一个主目标展开。
 
-专业 Agent 项目通常需要统一表达：
+### 2.3 可学习原则
 
-- Run
-- Step
-- Event
-- ToolCall
-- ToolResult
-- SkillRun
-- Error
-- RecoveryPlan
-- Trace export
+- 当前项目后续版本的内容密度必须明显提升，不能只停留在“看懂一个 patch”。
+- 每个版本都要让学习者能系统理解：
+  - 为什么做这个能力
+  - 它解决了什么工业问题
+  - 它和现有模块怎么衔接
+  - 它的核心数据模型是什么
+  - 它的失败边界在哪里
+  - 它如何验证
 
-这会支撑后续 observability、checkpoint、debug UI、eval analysis 和多 Agent 协作。
+### 2.4 闭环原则
 
-### 2. LLM-first 路由与计划
-
-当前很多路由仍是规则判断。
-
-后续应该逐步演进为：
+每个版本必须尽量形成完整能力闭环，而不是只做内部 helper：
 
 ```text
-User input
-  -> LLM intent planner
-  -> structured plan
-  -> LangGraph execution
-  -> tool / RAG / MCP / Skill
-  -> synthesis
-```
-
-规则 router 可以继续作为 fallback，但不应该长期作为主要智能决策层。
-
-### 3. 专业 RAG
-
-当前 RAG 仍以关键词检索为主。
-
-专业 RAG 至少需要：
-
-- document loader
-- chunk metadata
-- embedding
-- vector store
-- rerank 或 scoring
-- source citation
-- grounded answer
-- no-context handling
-- RAG eval set
-- index rebuild CLI
-
-### 4. 标准 MCP
-
-当前 MCP 仍是本地 in-process 学习版。
-
-专业 MCP 应该具备：
-
-- server schema
-- tool registry
-- tool input/output validation
-- permission policy
-- external tool boundary
-- error model
-- trace integration
-
-### 5. Skills 系统升级
-
-当前 Skills 是固定 catalog + 固定 step。
-
-后续应支持：
-
-- `.codex/skills` discovery
-- `SKILL.md` frontmatter parsing
-- project skill registry
-- built-in skills 与 project skills 合并
-- skill execution plan
-- skill tool permissions
-- skill trace
-- skill eval
-- skill versioning
-
-项目内 `professional-code-review` skill 应作为此方向的入口。
-
-## 后续每个阶段的能力闭环要求
-
-未来每个阶段不应只做一个 helper，而应尽量形成完整能力闭环：
-
-```text
-数据模型
+问题定义
+-> 数据模型
 -> 执行逻辑
 -> CLI/demo
--> tests
+-> 测试
 -> eval
--> trace
--> docs
--> exercises
+-> trace / checkpoint / replay / recovery 中至少一项
+-> 版本文档
+-> 练习与答案
 ```
 
-如果某阶段只做很小的内部改动，需要明确说明为什么这一步必须单独做，以及它服务于哪个更大的专业能力。
+### 2.5 渐进工程化原则
 
-## 未来 6 个推荐阶段
+- 允许分阶段推进复杂能力，但每一阶段都必须形成明确、可运行、可验证、可讲解的里程碑。
+- 不追求一次性做完“工业终局”，但每次都必须比上一阶段更接近工业架构。
 
-### v25：Unified Agent Runtime Events and Recovery Model
+## 3. 当前项目判断
 
-目标：
+截至 2026-08-07，项目已经跨过“最小 Agent 学习样例”阶段，进入“专业级工业 Agent 工程学习”阶段。
 
-- 新增统一 runtime event 模型。
-- 新增标准 `RecoveryPlan` 数据模型。
-- 将 tool recovery plan 和 skill recovery plan 统一。
-- 让 Agent、Tool、Skill、Graph 的关键执行过程进入事件流。
-- 为 checkpoint、observability、debug UI 和多 Agent 协作打基础。
+已具备的主干能力包括：
 
-建议新增：
+- CLI Agent 基线
+- 状态与工作流
+- 本地 RAG 与专业 RAG v1 基线
+- LLM client 接入
+- LLM tool calling
+- bounded tool loop
+- MCP 学习版协议与权限分类
+- Skills 执行与 Project Skill Registry
+- LangGraph 主执行器整合
+- structured trace
+- runtime events
+- checkpoint persistence
+- run history browser
+- runtime replay
+- failure classification 与 recovery plan
 
-- `agent/events.py`
-- `agent/recovery.py`
-- `tests/test_events.py`
-- `tests/test_recovery.py`
-- `versions/v25_unified-agent-runtime-events-recovery.md`
-- `docs/v25_unified-agent-runtime-events-recovery-exercises.md`
+这意味着后续迭代不应再回到“功能点级修补”的节奏，而应进入“专业能力模块级推进”。
 
-### v26：LLM Planner 接入 LangGraph
+## 4. 当前版本链路判断
 
-目标：
+当前版本链路可以概括为：
 
-- 用 DeepSeek 生成结构化 plan。
-- plan 包含 intent、steps、tools、risk、expected outputs。
-- LangGraph 根据 plan 路由执行。
-- 保留 deterministic fallback。
-- 增加 planner prompt、parser、tests、eval。
+```text
+LLM
+-> Planner
+-> LangGraph Runtime
+-> RAG / Tool / MCP / Skill
+-> Trace / Runtime Events
+-> Checkpoint / Replay
+-> Recovery
+```
 
-重点：
+当前链路已经初步连通，但仍然有明显缺口：
 
-- LLM 负责规划。
-- 代码负责校验、执行和兜底。
+- replay 还停留在单次 run 报告级能力
+- recovery 还没有与 replay / checkpoint 形成更强联动
+- direct answer 仍未完全转为 LLM-first
+- MCP 仍偏学习版，本地边界重于标准化边界
+- Skills 还缺更强的权限、配置和版本化能力
+- eval 还没有形成针对工业级行为的更强验证矩阵
 
-### v27：专业 RAG v1
+因此，后续版本要围绕“工业能力模块”向前推进，而不是继续做零散增强。
 
-目标：
+## 5. 后续版本立项硬性要求
 
-- 加 embedding。
-- 加 vector index。
-- 加 chunk metadata。
-- 加 source citation。
-- 加 grounded answer eval。
-- 增加 index rebuild CLI。
+从本文件生效开始，后续每个版本在立项前都必须先回答以下问题。
 
-重点：
+### 5.1 立项问题
 
-- 从关键词检索升级到可扩展 RAG。
-- 回答必须保留 source evidence。
+1. 这个版本解决的是工业 Agent 的哪个核心能力缺口？
+2. 为什么这个能力值得单独做成一个版本？
+3. 这个版本的主功能模块是什么？
+4. 本版本不做什么？
+5. 完成后会给后续哪个更大能力打基础？
 
-### v28：项目内 Skill Registry
+### 5.2 设计问题
 
-目标：
+1. 是否引入了清晰的数据模型或状态结构？
+2. 是否清楚划分了执行边界、失败边界和回退边界？
+3. 是否避免把复杂逻辑继续堆进单一函数或 if/else 主循环？
+4. 是否与现有 LLM / RAG / MCP / Skills / LangGraph 主链路之一产生实质整合？
 
-- 读取 `.codex/skills`。
-- 解析 `SKILL.md` frontmatter。
-- 合并 built-in skills 和 project skills。
-- 让 `professional-code-review` 能进入项目 Agent 的 skill catalog。
-- 为 project-specific skills 增加测试和 CLI。
+### 5.3 学习问题
 
-重点：
+1. 这个版本是否足够支撑一次完整学习？
+2. 学习者是否能通过文档、代码、测试和练习理解这一个大模块？
+3. 练习是否围绕架构理解、实现机制、验证方法和工程取舍展开，而不是只问表层 API？
 
-- Skills 不再只写死在 Python catalog 中。
-- 项目 skill 成为 Agent 可发现能力。
+如果这些问题回答不清楚，该版本不能立项。
 
-### v29：MCP 工具注册与权限策略
+## 6. 后续版本交付硬性要求
 
-目标：
+后续每个版本都必须尽量包含以下内容。
 
-- 标准化 MCP tool schema。
-- 加 read-only / write / network / destructive 权限分类。
-- 增加 permission policy。
-- trace 中记录权限判断。
-- 为不安全工具调用提供 recovery / refusal path。
+### 6.1 必须交付
 
-重点：
+- 一个明确的主能力模块
+- 对应实现代码
+- 至少一个可直接运行的 CLI/demo 入口
+- 自动化测试
+- 版本说明文档
+- 练习文档
 
-- 专业 Agent 必须有权限边界。
-- 工具能力不能只靠名字和自然语言描述。
+### 6.2 强烈建议交付
 
-### v30：默认 LangGraph 主执行器
+- eval 用例或行为验证入口
+- trace / runtime event / checkpoint / replay / recovery 中的至少一项增强
+- 与现有主链路的端到端集成验证
 
-目标：
+### 6.3 版本质量底线
 
-- 让 LangGraph 成为主 Agent orchestration runtime。
-- direct answer、RAG、tool、Skill、MCP 都进入 graph。
-- 原有 if/else 主控逐步变成 fallback 或 thin wrapper。
-- trace 同时保留 runtime events 和 graph state。
+如果一个版本只包含下面这些内容之一，则不应单独立项：
 
-重点：
+- 只改文案
+- 只加一个 helper
+- 只补一个极小测试
+- 只补一个 trace 字段
+- 只补一个 CLI 参数
 
-- 从“Agent 调 LangGraph”升级为“Agent 运行在 LangGraph 上”。
+除非该改动是一个更大模块的必要前置，并在版本说明中明确写出原因。
 
-## 每次迭代前的评估模板
+## 7. 后续版本学习材料硬性要求
 
-进入任何新阶段前，先回答：
+后续每个版本都必须比现在更适合学习，不能再出现“版本内容太薄”的问题。
 
-1. 这个阶段解决的是专业 Agent 的哪个能力缺口？
-2. 它是否只是局部 helper，还是形成完整能力闭环？
-3. 是否接入真实 LLM / RAG / MCP / Skills / LangGraph 之一？
-4. 是否有清晰数据模型？
-5. 是否有测试验证代码行为？
-6. 是否有 eval 验证 Agent 行为？
-7. 是否进入 trace，方便调试和恢复？
-8. 是否有 CLI/demo，方便手动学习？
-9. 是否有版本文档和练习？
-10. 是否为下一阶段留下明确扩展点？
+### 7.1 版本文档必须回答
 
-## 后续执行原则
+- 这个版本为什么存在
+- 它在工业 Agent 中的位置
+- 它解决了什么问题
+- 它的核心数据流是什么
+- 它的主要实现文件有哪些
+- 它的执行流程是什么
+- 它的失败与边界是什么
+- 它与上一版本和下一版本的衔接是什么
 
-- 优先做“能力模块”，少做孤立 helper。
-- 每个阶段都要能解释它在专业 Agent 架构中的位置。
-- 新功能必须考虑 trace、tests、eval 和 recovery。
-- 真实 LLM、RAG、MCP、Skills、LangGraph 应逐步融合，而不是各自孤立。
-- 保持学习友好：新增代码要有清晰注释，版本文档和练习文件必须保留。
-- 新阶段代码默认不提交，等学习完成后再按用户要求提交。
+### 7.2 练习必须覆盖
+
+- 概念理解题
+- 代码阅读题
+- 手动验证题
+- 工程取舍题
+
+### 7.3 答案要求
+
+- 答案应直接写回练习文件
+- 答案不能只是一句话结论
+- 答案必须体现工程原因、架构关系和边界分析
+
+## 8. 后续版本的推荐能力主线
+
+后续版本必须优先沿着下面这条工业主线推进：
+
+```text
+统一运行协议
+-> 可观测性
+-> 持久化与回放
+-> 恢复与继续执行
+-> 工具与权限体系
+-> Skills 体系升级
+-> 多 Agent / Subagent 协作
+-> 专业 RAG / 记忆 / 长任务
+-> 评估与发布级交付
+```
+
+这条主线的意思不是必须严格按字面顺序一项一项做，而是后续版本不能偏离工业 Agent 的主架构方向。
+
+## 9. 下一阶段推荐版本规划
+
+以下是基于当前项目状态重新制定的后续版本规划。每个版本都应是一个“大功能版本”。
+
+### v37：Run Replay Diff and Comparative Analysis
+
+主目标：
+
+- 让 replay 从“单次 run 回放”升级为“跨 run 对比分析”。
+
+应覆盖：
+
+- replay diff 数据模型
+- 两次运行的 route / graph route / steps / runtime events / answer 差异比较
+- CLI 对比入口
+- diff 报告输出
+- 测试与练习
+
+为什么它是大功能：
+
+- 它把 replay 从阅读能力推进到分析能力，是后续恢复、回归比较和审计的重要基础。
+
+### v38：Checkpoint-Guided Recovery and Resume
+
+主目标：
+
+- 让 checkpoint、replay 和 recovery 形成真正联动，支持从历史运行状态恢复或继续执行。
+
+应覆盖：
+
+- recovery / resume 数据模型
+- 从 checkpoint 恢复 graph state 的基础能力
+- 明确 resume 边界和不可恢复边界
+- CLI 恢复入口
+- 测试、trace、文档和练习
+
+为什么它是大功能：
+
+- 这是项目从“能观察历史”迈向“能利用历史继续工作”的关键一步。
+
+### v39：LLM-First Direct Answer and Intent Entry
+
+主目标：
+
+- 把 direct answer 入口升级为真正的 LLM-first 路由与回答入口。
+
+应覆盖：
+
+- direct answer 的 LLM 化
+- 规则 fallback
+- 与 planner / graph runtime 的衔接
+- 失败兜底
+- eval 与测试
+
+为什么它是大功能：
+
+- 工业 Agent 的顶层入口不能长期依赖规则分发，这一步决定“主智能入口”是否成立。
+
+### v40：Standardized MCP Execution Boundary
+
+主目标：
+
+- 把当前学习版 MCP 提升为更标准化的工具执行边界。
+
+应覆盖：
+
+- 更清晰的 MCP request / response 协议
+- tool schema 与 I/O 校验
+- 错误模型
+- 权限与拒绝路径的进一步标准化
+- trace 与 recovery 集成
+
+为什么它是大功能：
+
+- 工业 Agent 的外部工具层必须先边界清晰，之后才能谈稳定扩展。
+
+### v41：Skill Permissions, Versioning and Runtime Policy
+
+主目标：
+
+- 让 Skills 从“可发现、可运行”升级为“可治理、可约束、可演化”。
+
+应覆盖：
+
+- skill 权限边界
+- skill 版本信息
+- skill runtime policy
+- 更强的 skill trace 与测试
+- project skills 的工程化管理
+
+为什么它是大功能：
+
+- 工业 Agent 的 Skills 不能只是脚本目录，必须是可管理能力单元。
+
+### v42：Multi-Agent Task Delegation and Subagent Contract
+
+主目标：
+
+- 建立主 Agent 与 subagent 之间的标准协作协议。
+
+应覆盖：
+
+- subagent contract
+- task delegation 数据结构
+- 输入输出边界
+- trace / recovery / replay 中的子任务记录
+- 示例任务流与测试
+
+为什么它是大功能：
+
+- 多 Agent 协作是工业 Agent 系统的重要能力，不应只停留在目录和概念层。
+
+### v43：Long-Horizon Memory and Session Continuity
+
+主目标：
+
+- 引入更专业的会话记忆和长任务连续性机制。
+
+应覆盖：
+
+- session memory / task memory 模型
+- 短期与长期记忆边界
+- 与 checkpoint / replay / recovery 联动
+- CLI 验证入口
+- 测试与练习
+
+为什么它是大功能：
+
+- 工业 Agent 要处理跨轮次、跨任务连续工作，不能只依赖当前上下文。
+
+### v44：Industrial Evaluation Matrix and Failure Bench
+
+主目标：
+
+- 建立更接近工业交付的 Agent 评估矩阵和失败基准。
+
+应覆盖：
+
+- 分层 eval 结构
+- route / tool / skill / recovery / replay 类别用例
+- 失败基准集
+- 结果汇总入口
+- 文档与学习说明
+
+为什么它是大功能：
+
+- 没有系统评估矩阵，Agent 项目无法真正进入“可回归、可比较、可发布”的工程状态。
+
+## 10. 版本命名与内容约束
+
+后续版本必须遵守以下约束：
+
+- 每个版本文件名以版本号开头
+- 每个练习文件名以对应版本号开头
+- 每个版本只围绕一个主能力主题
+- 版本标题必须能直接看出它对应的工业能力
+- 版本文档、练习、测试和 CLI 命令应围绕同一主题，不得发散
+
+## 11. 版本完成后的复盘模板
+
+每个版本完成后，都应回答：
+
+1. 这个版本是否真的完成了一个大能力模块？
+2. 是否有足够材料支持学习，而不只是浏览 diff？
+3. 是否让项目更接近专业级工业 Agent，而不是更像 demo？
+4. 是否为下一阶段留下了清晰且必要的扩展点？
+5. 如果这个版本仍显得薄弱，问题是在范围太小、验证太弱，还是文档讲解不够？
+
+## 12. 执行结论
+
+从现在开始：
+
+- 后续版本一律以本总纲为立项依据。
+- 后续版本一律优先做“一个大的工业能力模块”。
+- 后续版本一律要求更强的学习价值和工程闭环。
+- 在你确认本总纲之前，不进入下一版本实现。

@@ -19,7 +19,16 @@ from .recovery import (
     build_tool_recovery_plan,
     classify_failure,
 )
-from .replay import ReplayReport, build_replay_report, format_replay_report
+from .replay import (
+    ReplayDiffReport,
+    ReplayReport,
+    ReplaySummary,
+    build_replay_report,
+    build_replay_summary,
+    compare_replay_reports,
+    format_replay_diff_report,
+    format_replay_report,
+)
 from .router import ToolRoute, route_intent
 from .tool_calling import ToolCallSelection, build_tool_calling_messages, parse_tool_call_selection, select_tool_call
 from .tool_loop import ToolLoopResult, ToolLoopStep
@@ -59,6 +68,8 @@ __all__ = [
     "GraphPlan",
     "RecoveryPlan",
     "ReplayReport",
+    "ReplayDiffReport",
+    "ReplaySummary",
     "RuntimeEvent",
     "RunCheckpointStore",
     "WorkspaceAgent",
@@ -76,9 +87,12 @@ __all__ = [
     "build_run_checkpoint",
     "build_runtime_events",
     "build_replay_report",
+    "build_replay_summary",
+    "compare_replay_reports",
     "format_checkpoint_history",
     "build_skill_recovery_plan",
     "format_replay_report",
+    "format_replay_diff_report",
     "build_tool_calling_messages",
     "build_tool_loop_synthesis_messages",
     "build_tool_recovery_plan",

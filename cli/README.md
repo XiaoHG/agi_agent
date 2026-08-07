@@ -85,6 +85,18 @@ Replay one saved run by id:
 python -m cli.main --replay-run abc12345
 ```
 
+Compare the latest two saved runs:
+
+```bash
+python -m cli.main --compare-last-two-runs
+```
+
+Compare two saved runs by id:
+
+```bash
+python -m cli.main --compare-runs abc12345 def67890
+```
+
 Run LLM tool calling:
 
 ```bash

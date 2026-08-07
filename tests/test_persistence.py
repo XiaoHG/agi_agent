@@ -7,7 +7,12 @@ import tempfile
 import unittest
 
 from agent import WorkspaceAgent, build_run_checkpoint, load_checkpoint
-from agent.replay import build_replay_report, format_replay_report
+from agent.replay import (
+    build_replay_report,
+    compare_replay_reports,
+    format_replay_diff_report,
+    format_replay_report,
+)
 from agent.persistence import RunCheckpointStore
 from cli import main as cli_main
 from cli import langgraph_demo
@@ -222,6 +227,90 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Runtime events:", replay_text)
             self.assertIn("Answer:", replay_text)
 
+    def test_replay_diff_report_compares_two_runs(self) -> None:
+        older = {
+            "run_id": "run-old",
+            "run_kind": "graph",
+            "created_at": "2026-08-07T00:00:00+00:00",
+            "user_input": "Read README.md.",
+            "route": {"action": "graph", "tool_name": "langgraph_workflow"},
+            "answer": "Older answer",
+            "trace_text": "older trace",
+            "trace": {
+                "route": {"action": "graph", "tool_name": "langgraph_workflow"},
+                "selected_tool": "read_workspace_file",
+                "logical_tool_name": "read_file",
+                "steps": [
+                    {"title": "Receive input", "detail": "Read README.md."},
+                    {"title": "Run graph", "detail": "route=read_file"},
+                ],
+                "tool_result": {
+                    "tool_name": "langgraph_workflow",
+                    "metadata": {
+                        "graph_route": "read_file",
+                    }
+                },
+            },
+        }
+        newer = {
+            "run_id": "run-new",
+            "run_kind": "graph",
+            "created_at": "2026-08-07T00:01:00+00:00",
+            "user_input": "List project skills.",
+            "route": {"action": "graph", "tool_name": "langgraph_workflow"},
+            "answer": "Newer answer",
+            "trace_text": "newer trace",
+            "trace": {
+                "route": {"action": "graph", "tool_name": "langgraph_workflow"},
+                "selected_tool": "execute_project_skill",
+                "logical_tool_name": "execute_skill",
+                "steps": [
+                    {"title": "Receive input", "detail": "List project skills."},
+                    {"title": "Run graph", "detail": "route=skill_execution"},
+                    {"title": "Record skill", "detail": "status=completed"},
+                ],
+                "tool_result": {
+                    "tool_name": "langgraph_workflow",
+                    "metadata": {
+                        "graph_route": "skill_execution",
+                        "skill_run": {
+                            "status": "completed",
+                            "skill": {"name": "code_review"},
+                        },
+                    }
+                },
+            },
+        }
+
+        report = compare_replay_reports(older, newer)
+        rendered = format_replay_diff_report(older, newer)
+
+        self.assertIn("graph_route", report.changed_fields)
+        self.assertIn("answer", report.changed_fields)
+        self.assertIn("tool_usage", report.changed_fields)
+        self.assertIn("skill_usage", report.changed_fields)
+        self.assertEqual(report.tool_names_added, ("execute_project_skill", "execute_skill"))
+        self.assertEqual(report.skill_names_added, ("code_review",))
+        self.assertIn("Replay diff report", rendered)
+        self.assertIn("Tools added:", rendered)
+        self.assertIn("Skills added:", rendered)
+
+    def test_workspace_agent_compares_latest_two_checkpoints(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            agent.run("Use LangGraph to read README.md.")
+            agent.run("Read README.md and then count lines.")
+
+            diff_text = agent.compare_latest_two_checkpoints()
+
+            self.assertIn("Replay diff report", diff_text)
+            self.assertIn("Older run:", diff_text)
+            self.assertIn("Newer run:", diff_text)
+            self.assertIn("Differences:", diff_text)
+
     def test_cli_main_can_replay_last_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -270,6 +359,59 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertIn(run.run_id, output.getvalue())
             self.assertIn("Graph route:", output.getvalue())
+
+    def test_cli_main_can_compare_last_two_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            agent.run("Use LangGraph to read README.md.")
+            agent.run("Read README.md and then count lines.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--compare-last-two-runs",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Replay diff report", output.getvalue())
+            self.assertIn("Step count delta:", output.getvalue())
+
+    def test_cli_main_can_compare_runs_by_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            first_run = agent.run("Use LangGraph to read README.md.")
+            second_run = agent.run("Read README.md and then count lines.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--compare-runs",
+                        first_run.run_id,
+                        second_run.run_id,
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn(first_run.run_id, output.getvalue())
+            self.assertIn(second_run.run_id, output.getvalue())
+            self.assertIn("Differences:", output.getvalue())
 
 
 if __name__ == "__main__":
