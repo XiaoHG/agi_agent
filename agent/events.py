@@ -43,12 +43,18 @@ def build_runtime_events(
 
     events: list[RuntimeEvent] = []
     for step in steps:
+        if isinstance(step, dict):
+            step_name = str(step.get("title", step.get("name", "unknown")))
+            step_detail = str(step.get("detail", step.get("description", "")))
+        else:
+            step_name = getattr(step, "title", getattr(step, "name", "unknown"))
+            step_detail = getattr(step, "detail", getattr(step, "description", ""))
         events.append(
             RuntimeEvent(
                 index=len(events) + 1,
                 event_type="step",
-                name=getattr(step, "title", "unknown"),
-                detail=getattr(step, "detail", ""),
+                name=step_name,
+                detail=step_detail,
             )
         )
 

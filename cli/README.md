@@ -73,6 +73,18 @@ Show one saved run by id:
 python -m cli.main --show-run abc12345 --trace
 ```
 
+Replay the latest saved run:
+
+```bash
+python -m cli.main --replay-last-run
+```
+
+Replay one saved run by id:
+
+```bash
+python -m cli.main --replay-run abc12345
+```
+
 Run LLM tool calling:
 
 ```bash

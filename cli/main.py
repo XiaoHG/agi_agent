@@ -22,6 +22,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", help="single user input")
     parser.add_argument("--show-run", help="show a checkpoint by run id")
     parser.add_argument("--show-last-run", action="store_true", help="show the latest persisted run")
+    parser.add_argument("--replay-run", help="replay a checkpoint by run id")
+    parser.add_argument("--replay-last-run", action="store_true", help="replay the latest persisted run")
     parser.add_argument("--llm-planner", action="store_true", help="use real DeepSeek planning for LangGraph runs")
     parser.add_argument("--classic-runtime", action="store_true", help="disable the default LangGraph runtime wrapper")
     parser.add_argument("--trace", action="store_true", help="print reasoning trace")
@@ -53,6 +55,20 @@ def list_runs(agent: WorkspaceAgent) -> int:
     """Print recent persisted runs."""
 
     print(agent.list_checkpoint_history())
+    return 0
+
+
+def replay_last_run(agent: WorkspaceAgent) -> int:
+    """Print a replay report for the latest persisted checkpoint."""
+
+    print(agent.replay_latest_checkpoint())
+    return 0
+
+
+def replay_run(agent: WorkspaceAgent, run_id: str) -> int:
+    """Print a replay report for a checkpoint selected by run id."""
+
+    print(agent.replay_checkpoint(run_id))
     return 0
 
 
@@ -109,6 +125,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.list_runs:
         return list_runs(agent)
+    if args.replay_run:
+        return replay_run(agent, args.replay_run)
+    if args.replay_last_run:
+        return replay_last_run(agent)
     if args.show_run:
         return show_run(agent, args.show_run, args.trace)
     if args.show_last_run:

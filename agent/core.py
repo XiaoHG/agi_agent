@@ -19,6 +19,7 @@ from .persistence import (
     format_checkpoint_history,
     format_checkpoint_summary,
 )  # 运行记录持久化
+from .replay import format_replay_report  # checkpoint 回放
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
@@ -699,6 +700,22 @@ class WorkspaceAgent:
         if self._history_store is None:
             return "No checkpoint found."
         return format_checkpoint_history(self._history_store.list_runs(limit=limit))
+
+    def replay_latest_checkpoint(self) -> str:
+        """Render a replay report for the latest checkpoint."""
+
+        checkpoint = self.load_latest_checkpoint()
+        if checkpoint is None:
+            return "No checkpoint found."
+        return format_replay_report(checkpoint)
+
+    def replay_checkpoint(self, run_id: str) -> str:
+        """Render a replay report for a checkpoint by run id."""
+
+        checkpoint = self.load_checkpoint(run_id)
+        if checkpoint is None:
+            return f"No checkpoint found for run id: {run_id}"
+        return format_replay_report(checkpoint)
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
         """Convert a workflow failure into a user-facing answer."""

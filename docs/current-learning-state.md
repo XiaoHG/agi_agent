@@ -14,7 +14,7 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v35 tool_loop 并入默认 LangGraph orchestration 已完成，本地未提交。
+当前状态：v36 runtime event replay 已开始，本地未提交。
 
 v29 功能基线提交：
 
@@ -132,7 +132,7 @@ v29 功能基线提交：
 - LangGraph workflow 已成为默认主执行器，workflow / tool_call / tool_loop 已并入统一 graph runtime。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，但还没有做基于事件流的完整 replay。
-- checkpoint 已可浏览，但还没有做跨 run 的自动 replay。
+- checkpoint 已可浏览，且已支持 report-level replay，但还没有做跨 run 的自动 replay。
 - LangGraph route 已有 DeepSeek planner 和 deterministic fallback，但还没有成为默认主执行器。
 
 ## 当前总目标
@@ -230,6 +230,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v33：workflow 并入默认 LangGraph orchestration。
 - 完成 v34：tool_call 并入默认 LangGraph orchestration。
 - 完成 v35：tool_loop 并入默认 LangGraph orchestration（本地未提交）。
+- 开始 v36：Runtime Event Replay。
 
 ## 未完成
 
@@ -237,7 +238,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 基于统一 LangGraph 主执行器，继续增强 replay、恢复和可观测性。
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
-- Runtime events replay。
+- Runtime events replay 已进入 report-level 版本。
 - checkpoint 跨 run 自动 replay。
 
 ## 恢复指令
