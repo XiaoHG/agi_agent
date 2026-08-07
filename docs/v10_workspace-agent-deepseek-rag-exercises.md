@@ -832,7 +832,7 @@ integrations/langchain_tools.py = framework adapter
 integrations/__init__.py
 integrations/langchain_tools.py
 tests/test_langchain_tools.py
-versions/langchain-tool-adapter_v11.md
+versions/v11_langchain-tool-adapter.md
 ```
 
 如果暂时不安装 LangChain，也可以先实现兼容 LangChain 结构的轻量 adapter，再接真实依赖。

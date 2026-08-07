@@ -852,7 +852,7 @@ metadata
 integrations/langgraph_workflow.py
 cli/langgraph_demo.py
 tests/test_langgraph_workflow.py
-versions/langgraph-workflow_v12.md
+versions/v12_langgraph-workflow.md
 ```
 
 ### 6. 应该修改哪些文件？

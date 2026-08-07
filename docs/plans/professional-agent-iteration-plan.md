@@ -161,8 +161,8 @@ User input
 - `agent/recovery.py`
 - `tests/test_events.py`
 - `tests/test_recovery.py`
-- `versions/unified-agent-runtime-events-recovery_v25.md`
-- `docs/unified-agent-runtime-events-recovery-exercises_v25.md`
+- `versions/v25_unified-agent-runtime-events-recovery.md`
+- `docs/v25_unified-agent-runtime-events-recovery-exercises.md`
 
 ### v26：LLM Planner 接入 LangGraph
 

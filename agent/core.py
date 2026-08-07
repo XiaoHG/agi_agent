@@ -133,21 +133,24 @@ class WorkspaceAgent:
             run.steps.append(AgentStep("Complete", "final answer generated"))
             return self._persist_run(run)
 
-        # 3.7 如果要求多步工具循环，则让模型在观察结果后继续决策
+        # 3.7 如果要求多步工具循环，则默认交给 graph 主执行器；classic runtime 作为显式回退
         if run.route.action == "tool_loop":
-            try:
-                loop_input = run.route.tool_input or user_input
-                run.tool_loop_result = self._run_tool_loop(loop_input)
-                run.tool_loop_result = self._synthesize_tool_loop_result(run.tool_loop_result)
-                if run.tool_loop_result.steps:
-                    run.tool_call = run.tool_loop_result.steps[-1].selection
-                run.steps.append(AgentStep("Run tool loop", self._describe_tool_loop(run.tool_loop_result)))
-                run.answer = run.tool_loop_result.to_text()
-            except ToolError as error:
-                run.tool_error = str(error)
-                run.steps.append(AgentStep("Tool loop failed", run.tool_error))
-                run.answer = self._compose_tool_error_answer(run)
-            run.steps.append(AgentStep("Complete", "final answer generated"))
+            if self._use_graph_runtime:
+                try:
+                    graph_state = self._run_langgraph(
+                        user_input,
+                        route_hint_action=run.route.action,
+                        route_hint_tool_name=run.route.tool_name,
+                        route_hint_tool_input=run.route.tool_input,
+                    )
+                    run.steps.append(AgentStep("Run tool-loop graph", self._describe_langgraph_state(graph_state)))
+                    self._apply_graph_runtime_result(run, graph_state)
+                except ToolError as error:
+                    run.tool_error = str(error)
+                    run.steps.append(AgentStep("Tool-loop graph failed", run.tool_error))
+                    self._run_classic_tool_loop(run)
+            else:
+                self._run_classic_tool_loop(run)
             return self._persist_run(run)
 
         # 3.7 如果要求模型参与工具选择，则默认交给 graph 主执行器；classic runtime 作为显式回退
@@ -317,6 +320,22 @@ class WorkspaceAgent:
             run.steps.append(AgentStep("Tool calling failed", run.tool_error))
             run.answer = self._compose_tool_error_answer(run)
 
+    def _run_classic_tool_loop(self, run: AgentRun) -> None:
+        """Run the legacy bounded tool-loop executor as an explicit fallback."""
+
+        try:
+            loop_input = run.route.tool_input or run.user_input
+            run.tool_loop_result = self._run_tool_loop(loop_input)
+            run.tool_loop_result = self._synthesize_tool_loop_result(run.tool_loop_result)
+            if run.tool_loop_result.steps:
+                run.tool_call = run.tool_loop_result.steps[-1].selection
+            run.steps.append(AgentStep("Run tool loop", self._describe_tool_loop(run.tool_loop_result)))
+            run.answer = run.tool_loop_result.to_text()
+        except ToolError as error:
+            run.tool_error = str(error)
+            run.steps.append(AgentStep("Tool loop failed", run.tool_error))
+            run.answer = self._compose_tool_error_answer(run)
+
     def _apply_graph_runtime_result(self, run: AgentRun, graph_state: dict[str, Any]) -> None:
         """Map graph runtime state back into the classic AgentRun surface."""
 
@@ -378,6 +397,22 @@ class WorkspaceAgent:
                     self._build_langgraph_metadata(graph_state),
                 )
             run.answer = self._compose_tool_answer(run) if run.tool_result is not None else graph_state.get("answer", "")
+            return
+
+        if run.route.action == "tool_loop":
+            tool_loop_result = graph_state.get("tool_loop_result")
+            if isinstance(tool_loop_result, dict):
+                run.tool_loop_result = ToolLoopResult.from_dict(tool_loop_result)
+                if run.tool_loop_result.steps:
+                    run.tool_call = run.tool_loop_result.steps[-1].selection
+                run.answer = run.tool_loop_result.to_text()
+            else:
+                run.answer = graph_state.get("answer", "")
+            run.tool_error = (
+                graph_state.get("tool_loop_error")
+                or graph_state.get("tool_error")
+                or run.tool_error
+            )
             return
 
         if run.route.action == "workflow":

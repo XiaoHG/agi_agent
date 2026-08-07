@@ -42,6 +42,7 @@ class ToolLoopTests(unittest.TestCase):
         self.assertEqual(len(run.tool_loop_result.steps) if run.tool_loop_result else 0, 2)
         self.assertIn("read_file", run.answer)
         self.assertIn("The README was read successfully", run.answer)
+        self.assertIn("Run tool-loop graph", agent.format_trace(run))
 
     def test_tool_loop_stops_on_repeated_tool_call(self) -> None:
         client = SequenceToolLoopClient(
@@ -114,6 +115,22 @@ class ToolLoopTests(unittest.TestCase):
         self.assertIn("mcp_workspace_summary", run.answer)
         self.assertIn("list_skills", run.answer)
         self.assertIn("workspace through MCP", run.answer)
+
+    def test_tool_loop_can_opt_out_of_graph_runtime(self) -> None:
+        client = SequenceToolLoopClient(
+            [
+                '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the file first."}',
+                '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"The README observation is enough."}',
+                "The README was read successfully, so the tool loop has enough evidence to answer.",
+            ]
+        )
+        agent = WorkspaceAgent(Path("."), llm_client=client, use_graph_runtime=False)
+
+        run = agent.run("Use tool loop to read README.md and then answer.")
+
+        self.assertIn("Result: tool loop stopped by model_answered_directly.", run.answer)
+        self.assertIn("Run tool loop", agent.format_trace(run))
+        self.assertNotIn("Run tool-loop graph", agent.format_trace(run))
 
 
 if __name__ == "__main__":

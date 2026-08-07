@@ -97,6 +97,18 @@ Run a bounded LLM tool loop:
 python -m cli.tool_loop_demo --input "Use tool loop to count lines in README.md and then answer." --trace
 ```
 
+Run tool loop through the default LangGraph-backed main runtime:
+
+```bash
+python -m cli.main --input "Use tool loop to read README.md and then answer." --trace
+```
+
+Compare tool loop against the classic runtime:
+
+```bash
+python -m cli.main --input "Use tool loop to read README.md and then answer." --classic-runtime --trace
+```
+
 Run a LangGraph demo with checkpoint persistence:
 
 ```bash

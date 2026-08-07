@@ -30,6 +30,19 @@ class FakeToolCallingClient:
         return LLMResponse(model="fake", content=self.content, raw={"messages": len(messages)})
 
 
+class SequenceToolLoopClient:
+    """Test double that returns one tool-loop response per call."""
+
+    def __init__(self, responses: list[str]) -> None:
+        self.responses = responses
+        self.calls = 0
+
+    def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        response = self.responses[min(self.calls, len(self.responses) - 1)]
+        self.calls += 1
+        return LLMResponse(model="fake", content=response, raw={"messages": len(messages)})
+
+
 class LangGraphWorkflowTests(unittest.TestCase):
     """Verify the minimal LangGraph workflow runs through expected graph nodes."""
 
@@ -188,6 +201,92 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["tool_call_status"], "needs_clarification")
             self.assertEqual(result["steps"], ["route", "select_tool_call", "finalize"])
             self.assertIn("needs more information", result["answer"])
+
+    def test_rag_graph_runs_tool_loop_inside_graph(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            client = SequenceToolLoopClient(
+                [
+                    '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the README first."}',
+                    '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"The README observation is enough."}',
+                    "The README was read successfully, so the tool loop has enough evidence to answer.",
+                ]
+            )
+
+            result = run_rag_graph(
+                root,
+                "Use tool loop to read README.md and then answer.",
+                planner_client=client,  # type: ignore[arg-type]
+                route_hint_action="tool_loop",
+                route_hint_tool_input="read README.md and then answer",
+            )
+
+            self.assertEqual(result["route"], "tool_loop_execution")
+            self.assertEqual(result["tool_loop_result"]["stop_reason"], "model_answered_directly")
+            self.assertEqual(result["tool_loop_result"]["final_answer_source"], "llm")
+            self.assertEqual(
+                result["steps"],
+                [
+                    "route",
+                    "initialize_tool_loop",
+                    "run_tool_loop_iteration",
+                    "run_tool_loop_iteration",
+                    "synthesize_tool_loop",
+                    "finalize_tool_loop",
+                    "finalize",
+                ],
+            )
+            self.assertIn("The README was read successfully", result["answer"])
+
+    def test_rag_graph_tool_loop_stops_on_repeated_tool_call(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            client = SequenceToolLoopClient(
+                [
+                    '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the file."}',
+                    '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the same file again."}',
+                    "The loop stopped because the model repeated the same read_file call.",
+                ]
+            )
+
+            result = run_rag_graph(
+                root,
+                "Use tool loop to read README.md and then answer.",
+                planner_client=client,  # type: ignore[arg-type]
+                route_hint_action="tool_loop",
+                route_hint_tool_input="read README.md and then answer",
+            )
+
+            self.assertEqual(result["route"], "tool_loop_execution")
+            self.assertEqual(result["tool_loop_result"]["stop_reason"], "repeated_tool_call")
+            self.assertEqual(result["tool_loop_result"]["final_answer_source"], "llm")
+            self.assertIn("repeated the same read_file call", result["answer"])
+
+    def test_rag_graph_tool_loop_keeps_deterministic_fallback_when_synthesis_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+            client = SequenceToolLoopClient(
+                [
+                    '{"action":"use_tool","tool_name":"count_lines","tool_input":"README.md","reason":"Count the README lines."}',
+                    '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"Line count is enough."}',
+                    "",
+                ]
+            )
+
+            result = run_rag_graph(
+                root,
+                "Use tool loop to count lines in README.md and answer.",
+                planner_client=client,  # type: ignore[arg-type]
+                route_hint_action="tool_loop",
+                route_hint_tool_input="count lines in README.md and answer",
+            )
+
+            self.assertEqual(result["route"], "tool_loop_execution")
+            self.assertEqual(result["tool_loop_result"]["final_answer_source"], "deterministic_fallback")
+            self.assertIn("Final synthesis fallback reason", result["answer"])
 
     def test_rag_graph_tool_status_controls_next_edge(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

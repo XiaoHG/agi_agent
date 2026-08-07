@@ -45,8 +45,8 @@
 
 新增：
 
-- `versions/unified-agent-runtime-events-recovery_v25.md`
-- `docs/unified-agent-runtime-events-recovery-exercises_v25.md`
+- `versions/v25_unified-agent-runtime-events-recovery.md`
+- `docs/v25_unified-agent-runtime-events-recovery-exercises.md`
 
 同时更新：
 

@@ -156,6 +156,31 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertTrue(any(step.title == "Run tool-call graph" for step in run.steps))
         self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "tool_call_execution")
 
+    def test_agent_tool_loop_runs_through_default_graph_runtime(self) -> None:
+        from agent.llm import LLMResponse
+
+        class FakeToolLoopClient:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def chat(self, messages):  # noqa: ANN001
+                responses = [
+                    '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the README first."}',
+                    '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"The README observation is enough."}',
+                    "The README was read successfully, so the tool loop has enough evidence to answer.",
+                ]
+                response = responses[min(self.calls, len(responses) - 1)]
+                self.calls += 1
+                return LLMResponse(model="fake", content=response, raw={"messages": len(messages)})
+
+        agent = WorkspaceAgent(Path("."), llm_client=FakeToolLoopClient())
+
+        run = agent.run("Use tool loop to read README.md and then answer.")
+
+        self.assertTrue(any(step.title == "Run tool-loop graph" for step in run.steps))
+        self.assertEqual(run.tool_loop_result.stop_reason if run.tool_loop_result else "", "model_answered_directly")
+        self.assertEqual(run.tool_loop_result.final_answer_source if run.tool_loop_result else "", "llm")
+
     def test_agent_describes_project_dirs(self) -> None:
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List the main project directories and explain what they are responsible for.")

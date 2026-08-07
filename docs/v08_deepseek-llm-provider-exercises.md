@@ -559,7 +559,7 @@ tests/test_rag.py
 rag/llm_qa.py
 cli/rag_llm_demo.py
 tests/test_rag_llm.py
-versions/deepseek-rag_v9.md
+versions/v09_deepseek-rag.md
 ```
 
 ### 5. 应该修改哪些文件？

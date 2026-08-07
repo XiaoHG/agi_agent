@@ -214,8 +214,8 @@ Dimensions: 64
 
 Query: agent workflow
 - README.md:316-355 score=0.679
-- docs/learning-master-plan.md:1-40 score=0.668
-- docs/week1-task-plan.md:71-110 score=0.667
+- docs/plans/learning-master-plan.md:1-40 score=0.668
+- docs/plans/week1-task-plan.md:71-110 score=0.667
 ```
 
 回答：`rag_index_demo` 当前生成了 562 条 records。
@@ -230,18 +230,18 @@ Route request: use_tool / search_vector_docs
 [Tool] search_vector_docs
 Result: found 3 vector context chunk(s) for 'Use professional RAG to search docs for MCP.'.
 
-Citation 1: docs/deepseek-rag-exercises.md:771-797
-Citation 2: docs/deepseek-rag-exercises.md:1-40
-Citation 3: versions/mcp-local-protocol_v4.md:176-205
+Citation 1: docs/v09_deepseek-rag-exercises.md:771-797
+Citation 2: docs/v09_deepseek-rag-exercises.md:1-40
+Citation 3: versions/v04_mcp-local-protocol.md:176-205
 ```
 
 回答：
 
 1. `search_vector_docs` 输出中的 citation 是：
 
-   - `docs/deepseek-rag-exercises.md:771-797`
-   - `docs/deepseek-rag-exercises.md:1-40`
-   - `versions/mcp-local-protocol_v4.md:176-205`
+   - `docs/v09_deepseek-rag-exercises.md:771-797`
+   - `docs/v09_deepseek-rag-exercises.md:1-40`
+   - `versions/v04_mcp-local-protocol.md:176-205`
 
 2. trace 中 route 是：
 

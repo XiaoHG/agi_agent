@@ -9,7 +9,11 @@ from langgraph.graph import END, START, StateGraph
 
 from agent.llm import DeepSeekLLMClient
 from agent.planner import plan_graph_route
-from agent.prompts import load_langgraph_planner_prompt, load_tool_calling_prompt
+from agent.prompts import (
+    load_langgraph_planner_prompt,
+    load_tool_calling_prompt,
+    load_tool_loop_synthesis_prompt,
+)
 from agent.recovery import (
     build_exception_recovery_plan,
     build_skill_recovery_plan,
@@ -17,6 +21,8 @@ from agent.recovery import (
 )
 from agent.tool_schema import build_workspace_tool_specs
 from agent.tool_calling import ToolCallSelection, select_tool_call
+from agent.tool_loop import ToolLoopResult, ToolLoopStep
+from agent.tool_synthesis import synthesize_tool_loop_answer
 from agent.tools import (
     ToolResult,
     answer_docs_with_llm,
@@ -68,6 +74,17 @@ class RAGGraphState(TypedDict, total=False):
     tool_call_selection: dict[str, Any]  # tool calling 结构化选择结果
     tool_call_status: str  # tool calling 执行状态
     tool_call_error: str  # tool calling 失败原因
+    tool_loop_result: dict[str, Any]  # tool loop 结构化结果
+    tool_loop_steps: list[dict[str, Any]]  # tool loop 步骤
+    tool_loop_observations: list[str]  # tool loop observations
+    tool_loop_seen_calls: list[str]  # tool loop 已见过的工具调用键
+    tool_loop_stop_reason: str  # tool loop 停止原因
+    tool_loop_final_answer: str  # tool loop 最终答案
+    tool_loop_final_answer_source: str  # tool loop 最终答案来源
+    tool_loop_status: str  # tool loop 执行状态
+    tool_loop_error: str  # tool loop 错误原因
+    tool_loop_current_step: int  # 当前 tool loop 轮次
+    tool_loop_max_steps: int  # tool loop 最大轮次
     workflow_plan: dict[str, Any]  # workflow plan 的 JSON-ready 数据
     workflow_results: list[dict[str, Any]]  # workflow 已执行 tool result 列表
     workflow_summary: str  # workflow 的综合说明
@@ -90,6 +107,7 @@ def build_rag_graph(
     tool_specs = build_workspace_tool_specs()
     resolved_planner_prompt = planner_prompt or load_langgraph_planner_prompt()
     tool_calling_prompt = load_tool_calling_prompt()
+    tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()
     tools = _build_graph_tool_registry(root)
 
     def route(state: RAGGraphState) -> RAGGraphState:
@@ -344,6 +362,338 @@ def build_rag_graph(
             "steps": steps,
         }
 
+    def initialize_tool_loop(state: RAGGraphState) -> RAGGraphState:
+        """Initialize bounded tool-loop state inside the graph runtime."""
+
+        steps = [*state.get("steps", []), "initialize_tool_loop"]
+        objective = state.get("route_hint_tool_input") or state["question"]
+        return {
+            **state,
+            "tool_loop_steps": [],
+            "tool_loop_observations": [],
+            "tool_loop_seen_calls": [],
+            "tool_loop_stop_reason": "",
+            "tool_loop_final_answer": "",
+            "tool_loop_final_answer_source": "deterministic",
+            "tool_loop_status": "running",
+            "tool_loop_error": "",
+            "tool_loop_current_step": 0,
+            "tool_loop_max_steps": 3,
+            "tool_loop_result": {
+                "objective": objective,
+                "steps": [],
+                "final_answer": "",
+                "stop_reason": "",
+                "final_answer_source": "deterministic",
+            },
+            "steps": steps,
+        }
+
+    def run_tool_loop_iteration(state: RAGGraphState) -> RAGGraphState:
+        """Run one iteration of the bounded tool loop inside graph state."""
+
+        steps = [*state.get("steps", []), "run_tool_loop_iteration"]
+        client = planner_client or DeepSeekLLMClient()
+        objective = state.get("route_hint_tool_input") or state["question"]
+        loop_steps = [*state.get("tool_loop_steps", [])]
+        observations = [*state.get("tool_loop_observations", [])]
+        seen_calls = [*state.get("tool_loop_seen_calls", [])]
+        current_step = int(state.get("tool_loop_current_step", 0))
+        max_steps = int(state.get("tool_loop_max_steps", 3))
+
+        if current_step >= max_steps:
+            final_answer = _compose_tool_loop_final_answer(
+                objective,
+                observations,
+                f"Reached the max step limit of {max_steps}.",
+            )
+            return {
+                **state,
+                "tool_loop_stop_reason": "max_steps",
+                "tool_loop_final_answer": final_answer,
+                "tool_loop_status": "await_synthesis",
+                "tool_loop_result": _tool_loop_result_payload(
+                    objective,
+                    loop_steps,
+                    final_answer,
+                    "max_steps",
+                    state.get("tool_loop_final_answer_source", "deterministic"),
+                ),
+                "steps": steps,
+            }
+
+        loop_input = _build_tool_loop_input(objective, observations)
+        try:
+            selection = select_tool_call(
+                client,
+                loop_input,
+                tool_specs,
+                prompt=tool_calling_prompt,
+            )
+        except Exception as error:
+            final_answer = (
+                "Result: the tool call failed, so the task was not completed.\n\n"
+                f"Reason: {error}\n\n"
+                "Next step: retry the request with a clearer tool target or inspect the tool-calling prompt/output."
+            )
+            recovery_plan = build_exception_recovery_plan(str(error))
+            return {
+                **state,
+                "selected_tool": "llm_tool_loop",
+                "logical_tool_name": "llm_tool_loop",
+                "tool_call_selection": {
+                    "action": "error",
+                    "tool_name": None,
+                    "tool_input": None,
+                    "reason": str(error),
+                    "raw_response": "",
+                },
+                "tool_loop_error": str(error),
+                "tool_loop_stop_reason": "selection_error",
+                "tool_loop_final_answer": final_answer,
+                "tool_loop_status": "completed",
+                "recovery_plan": recovery_plan.to_dict(),
+                "answer": final_answer,
+                "tool_loop_result": _tool_loop_result_payload(
+                    objective,
+                    loop_steps,
+                    final_answer,
+                    "selection_error",
+                    "deterministic",
+                ),
+                "steps": steps,
+            }
+
+        step_index = current_step + 1
+        selection_payload = _tool_call_selection_to_dict(selection)
+
+        if selection.action == "answer_directly":
+            loop_steps.append(
+                ToolLoopStep(index=step_index, selection=selection, observation=selection.reason).to_dict()
+            )
+            final_answer = _compose_tool_loop_final_answer(objective, observations, selection.reason)
+            return {
+                **state,
+                "selected_tool": "none",
+                "logical_tool_name": "llm_tool_loop",
+                "tool_call_selection": selection_payload,
+                "tool_loop_steps": loop_steps,
+                "tool_loop_current_step": step_index,
+                "tool_loop_stop_reason": "model_answered_directly",
+                "tool_loop_final_answer": final_answer,
+                "tool_loop_status": "await_synthesis",
+                "tool_loop_result": _tool_loop_result_payload(
+                    objective,
+                    loop_steps,
+                    final_answer,
+                    "model_answered_directly",
+                    state.get("tool_loop_final_answer_source", "deterministic"),
+                ),
+                "steps": steps,
+            }
+
+        if selection.action == "ask_clarification":
+            loop_steps.append(
+                ToolLoopStep(index=step_index, selection=selection, observation=selection.reason).to_dict()
+            )
+            final_answer = f"The agent needs more information: {selection.reason}"
+            return {
+                **state,
+                "selected_tool": "none",
+                "logical_tool_name": "llm_tool_loop",
+                "tool_call_selection": selection_payload,
+                "tool_loop_steps": loop_steps,
+                "tool_loop_current_step": step_index,
+                "tool_loop_stop_reason": "needs_clarification",
+                "tool_loop_final_answer": final_answer,
+                "tool_loop_status": "await_synthesis",
+                "tool_loop_result": _tool_loop_result_payload(
+                    objective,
+                    loop_steps,
+                    final_answer,
+                    "needs_clarification",
+                    state.get("tool_loop_final_answer_source", "deterministic"),
+                ),
+                "steps": steps,
+            }
+
+        tool_key = f"{selection.tool_name or 'none'}::{selection.tool_input or 'none'}"
+        if tool_key in seen_calls:
+            loop_steps.append(
+                ToolLoopStep(
+                    index=step_index,
+                    selection=selection,
+                    error="Repeated tool call detected.",
+                ).to_dict()
+            )
+            final_answer = _compose_tool_loop_final_answer(
+                objective,
+                observations,
+                "Stopped because the model repeated the same tool call.",
+            )
+            return {
+                **state,
+                "selected_tool": _map_agent_tool_to_graph_tool(selection.tool_name or "unknown"),
+                "logical_tool_name": selection.tool_name or "unknown",
+                "tool_call_selection": selection_payload,
+                "tool_loop_steps": loop_steps,
+                "tool_loop_current_step": step_index,
+                "tool_loop_stop_reason": "repeated_tool_call",
+                "tool_loop_final_answer": final_answer,
+                "tool_loop_status": "await_synthesis",
+                "tool_loop_result": _tool_loop_result_payload(
+                    objective,
+                    loop_steps,
+                    final_answer,
+                    "repeated_tool_call",
+                    state.get("tool_loop_final_answer_source", "deterministic"),
+                ),
+                "steps": steps,
+            }
+
+        selected_tool = _map_agent_tool_to_graph_tool(selection.tool_name or "unknown")
+        try:
+            result = _execute_tool_loop_capability(root, tools, selection)
+        except Exception as error:
+            loop_steps.append(
+                ToolLoopStep(index=step_index, selection=selection, error=str(error)).to_dict()
+            )
+            final_answer = f"The tool loop failed while running {selection.tool_name}: {error}"
+            recovery_plan = build_tool_recovery_plan(
+                selected_tool,
+                _build_tool_payload_from_selection(selection),
+                str(error),
+            )
+            return {
+                **state,
+                "selected_tool": selected_tool,
+                "logical_tool_name": selection.tool_name or "unknown",
+                "tool_call_selection": selection_payload,
+                "tool_loop_steps": loop_steps,
+                "tool_loop_current_step": step_index,
+                "tool_loop_stop_reason": "tool_error",
+                "tool_loop_final_answer": final_answer,
+                "tool_loop_status": "await_synthesis",
+                "tool_loop_error": str(error),
+                "tool_status": "failed",
+                "tool_error": str(error),
+                "recovery_plan": recovery_plan.to_dict(),
+                "tool_loop_result": _tool_loop_result_payload(
+                    objective,
+                    loop_steps,
+                    final_answer,
+                    "tool_error",
+                    state.get("tool_loop_final_answer_source", "deterministic"),
+                ),
+                "steps": steps,
+            }
+
+        observation = _preview_observation(result.output)
+        observations.append(f"{result.tool_name}: {observation}")
+        seen_calls.append(tool_key)
+        loop_steps.append(
+            ToolLoopStep(index=step_index, selection=selection, observation=observation).to_dict()
+        )
+        next_state: RAGGraphState = {
+            **state,
+            "selected_tool": selected_tool,
+            "logical_tool_name": selection.tool_name or "unknown",
+            "tool_call_selection": selection_payload,
+            "tool_input": _build_tool_payload_from_selection(selection),
+            "tool_output": result.output,
+            "tool_metadata": result.metadata or {},
+            "tool_status": "completed",
+            "tool_loop_steps": loop_steps,
+            "tool_loop_observations": observations,
+            "tool_loop_seen_calls": seen_calls,
+            "tool_loop_current_step": step_index,
+            "tool_loop_status": "running",
+            "steps": steps,
+        }
+        if step_index >= max_steps:
+            final_answer = _compose_tool_loop_final_answer(
+                objective,
+                observations,
+                f"Reached the max step limit of {max_steps}.",
+            )
+            next_state.update(
+                {
+                    "tool_loop_stop_reason": "max_steps",
+                    "tool_loop_final_answer": final_answer,
+                    "tool_loop_status": "await_synthesis",
+                    "tool_loop_result": _tool_loop_result_payload(
+                        objective,
+                        loop_steps,
+                        final_answer,
+                        "max_steps",
+                        state.get("tool_loop_final_answer_source", "deterministic"),
+                    ),
+                }
+            )
+        return next_state
+
+    def synthesize_tool_loop(state: RAGGraphState) -> RAGGraphState:
+        """Synthesize the final answer for a completed tool loop."""
+
+        steps = [*state.get("steps", []), "synthesize_tool_loop"]
+        result = _tool_loop_result_from_state(state)
+        client = planner_client or DeepSeekLLMClient()
+        try:
+            final_answer = synthesize_tool_loop_answer(
+                client,
+                result,
+                prompt=tool_loop_synthesis_prompt,
+            )
+        except Exception as error:
+            final_answer = (
+                f"{result.final_answer}\n\n"
+                f"Final synthesis fallback reason: {error}"
+            )
+            updated_result = ToolLoopResult(
+                objective=result.objective,
+                steps=result.steps,
+                final_answer=final_answer,
+                stop_reason=result.stop_reason,
+                final_answer_source="deterministic_fallback",
+            )
+            return {
+                **state,
+                "tool_loop_final_answer": final_answer,
+                "tool_loop_final_answer_source": "deterministic_fallback",
+                "tool_loop_status": "completed",
+                "tool_loop_result": updated_result.to_dict(),
+                "steps": steps,
+            }
+
+        updated_result = ToolLoopResult(
+            objective=result.objective,
+            steps=result.steps,
+            final_answer=final_answer,
+            stop_reason=result.stop_reason,
+            final_answer_source="llm",
+        )
+        return {
+            **state,
+            "tool_loop_final_answer": final_answer,
+            "tool_loop_final_answer_source": "llm",
+            "tool_loop_status": "completed",
+            "tool_loop_result": updated_result.to_dict(),
+            "steps": steps,
+        }
+
+    def finalize_tool_loop(state: RAGGraphState) -> RAGGraphState:
+        """Render the structured tool-loop result into the standard answer channel."""
+
+        steps = [*state.get("steps", []), "finalize_tool_loop"]
+        result = _tool_loop_result_from_state(state)
+        answer = result.to_text()
+        return {
+            **state,
+            "tool_output": answer,
+            "answer": answer,
+            "steps": steps,
+        }
+
     def run_workflow_step(state: RAGGraphState) -> RAGGraphState:
         """Execute one workflow step and keep progress in graph state."""
 
@@ -478,6 +828,10 @@ def build_rag_graph(
     graph.add_node("call_skill", call_skill)
     graph.add_node("recover_skill_failure", recover_skill_failure)
     graph.add_node("select_tool_call", select_tool_call_in_graph)
+    graph.add_node("initialize_tool_loop", initialize_tool_loop)
+    graph.add_node("run_tool_loop_iteration", run_tool_loop_iteration)
+    graph.add_node("synthesize_tool_loop", synthesize_tool_loop)
+    graph.add_node("finalize_tool_loop", finalize_tool_loop)
     graph.add_node("build_workflow", build_workflow)
     graph.add_node("run_workflow_step", run_workflow_step)
     graph.add_node("finalize_workflow", finalize_workflow)
@@ -491,6 +845,7 @@ def build_rag_graph(
             "call_tool": "call_tool",
             "call_skill": "call_skill",
             "select_tool_call": "select_tool_call",
+            "initialize_tool_loop": "initialize_tool_loop",
             "build_workflow": "build_workflow",
             "finalize": "finalize",
         },
@@ -522,6 +877,18 @@ def build_rag_graph(
         },
     )
     graph.add_edge("recover_skill_failure", "finalize")
+    graph.add_edge("initialize_tool_loop", "run_tool_loop_iteration")
+    graph.add_conditional_edges(
+        "run_tool_loop_iteration",
+        _next_after_tool_loop_iteration,
+        {
+            "run_next_tool_loop_iteration": "run_tool_loop_iteration",
+            "synthesize_tool_loop": "synthesize_tool_loop",
+            "finalize": "finalize",
+        },
+    )
+    graph.add_edge("synthesize_tool_loop", "finalize_tool_loop")
+    graph.add_edge("finalize_tool_loop", "finalize")
     graph.add_edge("build_workflow", "run_workflow_step")
     graph.add_conditional_edges(
         "run_workflow_step",
@@ -570,6 +937,8 @@ def _next_after_route(state: RAGGraphState) -> str:
         return "call_skill"
     if state.get("route") == "tool_call_execution":
         return "select_tool_call"
+    if state.get("route") == "tool_loop_execution":
+        return "initialize_tool_loop"
     if state.get("route") == "workflow_execution":
         return "build_workflow"
     return "call_tool"
@@ -611,6 +980,18 @@ def _next_after_tool_call_selection(state: RAGGraphState) -> str:
     if status == "call_skill":
         return "call_skill"
     return "finalize"
+
+
+def _next_after_tool_loop_iteration(state: RAGGraphState) -> str:
+    """Continue the tool loop or move to synthesis/finalize based on loop state."""
+
+    status = state.get("tool_loop_status")
+    stop_reason = state.get("tool_loop_stop_reason")
+    if status == "running":
+        return "run_next_tool_loop_iteration"
+    if stop_reason == "selection_error":
+        return "finalize"
+    return "synthesize_tool_loop"
 
 
 def _looks_like_skill_execution(lowered_question: str) -> bool:
@@ -710,6 +1091,15 @@ def _build_route_hint_state(state: RAGGraphState) -> dict[str, Any] | None:
             "planner_status": "router_wrapped",
             "selected_tool": "llm_tool_selector",
             "logical_tool_name": "llm_tool_selector",
+        }
+
+    if action == "tool_loop":
+        return {
+            "route": "tool_loop_execution",
+            "route_reason": "The outer router determined that this request needs bounded multi-step tool orchestration.",
+            "planner_status": "router_wrapped",
+            "selected_tool": "llm_tool_loop",
+            "logical_tool_name": "llm_tool_loop",
         }
 
     if action != "use_tool" or not tool_name:
@@ -852,6 +1242,84 @@ def _tool_call_selection_to_dict(selection: ToolCallSelection) -> dict[str, Any]
         "reason": selection.reason,
         "raw_response": selection.raw_response,
     }
+
+
+def _build_tool_loop_input(objective: str, observations: list[str]) -> str:
+    """Build the next tool-loop prompt input from objective and observations."""
+
+    if not observations:
+        return objective
+    return (
+        f"Objective:\n{objective}\n\n"
+        "Previous observations:\n"
+        f"{chr(10).join(f'- {item}' for item in observations)}\n\n"
+        "Choose the next smallest sufficient action. "
+        "If the observations are enough, choose answer_directly."
+    )
+
+
+def _compose_tool_loop_final_answer(objective: str, observations: list[str], reason: str) -> str:
+    """Build a deterministic final answer from tool-loop observations."""
+
+    observation_text = "\n".join(f"- {item}" for item in observations) if observations else "- no observations"
+    return (
+        f"Objective: {objective}\n\n"
+        f"Reason: {reason}\n\n"
+        "Observations:\n"
+        f"{observation_text}"
+    )
+
+
+def _preview_observation(text: str, limit: int = 280) -> str:
+    """Create a compact one-line observation for the next tool-loop iteration."""
+
+    normalized = " ".join(text.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 15] + "... (truncated)"
+
+
+def _execute_tool_loop_capability(root: Path, tools: dict[str, Any], selection: ToolCallSelection) -> ToolResult:
+    """Execute one tool-loop capability, including normal tools and skills."""
+
+    if selection.tool_name == "execute_skill":
+        return run_skill_with_workspace(root, selection.tool_input or "")
+    selected_tool = _map_agent_tool_to_graph_tool(selection.tool_name or "unknown")
+    tool = tools[selected_tool]
+    return tool(_build_tool_payload_from_selection(selection))
+
+
+def _tool_loop_result_payload(
+    objective: str,
+    loop_steps: list[dict[str, Any]],
+    final_answer: str,
+    stop_reason: str,
+    final_answer_source: str,
+) -> dict[str, Any]:
+    """Build JSON-ready tool-loop result payload."""
+
+    return {
+        "objective": objective,
+        "steps": loop_steps,
+        "final_answer": final_answer,
+        "stop_reason": stop_reason,
+        "final_answer_source": final_answer_source,
+    }
+
+
+def _tool_loop_result_from_state(state: RAGGraphState) -> ToolLoopResult:
+    """Restore ToolLoopResult from graph state."""
+
+    raw = state.get("tool_loop_result")
+    if isinstance(raw, dict):
+        return ToolLoopResult.from_dict(raw)
+    return ToolLoopResult(
+        objective=str(state.get("route_hint_tool_input") or state.get("question", "")),
+        steps=[],
+        final_answer=str(state.get("tool_loop_final_answer", "")),
+        stop_reason=str(state.get("tool_loop_stop_reason", "")),
+        final_answer_source=str(state.get("tool_loop_final_answer_source", "deterministic")),
+    )
 
 
 def _build_workflow_payload(step: WorkflowStep) -> dict[str, str]:

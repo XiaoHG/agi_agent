@@ -25,7 +25,7 @@
 
 迭代依据：
 
-- `docs/professional-agent-iteration-plan.md`
+- `docs/plans/professional-agent-iteration-plan.md`
 
 本阶段目标：
 
@@ -41,9 +41,9 @@
 - `rag/embeddings.py`
 - `rag/vector_index.py`
 - `cli/rag_index_demo.py`
-- `versions/professional-rag-v1_v29.md`
-- `docs/professional-rag-v1-exercises_v29.md`
-- `docs/work-snapshot-2026-08-05.md`
+- `versions/v29_professional-rag-v1.md`
+- `docs/v29_professional-rag-v1-exercises.md`
+- `docs/snapshots/work-snapshot-2026-08-05.md`
 
 ## v29 修改文件
 
@@ -156,8 +156,8 @@ data/rag-index.json
 - `tests/test_rag.py`
 - `tests/test_rag_llm.py`
 - `evals/regression_cases.json`
-- `versions/professional-rag-v1_v29.md`
-- `docs/professional-rag-v1-exercises_v29.md`
+- `versions/v29_professional-rag-v1.md`
+- `docs/v29_professional-rag-v1-exercises.md`
 - `rag/README.md`
 - `cli/README.md`
 - `docs/current-learning-state.md`
@@ -232,10 +232,10 @@ python -m cli.eval_runner
 
    ```bash
    sed -n '1,260p' docs/current-learning-state.md
-   sed -n '1,260p' docs/work-snapshot-2026-08-05.md
-   sed -n '1,260p' docs/professional-agent-iteration-plan.md
-   sed -n '1,260p' versions/professional-rag-v1_v29.md
-   sed -n '1,320p' docs/professional-rag-v1-exercises_v29.md
+   sed -n '1,260p' docs/snapshots/work-snapshot-2026-08-05.md
+   sed -n '1,260p' docs/plans/professional-agent-iteration-plan.md
+   sed -n '1,260p' versions/v29_professional-rag-v1.md
+   sed -n '1,320p' docs/v29_professional-rag-v1-exercises.md
    ```
 
 4. 重点代码入口：
