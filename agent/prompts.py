@@ -40,3 +40,9 @@ def load_langgraph_planner_prompt() -> str:
     """Load the prompt that asks the LLM to plan LangGraph execution."""
 
     return load_prompt("prompts/langgraph-planner.v1.md")
+
+
+def load_direct_answer_prompt() -> str:
+    """Load the prompt that asks the LLM to answer directly without tool use."""
+
+    return load_prompt("prompts/direct-answer.v1.md")

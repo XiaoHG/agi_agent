@@ -19,6 +19,8 @@ Run the agent:
 python -m cli.main --input "Explain the difference between an agent and a chatbot."
 ```
 
+For direct-answer requests, the main runtime now prefers an LLM-first answer path and keeps a deterministic fallback when the direct-answer model is unavailable.
+
 Run with trace output:
 
 ```bash

@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已完成实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已完成实现，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：继续围绕 replay、checkpoint、恢复和可观测性主线，推进更强的恢复分叉与 continue execution。
+下一阶段建议：沿总纲进入标准化 MCP 执行边界阶段，继续把外部工具层从学习版推进到更专业的执行协议。
 
 ## 当前教师判断
 
@@ -124,10 +124,12 @@ v29 功能基线提交：
 - tool_loop classic fallback preserved for comparison
 - replay summary / comparative diff report
 - compare latest two runs / compare selected runs CLI
+- LLM-first direct answer
+- direct answer deterministic fallback
+- direct answer structured trace metadata
 
 当前缺口：
 
-- `WorkspaceAgent` direct answer 还没有默认使用 LLM。
 - RAG 已开始接入本地 vector index，但还不是外部 embedding provider / production vector store。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，并已具备最小权限分类和拒绝路径；但 MCP 协议仍是本地 in-process 学习版。
 - Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，但还没有更完整的动态配置和 skill-level 权限模型。
@@ -157,10 +159,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v37 replay diff 与 v38 checkpoint-guided resume：`versions/v37_run-replay-diff-and-comparative-analysis.md`、`versions/v38_checkpoint-guided-recovery-and-resume.md`。
-2. 查看对应练习：`docs/v37_run-replay-diff-and-comparative-analysis-exercises.md`、`docs/v38_checkpoint-guided-recovery-and-resume-exercises.md`。
+1. 复盘 v38 checkpoint-guided resume 与 v39 LLM-first direct answer：`versions/v38_checkpoint-guided-recovery-and-resume.md`、`versions/v39_llm-first-direct-answer-and-intent-entry.md`。
+2. 查看对应练习：`docs/v38_checkpoint-guided-recovery-and-resume-exercises.md`、`docs/v39_llm-first-direct-answer-and-intent-entry-exercises.md`。
 3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
-4. 进入下一阶段：在 checkpoint-guided resume 基础上推进真正的恢复分叉和继续执行能力。
+4. 进入下一阶段：进入标准化 MCP 执行边界，强化工具协议、输入输出校验和错误模型。
 
 ## 当前学习重点
 
@@ -235,12 +237,13 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 开始 v36：Runtime Event Replay。
 - 完成 v36：Runtime Event Replay。
 - 完成 v37：Run Replay Diff and Comparative Analysis。
-- 开始 v38：Checkpoint-Guided Recovery and Resume。
+- 完成 v38：Checkpoint-Guided Recovery and Resume。
+- 完成 v39：LLM-First Direct Answer and Intent Entry（本地未提交）。
 
 ## 未完成
 
 - 标准化 MCP server/client。
-- 基于统一 LangGraph 主执行器，继续增强 replay、恢复和可观测性。
+- 基于统一 LangGraph 主执行器，继续增强恢复分叉和可观测性。
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
 - Runtime events replay 已进入 report-level、comparative diff 与 checkpoint-guided resume 版本。
@@ -270,14 +273,19 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 10. `docs/v34_graph-tool-call-orchestration-exercises.md`
 11. `versions/v35_graph-tool-loop-orchestration.md`
 12. `docs/v35_graph-tool-loop-orchestration-exercises.md`
-13. `agent/core.py`
-14. `integrations/langgraph_workflow.py`
-15. `cli/main.py`
-16. `tests/test_agent.py`
-17. `tests/test_langgraph_workflow.py`
-18. `tests/test_tool_calling.py`
-19. `tests/test_tool_loop.py`
-20. `cli/README.md`
+13. `versions/v38_checkpoint-guided-recovery-and-resume.md`
+14. `docs/v38_checkpoint-guided-recovery-and-resume-exercises.md`
+15. `versions/v39_llm-first-direct-answer-and-intent-entry.md`
+16. `docs/v39_llm-first-direct-answer-and-intent-entry-exercises.md`
+17. `agent/core.py`
+18. `integrations/langgraph_workflow.py`
+19. `agent/direct_answer.py`
+20. `cli/main.py`
+21. `tests/test_agent.py`
+22. `tests/test_langgraph_workflow.py`
+23. `tests/test_tool_calling.py`
+24. `tests/test_tool_loop.py`
+25. `cli/README.md`
 然后继续执行当前具体任务。
 
 ## 下一步建议

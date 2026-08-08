@@ -5,6 +5,7 @@ import tempfile  # 临时文件夹，测试完自动删，不污染环境
 import unittest  # Python 官方测试框架
 
 from agent import WorkspaceAgent, count_lines, list_dir, read_file, route_intent
+from agent.llm import LLMError, LLMResponse
 
 
 class WorkspaceAgentTests(unittest.TestCase):
@@ -109,11 +110,49 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertIn("- dir/", result.output)
 
     def test_agent_direct_answer(self) -> None:
-        agent = WorkspaceAgent(Path("."))
+        class FailingDirectAnswerClient:
+            def chat(self, messages):  # noqa: ANN001
+                raise LLMError("Direct answer model unavailable.")
+
+        agent = WorkspaceAgent(Path("."), llm_client=FailingDirectAnswerClient())
         run = agent.run("Explain the difference between an agent and a chatbot.")
         self.assertIn("main difference", run.answer)
         self.assertEqual(run.route.action, "direct_answer")
         self.assertTrue(any(step.title == "Run graph runtime" for step in run.steps))
+
+    def test_agent_direct_answer_uses_llm_when_available(self) -> None:
+        class FakeDirectAnswerClient:
+            def chat(self, messages):  # noqa: ANN001
+                return LLMResponse(
+                    model="fake",
+                    content="LLM answer: an agent can plan, call tools, and keep execution state.",
+                    raw={"messages": len(messages)},
+                )
+
+        agent = WorkspaceAgent(Path("."), llm_client=FakeDirectAnswerClient())
+
+        run = agent.run("Explain the difference between an agent and a chatbot.")
+        trace = agent.to_trace_dict(run)
+
+        self.assertEqual(run.route.action, "direct_answer")
+        self.assertIn("LLM answer:", run.answer)
+        self.assertEqual(trace["direct_answer"]["source"], "llm")
+        self.assertEqual(trace["direct_answer"]["status"], "completed")
+
+    def test_agent_direct_answer_keeps_deterministic_fallback_when_llm_fails(self) -> None:
+        class FailingDirectAnswerClient:
+            def chat(self, messages):  # noqa: ANN001
+                raise LLMError("Direct answer model unavailable.")
+
+        agent = WorkspaceAgent(Path("."), llm_client=FailingDirectAnswerClient())
+
+        run = agent.run("Explain the difference between an agent and a chatbot.")
+        trace = agent.to_trace_dict(run)
+
+        self.assertIn("main difference", run.answer)
+        self.assertEqual(trace["direct_answer"]["source"], "deterministic_fallback")
+        self.assertEqual(trace["direct_answer"]["status"], "fallback")
+        self.assertIn("unavailable", trace["direct_answer"]["error"])
 
     def test_agent_handles_missing_file(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -138,8 +177,6 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertFalse(any(step.title == "Run graph runtime" for step in run.steps))
 
     def test_agent_tool_call_runs_through_default_graph_runtime(self) -> None:
-        from agent.llm import LLMResponse
-
         class FakeToolCallingClient:
             def chat(self, messages):  # noqa: ANN001
                 return LLMResponse(
@@ -157,8 +194,6 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "tool_call_execution")
 
     def test_agent_tool_loop_runs_through_default_graph_runtime(self) -> None:
-        from agent.llm import LLMResponse
-
         class FakeToolLoopClient:
             def __init__(self) -> None:
                 self.calls = 0

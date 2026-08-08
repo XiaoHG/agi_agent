@@ -8,8 +8,10 @@ from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from agent.llm import DeepSeekLLMClient
+from agent.direct_answer import answer_directly, compose_direct_answer_fallback
 from agent.planner import plan_graph_route
 from agent.prompts import (
+    load_direct_answer_prompt,
     load_langgraph_planner_prompt,
     load_tool_calling_prompt,
     load_tool_loop_synthesis_prompt,
@@ -58,6 +60,7 @@ class RAGGraphState(TypedDict, total=False):
     planner_status: str  # LLM planner 状态：llm_planned / deterministic_fallback
     planner_error: str  # planner 失败原因
     planner_raw_response: str  # planner 原始响应
+    direct_answer: dict[str, Any]  # 顶层直接回答结果
     route_hint_action: str  # 外层 router action，用于默认 graph runtime
     route_hint_tool_name: str  # 外层 router tool name
     route_hint_tool_input: str  # 外层 router tool input
@@ -108,6 +111,7 @@ def build_rag_graph(
     resolved_planner_prompt = planner_prompt or load_langgraph_planner_prompt()
     tool_calling_prompt = load_tool_calling_prompt()
     tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()
+    direct_answer_prompt = load_direct_answer_prompt()
     tools = _build_graph_tool_registry(root)
 
     def route(state: RAGGraphState) -> RAGGraphState:
@@ -117,7 +121,11 @@ def build_rag_graph(
         lowered = question.lower()
         steps = [*state.get("steps", []), "route"]
 
-        route_hint = _build_route_hint_state(state)
+        route_hint = _build_route_hint_state(
+            state,
+            planner_client=planner_client,
+            direct_answer_prompt=direct_answer_prompt,
+        )
         if route_hint is not None:
             return {
                 **state,
@@ -1058,7 +1066,12 @@ def _build_graph_tool_registry(root: Path) -> dict[str, Any]:
     }
 
 
-def _build_route_hint_state(state: RAGGraphState) -> dict[str, Any] | None:
+def _build_route_hint_state(
+    state: RAGGraphState,
+    *,
+    planner_client: DeepSeekLLMClient | None,
+    direct_answer_prompt: str,
+) -> dict[str, Any] | None:
     """Translate the outer router decision into a graph route."""
 
     action = state.get("route_hint_action")
@@ -1066,13 +1079,19 @@ def _build_route_hint_state(state: RAGGraphState) -> dict[str, Any] | None:
     tool_input = state.get("route_hint_tool_input") or state.get("question", "")
 
     if action == "direct_answer":
+        direct_answer = answer_directly(
+            tool_input,
+            prompt=direct_answer_prompt,
+            client=planner_client,
+        )
         return {
             "route": "direct_answer",
             "route_reason": "The outer router determined that no local tool is required.",
             "planner_status": "router_wrapped",
             "selected_tool": "none",
             "logical_tool_name": "direct_answer",
-            "answer": _compose_direct_answer(tool_input),
+            "direct_answer": direct_answer.to_dict(),
+            "answer": direct_answer.answer,
         }
 
     if action == "workflow":
@@ -1169,29 +1188,7 @@ def _build_route_hint_state(state: RAGGraphState) -> dict[str, Any] | None:
 
 def _compose_direct_answer(user_input: str) -> str:
     """Provide the same deterministic direct answer used by the classic runtime."""
-
-    text = user_input.lower()
-    if "agent" in text and ("chat" in text or "chatbot" in text) and ("difference" in text or "different" in text):
-        return (
-            "Result: the main difference is that an agent makes task-oriented decisions, can call tools, can keep state, "
-            "and can complete work through multiple steps.\n\n"
-            "Reason: a chatbot is mostly a text responder, while an agent is closer to an execution loop that moves a task toward completion.\n\n"
-            "In this project: start with the minimal loop, then add state, RAG, MCP, skills, and subagents.\n\n"
-            "Next step: run the CLI with trace enabled and inspect each recorded step."
-        )
-    if "why" in text:
-        return (
-            "Result: start from engineering boundaries before adding frameworks.\n\n"
-            "Reason: agent systems usually fail around tool boundaries, state transitions, and missing evaluation, not only around model quality.\n\n"
-            "In this project: first make the minimal loop work, then add RAG, MCP, skills, and subagents incrementally.\n\n"
-            "Next step: split the question into concept, implementation, and verification layers."
-        )
-    return (
-        "Result: this request does not require a local tool, so the agent answered directly.\n\n"
-        "Reason: the current version focuses on the minimal agent loop rather than broad knowledge coverage.\n\n"
-        "In this project: use tool calls when the request involves project files, directory structure, or specific documents.\n\n"
-        "Next step: ask the agent to read README.md or list the project directory if you want it to inspect local content."
-    )
+    return compose_direct_answer_fallback(user_input)
 
 
 def _map_agent_tool_to_graph_tool(tool_name: str) -> str:

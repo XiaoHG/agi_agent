@@ -86,6 +86,24 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["selected_tool"], "read_workspace_file")
             self.assertIn("[read_file] README.md", result["answer"])
 
+    def test_rag_graph_route_hint_direct_answer_uses_llm_when_available(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            client = FakePlannerClient("LLM answer: agents can plan and use tools.")
+
+            result = run_rag_graph(
+                root,
+                "Explain the difference between an agent and a chatbot.",
+                planner_client=client,  # type: ignore[arg-type]
+                route_hint_action="direct_answer",
+            )
+
+            self.assertEqual(result["route"], "direct_answer")
+            self.assertEqual(result["steps"], ["route", "finalize"])
+            self.assertEqual(result["direct_answer"]["source"], "llm")
+            self.assertEqual(result["direct_answer"]["status"], "completed")
+            self.assertIn("LLM answer:", result["answer"])
+
     def test_rag_graph_recovers_failed_tool_call(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

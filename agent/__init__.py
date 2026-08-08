@@ -1,6 +1,7 @@
 """Core package for the Agent learning workspace."""
 
 from .core import AgentRun, WorkspaceAgent
+from .direct_answer import DirectAnswerResult, answer_directly, build_direct_answer_messages, compose_direct_answer_fallback
 from .events import RuntimeEvent, build_runtime_events
 from .llm import DeepSeekConfig, DeepSeekLLMClient, LLMError, LLMMessage, LLMResponse
 from .persistence import (
@@ -67,6 +68,7 @@ __all__ = [
     "AgentState",
     "DeepSeekConfig",
     "DeepSeekLLMClient",
+    "DirectAnswerResult",
     "LLMError",
     "LLMMessage",
     "LLMResponse",
@@ -89,6 +91,7 @@ __all__ = [
     "ToolError",
     "ToolResult",
     "build_exception_recovery_plan",
+    "build_direct_answer_messages",
     "build_graph_checkpoint",
     "build_graph_planner_messages",
     "build_run_checkpoint",
@@ -108,6 +111,7 @@ __all__ = [
     "build_tool_recovery_plan",
     "build_workspace_tool_specs",
     "answer_docs_with_llm",
+    "answer_directly",
     "format_checkpoint_summary",
     "list_agent_skills",
     "list_dir",
@@ -132,4 +136,5 @@ __all__ = [
     "route_intent",
     "select_tool_call",
     "synthesize_tool_loop_answer",
+    "compose_direct_answer_fallback",
 ]

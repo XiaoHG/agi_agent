@@ -7,11 +7,13 @@ from uuid import uuid4  # 生成唯一运行ID
 
 # 内部模块依赖（需配套实现）
 from .prompts import (  # 加载提示词
+    load_direct_answer_prompt,
     load_system_prompt,
     load_tool_calling_prompt,
     load_tool_loop_synthesis_prompt,
     load_tool_router_prompt,
 )
+from .direct_answer import DirectAnswerResult, answer_directly, compose_direct_answer_fallback
 from .events import build_runtime_events  # 统一运行事件导出
 from .persistence import (
     RunCheckpointStore,
@@ -60,6 +62,7 @@ class AgentRun:
     route: ToolRoute             # 路由决策结果（来自route_intent）
     tool_call: ToolCallSelection | None = None  # LLM 工具选择结果（仅 tool_call 分支使用）
     tool_loop_result: ToolLoopResult | None = None  # 多步工具循环结果
+    direct_answer_result: DirectAnswerResult | None = None  # 直接回答结果
     steps: list[AgentStep] = field(default_factory=list)  # 执行步骤列表
     tool_result: ToolResult | None = None  # 工具执行结果（成功时）
     tool_error: str | None = None          # 工具执行错误（失败时）
@@ -78,6 +81,7 @@ class WorkspaceAgent:
     ) -> None:
         self.workspace_root = Path(workspace_root).resolve()  # 解析为绝对路径
         self.system_prompt = load_system_prompt()            # 加载系统提示词
+        self.direct_answer_prompt = load_direct_answer_prompt()  # 加载直接回答提示词
         self.tool_router_prompt = load_tool_router_prompt()  # 加载工具路由提示词
         self.tool_calling_prompt = load_tool_calling_prompt()  # 加载结构化工具调用提示词
         self.tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()  # 加载工具循环最终综合提示词
@@ -276,8 +280,14 @@ class WorkspaceAgent:
                 run.answer = self._compose_tool_error_answer(run)
             return
 
-        run.answer = self._compose_direct_answer(run.user_input)
-        run.steps.append(AgentStep("Answer directly", "no tool was called"))
+        run.direct_answer_result = self._answer_directly(run.user_input)
+        run.answer = run.direct_answer_result.answer
+        run.steps.append(
+            AgentStep(
+                "Answer directly",
+                f"source={run.direct_answer_result.source}; status={run.direct_answer_result.status}",
+            )
+        )
 
     def _run_classic_workflow(self, run: AgentRun) -> None:
         """Run the legacy workflow executor as an explicit fallback."""
@@ -355,7 +365,18 @@ class WorkspaceAgent:
             )
 
         if graph_state.get("route") == "direct_answer":
-            run.answer = graph_state.get("answer", self._compose_direct_answer(run.user_input))
+            direct_answer = graph_state.get("direct_answer")
+            if isinstance(direct_answer, dict):
+                run.direct_answer_result = DirectAnswerResult(
+                    answer=str(direct_answer.get("answer", graph_state.get("answer", ""))),
+                    source=str(direct_answer.get("source", "deterministic_fallback")),
+                    status=str(direct_answer.get("status", "fallback")),
+                    error=str(direct_answer.get("error", "")),
+                )
+            run.answer = graph_state.get(
+                "answer",
+                compose_direct_answer_fallback(run.user_input),
+            )
             return
 
         logical_tool_name = graph_state.get("logical_tool_name") or run.route.tool_name or "langgraph_workflow"
@@ -860,29 +881,17 @@ class WorkspaceAgent:
         return run.tool_result.output  # 默认返回原始工具输出
 
     def _compose_direct_answer(self, user_input: str) -> str:
-        """Provide a structured direct answer for non-tool requests."""
+        """Provide the deterministic direct-answer fallback."""
 
-        text = user_input.lower()
-        if "agent" in text and ("chat" in text or "chatbot" in text) and ("difference" in text or "different" in text):
-            return (
-                "Result: the main difference is that an agent makes task-oriented decisions, can call tools, can keep state, "
-                "and can complete work through multiple steps.\n\n"
-                "Reason: a chatbot is mostly a text responder, while an agent is closer to an execution loop that moves a task toward completion.\n\n"
-                "In this project: start with the minimal loop, then add state, RAG, MCP, skills, and subagents.\n\n"
-                "Next step: run the CLI with trace enabled and inspect each recorded step."
-            )
-        if "why" in text:
-            return (
-                "Result: start from engineering boundaries before adding frameworks.\n\n"
-                "Reason: agent systems usually fail around tool boundaries, state transitions, and missing evaluation, not only around model quality.\n\n"
-                "In this project: first make the minimal loop work, then add RAG, MCP, skills, and subagents incrementally.\n\n"
-                "Next step: split the question into concept, implementation, and verification layers."
-            )
-        return (
-            "Result: this request does not require a local tool, so the agent answered directly.\n\n"
-            "Reason: the current version focuses on the minimal agent loop rather than broad knowledge coverage.\n\n"
-            "In this project: use tool calls when the request involves project files, directory structure, or specific documents.\n\n"
-            "Next step: ask the agent to read README.md or list the project directory if you want it to inspect local content."
+        return compose_direct_answer_fallback(user_input)
+
+    def _answer_directly(self, user_input: str) -> DirectAnswerResult:
+        """Run the LLM-first direct-answer path with deterministic fallback."""
+
+        return answer_directly(
+            user_input,
+            prompt=self.direct_answer_prompt,
+            client=self._llm_client,
         )
 
     def _summarize_text(self, text: str, limit: int = 20) -> str:
@@ -953,6 +962,12 @@ class WorkspaceAgent:
                 f"action={run.tool_call.action}, tool={run.tool_call.tool_name or 'none'}, "
                 f"input={run.tool_call.tool_input or 'none'}"
             )
+        if run.direct_answer_result is not None:
+            parts.append("\n[Direct Answer]")
+            parts.append(
+                f"source={run.direct_answer_result.source}, status={run.direct_answer_result.status}, "
+                f"error={run.direct_answer_result.error or 'none'}"
+            )
         if run.tool_loop_result is not None:
             parts.append("\n[Tool Loop]")
             parts.append(run.tool_loop_result.to_text())
@@ -1005,6 +1020,9 @@ class WorkspaceAgent:
                 "steps": [step.describe() for step in run.tool_loop_result.steps],
                 "final_answer_source": run.tool_loop_result.final_answer_source,
             },
+            "direct_answer": None
+            if run.direct_answer_result is None
+            else run.direct_answer_result.to_dict(),
             "selected_tool_name": None if run.tool_call is None else run.tool_call.tool_name,
             "steps": [{"title": step.title, "detail": step.detail} for step in run.steps],
             "runtime_events": [event.to_dict() for event in runtime_events],
