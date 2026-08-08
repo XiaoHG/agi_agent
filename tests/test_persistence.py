@@ -8,8 +8,11 @@ import unittest
 
 from agent import WorkspaceAgent, build_run_checkpoint, load_checkpoint
 from agent.replay import (
+    build_checkpoint_resume_plan,
+    build_checkpoint_resume_report,
     build_replay_report,
     compare_replay_reports,
+    format_checkpoint_resume_report,
     format_replay_diff_report,
     format_replay_report,
 )
@@ -310,6 +313,103 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Older run:", diff_text)
             self.assertIn("Newer run:", diff_text)
             self.assertIn("Differences:", diff_text)
+
+    def test_checkpoint_resume_report_uses_resume_plan(self) -> None:
+        record = {
+            "run_id": "run-resume",
+            "run_kind": "graph",
+            "created_at": "2026-08-07T00:00:00+00:00",
+            "user_input": "Use LangGraph to read README.md.",
+            "route": {"action": "graph", "tool_name": "langgraph_workflow", "tool_input": None, "reason": "graph"},
+            "answer": "Graph answer",
+            "trace_text": "trace text",
+            "trace": {
+                "route": {"action": "graph", "tool_name": "langgraph_workflow"},
+                "steps": [{"title": "Run graph", "detail": "route=read_file"}],
+                "tool_result": {
+                    "metadata": {
+                        "graph_route": "read_file",
+                    }
+                },
+            },
+        }
+
+        plan = build_checkpoint_resume_plan(record)
+        report = build_checkpoint_resume_report(record)
+        rendered = format_checkpoint_resume_report(record)
+
+        self.assertEqual(plan.source_run_id, "run-resume")
+        self.assertEqual(plan.resume_mode, "checkpoint_rerun")
+        self.assertTrue(plan.can_resume)
+        self.assertIn("Checkpoint resume plan", plan.to_text())
+        self.assertIn("Checkpoint resume plan", report.to_text())
+        self.assertIn("Source summary:", rendered)
+        self.assertIn("Resume mode:", rendered)
+
+    def test_workspace_agent_can_resume_latest_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            source_run = agent.run("Use LangGraph to read README.md.")
+
+            resume_text = agent.resume_latest_checkpoint()
+            resumed = load_checkpoint(history_dir / "latest.json")
+
+            self.assertIn("Checkpoint resume plan", resume_text)
+            self.assertIn("Source summary:", resume_text)
+            self.assertIsNotNone(resumed)
+            self.assertNotEqual(resumed["run_id"], source_run.run_id)
+
+    def test_cli_main_can_resume_last_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            agent.run("Use LangGraph to read README.md.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--resume-last-run",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Checkpoint resume plan", output.getvalue())
+            self.assertIn("Resume diff:", output.getvalue())
+
+    def test_cli_main_can_resume_run_by_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir)
+            run = agent.run("Use LangGraph to read README.md.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--resume-run",
+                        run.run_id,
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn(run.run_id, output.getvalue())
+            self.assertIn("Checkpoint resume plan", output.getvalue())
 
     def test_cli_main_can_replay_last_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

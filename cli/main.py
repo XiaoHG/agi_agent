@@ -35,6 +35,8 @@ def build_parser() -> argparse.ArgumentParser:
         metavar=("OLDER_RUN_ID", "NEWER_RUN_ID"),
         help="compare two persisted runs by run id",
     )
+    parser.add_argument("--resume-run", help="resume a checkpoint by run id")
+    parser.add_argument("--resume-last-run", action="store_true", help="resume the latest persisted run")
     parser.add_argument("--llm-planner", action="store_true", help="use real DeepSeek planning for LangGraph runs")
     parser.add_argument("--classic-runtime", action="store_true", help="disable the default LangGraph runtime wrapper")
     parser.add_argument("--trace", action="store_true", help="print reasoning trace")
@@ -94,6 +96,20 @@ def compare_runs(agent: WorkspaceAgent, older_run_id: str, newer_run_id: str) ->
     """Print a replay diff report for two selected checkpoints."""
 
     print(agent.compare_checkpoints(older_run_id, newer_run_id))
+    return 0
+
+
+def resume_last_run(agent: WorkspaceAgent) -> int:
+    """Print a checkpoint-guided resume report for the latest persisted checkpoint."""
+
+    print(agent.resume_latest_checkpoint())
+    return 0
+
+
+def resume_run(agent: WorkspaceAgent, run_id: str) -> int:
+    """Print a checkpoint-guided resume report for a checkpoint selected by run id."""
+
+    print(agent.resume_checkpoint(run_id))
     return 0
 
 
@@ -158,6 +174,10 @@ def main(argv: list[str] | None = None) -> int:
         return compare_runs(agent, args.compare_runs[0], args.compare_runs[1])
     if args.compare_last_two_runs:
         return compare_last_two_runs(agent)
+    if args.resume_run:
+        return resume_run(agent, args.resume_run)
+    if args.resume_last_run:
+        return resume_last_run(agent)
     if args.show_run:
         return show_run(agent, args.show_run, args.trace)
     if args.show_last_run:

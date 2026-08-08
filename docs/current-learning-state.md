@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已完成实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已完成实现，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：继续围绕 replay、checkpoint、恢复和可观测性主线，推进 checkpoint-guided recovery and resume。
+下一阶段建议：继续围绕 replay、checkpoint、恢复和可观测性主线，推进更强的恢复分叉与 continue execution。
 
 ## 当前教师判断
 
@@ -133,8 +133,8 @@ v29 功能基线提交：
 - Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，但还没有更完整的动态配置和 skill-level 权限模型。
 - LangGraph workflow 已成为默认主执行器，workflow / tool_call / tool_loop 已并入统一 graph runtime。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
-- Runtime events 已经能随 checkpoint 一起落盘，并已支持 report-level replay 与跨 run diff，但还没有做真正的 resume / continue execution。
-- checkpoint 已可浏览、可回放、可比较，但还没有做 checkpoint-guided recovery。
+- Runtime events 已经能随 checkpoint 一起落盘，并已支持 report-level replay、跨 run diff 与 checkpoint-guided resume，但还没有做真正的恢复分叉和 continue execution。
+- checkpoint 已可浏览、可回放、可比较，并已支持基于 checkpoint route hints 的 guided resume。
 - LangGraph route 已有 DeepSeek planner 和 deterministic fallback，但还没有成为默认主执行器。
 
 ## 当前总目标
@@ -157,10 +157,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v31 MCP 工具注册与权限策略：`versions/v31_mcp-tool-permission-policy.md`。
-2. 查看 v31 练习：`docs/v31_mcp-tool-permission-policy-exercises.md`。
+1. 复盘 v37 replay diff 与 v38 checkpoint-guided resume：`versions/v37_run-replay-diff-and-comparative-analysis.md`、`versions/v38_checkpoint-guided-recovery-and-resume.md`。
+2. 查看对应练习：`docs/v37_run-replay-diff-and-comparative-analysis-exercises.md`、`docs/v38_checkpoint-guided-recovery-and-resume-exercises.md`。
 3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
-4. 进入下一阶段：在 replay diff 基础上推进 checkpoint-guided recovery and resume。
+4. 进入下一阶段：在 checkpoint-guided resume 基础上推进真正的恢复分叉和继续执行能力。
 
 ## 当前学习重点
 
@@ -233,6 +233,9 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v34：tool_call 并入默认 LangGraph orchestration。
 - 完成 v35：tool_loop 并入默认 LangGraph orchestration（本地未提交）。
 - 开始 v36：Runtime Event Replay。
+- 完成 v36：Runtime Event Replay。
+- 完成 v37：Run Replay Diff and Comparative Analysis。
+- 开始 v38：Checkpoint-Guided Recovery and Resume。
 
 ## 未完成
 
@@ -240,8 +243,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 基于统一 LangGraph 主执行器，继续增强 replay、恢复和可观测性。
 - MCP / Skills 标准化执行协议。
 - Skills 外部 registry 与权限模型。
-- Runtime events replay 已进入 report-level 版本。
-- checkpoint 跨 run 自动 replay。
+- Runtime events replay 已进入 report-level、comparative diff 与 checkpoint-guided resume 版本。
+- checkpoint 已支持 guided resume，但还没有真正的分叉恢复与状态级 continue execution。
 
 ## 恢复指令
 

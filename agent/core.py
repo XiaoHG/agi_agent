@@ -19,7 +19,11 @@ from .persistence import (
     format_checkpoint_history,
     format_checkpoint_summary,
 )  # 运行记录持久化
-from .replay import format_replay_diff_report, format_replay_report  # checkpoint 回放 / 对比
+from .replay import (
+    format_checkpoint_resume_report,
+    format_replay_diff_report,
+    format_replay_report,
+)  # checkpoint 回放 / 对比 / 恢复
 from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
 from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
@@ -83,13 +87,13 @@ class WorkspaceAgent:
         checkpoint_root = history_dir if history_dir is not None else self.workspace_root / "logs" / "agent-runs"
         self._history_store = RunCheckpointStore(Path(checkpoint_root))  # 本地 checkpoint 存储
 
-    def run(self, user_input: str) -> AgentRun:
+    def run(self, user_input: str, route_override: ToolRoute | None = None) -> AgentRun:
         """Execute one turn and return a structured run record."""
         # 1. 初始化AgentRun会话
         run = AgentRun(
             run_id=uuid4().hex[:8],  # 生成8位短UUID作为会话ID
             user_input=user_input,
-            route=route_intent(user_input),  # 【关键】路由决策：判断是否需要调用工具
+            route=route_override or route_intent(user_input),  # 【关键】路由决策：判断是否需要调用工具
             steps=[],
         )
 
@@ -717,6 +721,22 @@ class WorkspaceAgent:
             return f"No checkpoint found for run id: {run_id}"
         return format_replay_report(checkpoint)
 
+    def resume_latest_checkpoint(self) -> str:
+        """Resume the latest checkpoint using its persisted route hints."""
+
+        checkpoint = self.load_latest_checkpoint()
+        if checkpoint is None:
+            return "No checkpoint found."
+        return self._resume_from_checkpoint_record(checkpoint)
+
+    def resume_checkpoint(self, run_id: str) -> str:
+        """Resume a checkpoint by run id using its persisted route hints."""
+
+        checkpoint = self.load_checkpoint(run_id)
+        if checkpoint is None:
+            return f"No checkpoint found for run id: {run_id}"
+        return self._resume_from_checkpoint_record(checkpoint)
+
     def compare_latest_two_checkpoints(self) -> str:
         """Render a replay diff report for the latest two checkpoints."""
 
@@ -739,6 +759,35 @@ class WorkspaceAgent:
         if newer_record is None:
             return f"No checkpoint found for run id: {newer_run_id}"
         return format_replay_diff_report(older_record, newer_record)
+
+    def _resume_from_checkpoint_record(self, checkpoint: dict[str, Any]) -> str:
+        """Resume a persisted checkpoint using its stored route hints."""
+
+        route = self._route_from_checkpoint_record(checkpoint)
+        if route is None:
+            return "Checkpoint is missing route information."
+        resumed_run = self.run(str(checkpoint.get("user_input", "")), route_override=route)
+        resumed_checkpoint = self.load_latest_checkpoint()
+        return format_checkpoint_resume_report(checkpoint, resumed_checkpoint)
+
+    def _route_from_checkpoint_record(self, checkpoint: dict[str, Any]) -> ToolRoute | None:
+        """Normalize a persisted checkpoint route into a runtime ToolRoute."""
+
+        route = checkpoint.get("route", {})
+        if not isinstance(route, dict):
+            return None
+        action = route.get("action")
+        if not isinstance(action, str) or not action.strip():
+            return None
+        tool_name = route.get("tool_name")
+        tool_input = route.get("tool_input")
+        reason = route.get("reason", "")
+        return ToolRoute(
+            action=action,
+            tool_name=tool_name if isinstance(tool_name, str) and tool_name else None,
+            tool_input=tool_input if isinstance(tool_input, str) and tool_input else None,
+            reason=reason if isinstance(reason, str) else "",
+        )
 
     def _compose_tool_error_answer_for_workflow(self, state: AgentState) -> str:
         """Convert a workflow failure into a user-facing answer."""

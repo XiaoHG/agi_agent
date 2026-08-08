@@ -85,6 +85,18 @@ Replay one saved run by id:
 python -m cli.main --replay-run abc12345
 ```
 
+Resume the latest saved run:
+
+```bash
+python -m cli.main --resume-last-run
+```
+
+Resume one saved run by id:
+
+```bash
+python -m cli.main --resume-run abc12345
+```
+
 Compare the latest two saved runs:
 
 ```bash

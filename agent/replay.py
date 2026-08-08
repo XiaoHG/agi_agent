@@ -204,6 +204,110 @@ class ReplayDiffReport:
         return "\n".join(lines)
 
 
+@dataclass(frozen=True)
+class CheckpointResumePlan:
+    """Plan for resuming a persisted checkpoint."""
+
+    source_run_id: str
+    source_run_kind: str
+    user_input: str
+    route_action: str
+    route_tool: str
+    graph_route: str
+    failure_type: str
+    has_recovery: bool
+    resume_mode: str
+    can_resume: bool
+    reason: str
+    next_safe_action: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the plan as JSON-ready data."""
+
+        return {
+            "source_run_id": self.source_run_id,
+            "source_run_kind": self.source_run_kind,
+            "user_input": self.user_input,
+            "route_action": self.route_action,
+            "route_tool": self.route_tool,
+            "graph_route": self.graph_route,
+            "failure_type": self.failure_type,
+            "has_recovery": self.has_recovery,
+            "resume_mode": self.resume_mode,
+            "can_resume": self.can_resume,
+            "reason": self.reason,
+            "next_safe_action": self.next_safe_action,
+        }
+
+    def to_text(self) -> str:
+        """Render the resume plan for CLI output."""
+
+        lines = [
+            "Checkpoint resume plan",
+            f"Source run: {self.source_run_id} [{self.source_run_kind}]",
+            f"Route: {self.route_action} / {self.route_tool}",
+            f"Graph route: {self.graph_route}",
+            f"Failure type: {self.failure_type}",
+            f"Has recovery: {'yes' if self.has_recovery else 'no'}",
+            f"Resume mode: {self.resume_mode}",
+            f"Can resume: {'yes' if self.can_resume else 'no'}",
+            f"Reason: {self.reason}",
+            f"Next safe action: {self.next_safe_action}",
+        ]
+        return "\n".join(lines)
+
+
+@dataclass(frozen=True)
+class CheckpointResumeReport:
+    """Structured report for a checkpoint-guided resume."""
+
+    plan: CheckpointResumePlan
+    source: ReplaySummary
+    resumed: ReplaySummary | None = None
+    diff: ReplayDiffReport | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the resume report as JSON-ready data."""
+
+        return {
+            "plan": self.plan.to_dict(),
+            "source": self.source.to_dict(),
+            "resumed": self.resumed.to_dict() if self.resumed is not None else None,
+            "diff": self.diff.to_dict() if self.diff is not None else None,
+        }
+
+    def to_text(self) -> str:
+        """Render the resume report for CLI output."""
+
+        lines = [self.plan.to_text(), "", "Source summary:"]
+        lines.extend(
+            [
+                f"- Run ID: {self.source.run_id}",
+                f"- Answer preview: {self.source.answer_preview()}",
+                f"- Steps: {self.source.step_count}",
+                f"- Runtime events: {self.source.runtime_event_count}",
+                f"- Tools: {', '.join(self.source.tool_names) if self.source.tool_names else 'none'}",
+                f"- Skills: {', '.join(self.source.skill_names) if self.source.skill_names else 'none'}",
+            ]
+        )
+        if self.resumed is not None:
+            lines.extend(
+                [
+                    "",
+                    "Resumed summary:",
+                    f"- Run ID: {self.resumed.run_id}",
+                    f"- Answer preview: {self.resumed.answer_preview()}",
+                    f"- Steps: {self.resumed.step_count}",
+                    f"- Runtime events: {self.resumed.runtime_event_count}",
+                    f"- Tools: {', '.join(self.resumed.tool_names) if self.resumed.tool_names else 'none'}",
+                    f"- Skills: {', '.join(self.resumed.skill_names) if self.resumed.skill_names else 'none'}",
+                ]
+            )
+        if self.diff is not None:
+            lines.extend(["", "Resume diff:", self.diff.to_text()])
+        return "\n".join(lines)
+
+
 def build_replay_report(record: dict[str, Any]) -> ReplayReport:
     """Build a replay report from a persisted checkpoint."""
 
@@ -320,6 +424,65 @@ def format_replay_diff_report(older_record: dict[str, Any], newer_record: dict[s
     """Render a replay diff report for CLI use."""
 
     return compare_replay_reports(older_record, newer_record).to_text()
+
+
+def build_checkpoint_resume_plan(record: dict[str, Any]) -> CheckpointResumePlan:
+    """Build a checkpoint-guided resume plan from a persisted run."""
+
+    summary = build_replay_summary(record)
+    route = _route_dict(record, _trace_dict(record))
+    trace = _trace_dict(record)
+    recovery_plan = _tool_metadata(trace).get("recovery_plan")
+    if not isinstance(recovery_plan, dict):
+        recovery_plan = {}
+    next_safe_action = _normalize_label(recovery_plan.get("next_safe_action"), default="Reuse the persisted route hints and rerun the request.")
+    reason = (
+        "Resume the saved request with the checkpoint route hints so the same execution path can be re-entered."
+        if summary.has_recovery
+        else "No failure was recorded; rerun the saved request with the persisted route hints."
+    )
+    resume_mode = "guided_retry" if summary.has_recovery else "checkpoint_rerun"
+    return CheckpointResumePlan(
+        source_run_id=summary.run_id,
+        source_run_kind=summary.run_kind,
+        user_input=summary.user_input,
+        route_action=summary.route_action,
+        route_tool=summary.route_tool,
+        graph_route=summary.graph_route,
+        failure_type=summary.failure_type,
+        has_recovery=summary.has_recovery,
+        resume_mode=resume_mode,
+        can_resume=True,
+        reason=reason,
+        next_safe_action=next_safe_action,
+    )
+
+
+def build_checkpoint_resume_report(
+    source_record: dict[str, Any],
+    resumed_record: dict[str, Any] | None = None,
+) -> CheckpointResumeReport:
+    """Build a structured resume report from checkpoint records."""
+
+    plan = build_checkpoint_resume_plan(source_record)
+    source_summary = build_replay_summary(source_record)
+    resumed_summary = build_replay_summary(resumed_record) if resumed_record is not None else None
+    diff = compare_replay_reports(source_record, resumed_record) if resumed_record is not None else None
+    return CheckpointResumeReport(
+        plan=plan,
+        source=source_summary,
+        resumed=resumed_summary,
+        diff=diff,
+    )
+
+
+def format_checkpoint_resume_report(
+    source_record: dict[str, Any],
+    resumed_record: dict[str, Any] | None = None,
+) -> str:
+    """Render a checkpoint-guided resume report for CLI use."""
+
+    return build_checkpoint_resume_report(source_record, resumed_record).to_text()
 
 
 def _trace_dict(record: dict[str, Any]) -> dict[str, Any]:
