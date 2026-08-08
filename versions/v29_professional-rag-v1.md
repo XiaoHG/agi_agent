@@ -2,7 +2,7 @@
 
 ## 本阶段目标
 
-按照 `docs/professional-agent-iteration-plan.md` 的专业 RAG 方向，把原来的关键词检索扩展为一个可 rebuild、可测试、可引用来源的本地 vector RAG 原型。
+按照 `docs/plans/v3_professional-agent-iteration-plan.md` 的专业 RAG 方向，把原来的关键词检索扩展为一个可 rebuild、可测试、可引用来源的本地 vector RAG 原型。
 
 本阶段不是接入外部 embedding 服务，而是先用 deterministic local embedding 建立工程闭环：
 
@@ -23,8 +23,8 @@ documents
 | `rag/embeddings.py` | 本地 deterministic embedding 和 cosine similarity |
 | `rag/vector_index.py` | vector index 数据模型、rebuild、search、save、load |
 | `cli/rag_index_demo.py` | rebuild 本地 RAG vector index，并可立即查询 |
-| `versions/professional-rag-v1_v29.md` | 本阶段版本说明 |
-| `docs/professional-rag-v1-exercises_v29.md` | 本阶段练习 |
+| `versions/v29_professional-rag-v1.md` | 本阶段版本说明 |
+| `docs/v29_professional-rag-v1-exercises.md` | 本阶段练习 |
 
 ## 本阶段修改文件
 

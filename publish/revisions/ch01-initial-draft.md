@@ -15,8 +15,8 @@
 ## 涉及证据
 
 - `docs/current-learning-state.md`
-- `docs/plans/learning-master-plan.md`
-- `docs/plans/professional-agent-iteration-plan.md`
+- `docs/plans/v1_learning-master-plan.md`
+- `docs/plans/v3_professional-agent-iteration-plan.md`
 - `versions/v01_minimal-cli-agent.md`
 - `versions/v02_state-workflow.md`
 - `versions/v03_rag-local-search.md`

@@ -39,7 +39,7 @@
 
 新增：
 
-- `prompts/direct-answer.v1.md`
+- `prompts/v39_direct-answer.md`
 
 这让 direct answer 不再借用别的 prompt，而是有自己的输出边界和风格约束。
 
@@ -67,7 +67,7 @@
 | `agent/core.py` | 接入 LLM-first direct answer 与 trace |
 | `integrations/langgraph_workflow.py` | graph route-hint direct answer 接入同一能力 |
 | `agent/prompts.py` | 增加 direct-answer prompt loader |
-| `prompts/direct-answer.v1.md` | direct answer prompt |
+| `prompts/v39_direct-answer.md` | direct answer prompt |
 | `tests/test_agent.py` | direct answer 的 LLM / fallback 测试 |
 | `tests/test_langgraph_workflow.py` | graph direct answer 测试 |
 | `cli/README.md` | direct answer 行为说明 |

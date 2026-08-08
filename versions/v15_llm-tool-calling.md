@@ -46,7 +46,7 @@
 - `list_subagents`
 - `plan_subagents`
 
-### `prompts/tool-calling.v1.md`
+### `prompts/v15_tool-calling.md`
 
 新增工具选择 prompt，要求模型：
 
@@ -162,7 +162,7 @@
 | --- | ---: |
 | `agent/tool_schema.py` | 97 |
 | `agent/tool_calling.py` | 183 |
-| `prompts/tool-calling.v1.md` | 31 |
+| `prompts/v15_tool-calling.md` | 31 |
 | `cli/tool_calling_demo.py` | 35 |
 | `tests/test_tool_calling.py` | 80 |
 | `versions/llm-tool-calling_v15.md` | 213 |

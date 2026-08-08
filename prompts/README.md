@@ -15,11 +15,12 @@
 
 ```text
 prompts/
-  agent-system.v1.md
-  tool-router.v1.md
-  rag-answer.v1.md
-  reviewer.v1.md
+  v1_agent-system.md
+  v2_tool-router.md
+  v15_tool-calling.md
+  v17_tool-loop-synthesis.md
+  v28_langgraph-planner.md
+  v39_direct-answer.md
 ```
 
 prompt 应尽量通过配置加载，避免硬编码在业务代码里。
-

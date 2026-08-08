@@ -25,7 +25,7 @@
 
 迭代依据：
 
-- `docs/plans/professional-agent-iteration-plan.md`
+- `docs/plans/v3_professional-agent-iteration-plan.md`
 
 本阶段目标：
 
@@ -233,7 +233,7 @@ python -m cli.eval_runner
    ```bash
    sed -n '1,260p' docs/current-learning-state.md
    sed -n '1,260p' docs/snapshots/work-snapshot-2026-08-05.md
-   sed -n '1,260p' docs/plans/professional-agent-iteration-plan.md
+   sed -n '1,260p' docs/plans/v3_professional-agent-iteration-plan.md
    sed -n '1,260p' versions/v29_professional-rag-v1.md
    sed -n '1,320p' docs/v29_professional-rag-v1-exercises.md
    ```

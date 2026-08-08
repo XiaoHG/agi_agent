@@ -214,8 +214,8 @@ Dimensions: 64
 
 Query: agent workflow
 - README.md:316-355 score=0.679
-- docs/plans/learning-master-plan.md:1-40 score=0.668
-- docs/plans/week1-task-plan.md:71-110 score=0.667
+- docs/plans/v1_learning-master-plan.md:1-40 score=0.668
+- docs/plans/v2_week1-task-plan.md:71-110 score=0.667
 ```
 
 回答：`rag_index_demo` 当前生成了 562 条 records。

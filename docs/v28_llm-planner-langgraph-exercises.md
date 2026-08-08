@@ -36,7 +36,7 @@
 
 回答：
 
-1. `prompts/langgraph-planner.v1.md` 为什么要限制支持的 route？
+1. `prompts/v28_langgraph-planner.md` 为什么要限制支持的 route？
 
    答案：限制 route 是为了把 LLM 的自由输出收敛到系统真正支持的执行路径。当前 LangGraph 只实现了 `read_file`、`search_docs`、`answer_docs_with_llm` 和 `skill_execution`，如果 prompt 不限制，模型可能返回不存在的 route，导致执行层不可控。
 

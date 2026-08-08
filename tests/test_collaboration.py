@@ -34,10 +34,12 @@ class CollaborationTests(unittest.TestCase):
     def test_discover_project_skills(self) -> None:
         skills = discover_project_skills(Path("."))
 
-        self.assertEqual(len(skills), 1)
-        self.assertEqual(skills[0].name, "professional-code-review")
-        self.assertEqual(skills[0].source, "project")
-        self.assertTrue((skills[0].path or "").endswith(".codex/skills/professional-code-review/SKILL.md"))
+        self.assertEqual(len(skills), 2)
+        names = {skill.name for skill in skills}
+        self.assertIn("professional-code-review", names)
+        self.assertIn("publish-book-workflow", names)
+        self.assertTrue(any(skill.source == "project" for skill in skills))
+        self.assertTrue(any((skill.path or "").endswith(".codex/skills/professional-code-review/SKILL.md") for skill in skills))
 
     def test_get_available_skills_merges_builtin_and_project(self) -> None:
         names = {skill.name for skill in get_available_skills(Path("."))}

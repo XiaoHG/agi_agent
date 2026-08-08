@@ -2,7 +2,7 @@
 
 ## 本阶段目标
 
-按照 `docs/professional-agent-iteration-plan.md` 的方向，把 LangGraph 从纯规则路由推进到 LLM-first planning：
+按照 `docs/plans/v3_professional-agent-iteration-plan.md` 的方向，把 LangGraph 从纯规则路由推进到 LLM-first planning：
 
 ```text
 User question
@@ -35,9 +35,9 @@ User question
 | 文件 | 作用 |
 |---|---|
 | `agent/planner.py` | LangGraph planner 数据模型、prompt message 构建、JSON 解析和 plan 校验 |
-| `prompts/langgraph-planner.v1.md` | DeepSeek planner 使用的结构化规划 prompt |
-| `versions/llm-planner-langgraph_v28.md` | 本阶段版本说明 |
-| `docs/llm-planner-langgraph-exercises_v28.md` | 本阶段练习 |
+| `prompts/v28_langgraph-planner.md` | DeepSeek planner 使用的结构化规划 prompt |
+| `versions/v28_llm-planner-langgraph.md` | 本阶段版本说明 |
+| `docs/v28_llm-planner-langgraph-exercises.md` | 本阶段练习 |
 
 ## 修改文件
 
@@ -73,7 +73,7 @@ User question
 
 ### 2. planner prompt
 
-`prompts/langgraph-planner.v1.md` 明确限制 planner 只能选择四种 route：
+`prompts/v28_langgraph-planner.md` 明确限制 planner 只能选择四种 route：
 
 - `read_file`
 - `search_docs`

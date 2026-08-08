@@ -17,8 +17,8 @@ CLI 入口（cli/main.py）
    ▼
 WorkspaceAgent（agent/core.py）
    │
-   ├── 加载提示词（prompts/agent-system.v1.md）
-   ├── 加载路由提示词（prompts/tool-router.v1.md）
+   ├── 加载提示词（prompts/v1_agent-system.md）
+   ├── 加载路由提示词（prompts/v2_tool-router.md）
    ├── 路由判断（router.py）
    │
    ├── 如果是直接回答

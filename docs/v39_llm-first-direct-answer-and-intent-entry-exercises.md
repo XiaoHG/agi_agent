@@ -21,7 +21,7 @@
 - `agent/direct_answer.py`
 - `agent/core.py`
 - `integrations/langgraph_workflow.py`
-- `prompts/direct-answer.v1.md`
+- `prompts/v39_direct-answer.md`
 
 请回答：
 

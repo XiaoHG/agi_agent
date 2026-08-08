@@ -75,7 +75,7 @@ README.md 文件共有 616 行。
 
 ## 代码改动说明
 
-### `prompts/tool-loop-synthesis.v1.md`
+### `prompts/v17_tool-loop-synthesis.md`
 
 新增最终综合 prompt。
 
@@ -177,7 +177,7 @@ fallback 策略：
 | 文件 | 行数 |
 | --- | ---: |
 | `agent/tool_synthesis.py` | 52 |
-| `prompts/tool-loop-synthesis.v1.md` | 24 |
+| `prompts/v17_tool-loop-synthesis.md` | 24 |
 | `tests/test_tool_synthesis.py` | 67 |
 | `versions/llm-tool-synthesis_v17.md` | 248 |
 

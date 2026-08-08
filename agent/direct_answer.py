@@ -52,15 +52,12 @@ def answer_directly(
 
     resolved_client = client
     if resolved_client is None:
-        try:
-            resolved_client = DeepSeekLLMClient()
-        except Exception as error:  # pragma: no cover - exercised through fallback behavior
-            return DirectAnswerResult(
-                answer=compose_direct_answer_fallback(user_input),
-                source="deterministic_fallback",
-                status="fallback",
-                error=str(error),
-            )
+        return DirectAnswerResult(
+            answer=compose_direct_answer_fallback(user_input),
+            source="deterministic_fallback",
+            status="fallback",
+            error="Direct-answer client was not provided.",
+        )
 
     try:
         response = resolved_client.chat(build_direct_answer_messages(user_input, prompt))

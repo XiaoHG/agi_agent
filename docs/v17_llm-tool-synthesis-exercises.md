@@ -710,7 +710,7 @@ user input
 - `ToolLoopResult.final_answer`：最终答案正文。
 - `ToolLoopResult.final_answer_source`：最终答案来源。
 - `tool_synthesis.py`：把 tool loop observations 转成最终答案。
-- `tool-loop-synthesis.v1.md`：约束 final synthesis 行为的 prompt。
+- `v17_tool-loop-synthesis.md`：约束 final synthesis 行为的 prompt。
 - deterministic fallback：final synthesis 失败时的确定性回退。
 
 ### 3. 能跑通验证命令
@@ -766,4 +766,3 @@ Trace exposes answer source.
 ```text
 MCP / Skills as first-class tool loop capabilities
 ```
-

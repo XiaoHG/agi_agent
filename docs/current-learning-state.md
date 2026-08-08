@@ -148,7 +148,7 @@ v29 功能基线提交：
 
 后续迭代必须参考：
 
-- `docs/plans/professional-agent-iteration-plan.md`
+- `docs/plans/v3_professional-agent-iteration-plan.md`
 
 基本原则：不要长期停留在局部 helper 修补；每个阶段应尽量围绕专业 Agent 能力闭环推进，包括数据模型、执行逻辑、CLI/demo、tests、eval、trace、docs 和 exercises。
 
@@ -268,7 +268,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 1. `AGENTS.md`
 2. `docs/current-learning-state.md`
 3. `docs/snapshots/work-snapshot-2026-08-05.md`
-4. `docs/plans/professional-agent-iteration-plan.md`
+4. `docs/plans/v3_professional-agent-iteration-plan.md`
 5. `versions/v32_default-langgraph-main-runtime.md`
 6. `docs/v32_default-langgraph-main-runtime-exercises.md`
 7. `versions/v33_graph-workflow-orchestration.md`
@@ -295,7 +295,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一阶段规划必须先参考：
 
-- `docs/plans/professional-agent-iteration-plan.md`
+- `docs/plans/v3_professional-agent-iteration-plan.md`
 
 建议优先进入：
 
