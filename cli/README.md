@@ -182,3 +182,9 @@ Allow the MCP write tool explicitly:
 ```bash
 python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hello mcp" --allow-write
 ```
+
+Show the standardized MCP execution record:
+
+```bash
+python -m cli.mcp_demo --tool workspace_summary --show-execution
+```

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from uuid import uuid4
 from typing import Any
 
 
@@ -38,6 +39,83 @@ class MCPResponse:
     content: str  # 工具返回内容
     is_error: bool = False  # 是否为错误响应
     metadata: dict[str, Any] = field(default_factory=dict)  # 扩展 metadata，供 trace / policy 使用
+
+
+@dataclass(frozen=True)
+class MCPError:
+    """Structured MCP error details for trace and recovery."""
+
+    stage: str
+    code: str
+    message: str
+    next_safe_action: str
+
+    def to_dict(self) -> dict[str, str]:
+        """Render the error as JSON-ready data."""
+
+        return {
+            "stage": self.stage,
+            "code": self.code,
+            "message": self.message,
+            "next_safe_action": self.next_safe_action,
+        }
+
+
+@dataclass(frozen=True)
+class MCPExecutionRecord:
+    """Standardized MCP execution record shared by client, server, and adapter."""
+
+    request: MCPRequest
+    response: MCPResponse
+    permission_policy: MCPPermissionPolicy
+    permission_decision: MCPPermissionDecision
+    error: MCPError | None = None
+    protocol_version: str = "v1"
+    execution_id: str = field(default_factory=lambda: uuid4().hex[:8])
+
+    @property
+    def status(self) -> str:
+        """Return the standardized execution status."""
+
+        if self.error is not None:
+            return "error"
+        return "error" if self.response.is_error else "ok"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the execution record as JSON-ready data."""
+
+        return {
+            "protocol_version": self.protocol_version,
+            "execution_id": self.execution_id,
+            "status": self.status,
+            "request": {
+                "tool_name": self.request.tool_name,
+                "arguments": self.request.arguments,
+            },
+            "permission_policy": self.permission_policy.to_dict(),
+            "permission_decision": self.permission_decision.to_dict(),
+            "response": {
+                "tool_name": self.response.tool_name,
+                "content": self.response.content,
+                "is_error": self.response.is_error,
+                "metadata": self.response.metadata,
+            },
+            "error": None if self.error is None else self.error.to_dict(),
+        }
+
+    def to_response(self) -> MCPResponse:
+        """Return the underlying response with execution metadata attached."""
+
+        metadata = {
+            "mcp_execution": self.to_dict(),
+            **self.response.metadata,
+        }
+        return MCPResponse(
+            self.response.tool_name,
+            self.response.content,
+            is_error=self.response.is_error,
+            metadata=metadata,
+        )
 
 
 @dataclass(frozen=True)

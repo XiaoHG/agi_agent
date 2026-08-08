@@ -8,19 +8,19 @@
 
 ## Last Updated
 
-2026-08-07
+2026-08-08
 
 ## 当前阶段
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已完成实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已完成实现，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：沿总纲进入标准化 MCP 执行边界阶段，继续把外部工具层从学习版推进到更专业的执行协议。
+下一阶段建议：沿总纲进入 Skills 治理与运行时策略阶段，继续把能力层从“可调用”推进到“可治理、可约束、可演化”。
 
 ## 当前教师判断
 
@@ -127,6 +127,9 @@ v29 功能基线提交：
 - LLM-first direct answer
 - direct answer deterministic fallback
 - direct answer structured trace metadata
+- MCP execution record
+- MCP structured error model
+- MCP execution CLI inspection
 
 当前缺口：
 
@@ -159,10 +162,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v38 checkpoint-guided resume 与 v39 LLM-first direct answer：`versions/v38_checkpoint-guided-recovery-and-resume.md`、`versions/v39_llm-first-direct-answer-and-intent-entry.md`。
-2. 查看对应练习：`docs/v38_checkpoint-guided-recovery-and-resume-exercises.md`、`docs/v39_llm-first-direct-answer-and-intent-entry-exercises.md`。
+1. 复盘 v39 LLM-first direct answer 与 v40 standardized MCP execution boundary：`versions/v39_llm-first-direct-answer-and-intent-entry.md`、`versions/v40_standardized-mcp-execution-boundary.md`。
+2. 查看对应练习：`docs/v39_llm-first-direct-answer-and-intent-entry-exercises.md`、`docs/v40_standardized-mcp-execution-boundary-exercises.md`。
 3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
-4. 进入下一阶段：进入标准化 MCP 执行边界，强化工具协议、输入输出校验和错误模型。
+4. 进入下一阶段：进入 Skills 权限、版本和运行时策略治理。
 
 ## 当前学习重点
 
@@ -238,7 +241,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v36：Runtime Event Replay。
 - 完成 v37：Run Replay Diff and Comparative Analysis。
 - 完成 v38：Checkpoint-Guided Recovery and Resume。
-- 完成 v39：LLM-First Direct Answer and Intent Entry（本地未提交）。
+- 完成 v39：LLM-First Direct Answer and Intent Entry。
+- 完成 v40：Standardized MCP Execution Boundary（本地未提交）。
 
 ## 未完成
 
@@ -277,15 +281,14 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 14. `docs/v38_checkpoint-guided-recovery-and-resume-exercises.md`
 15. `versions/v39_llm-first-direct-answer-and-intent-entry.md`
 16. `docs/v39_llm-first-direct-answer-and-intent-entry-exercises.md`
-17. `agent/core.py`
-18. `integrations/langgraph_workflow.py`
-19. `agent/direct_answer.py`
-20. `cli/main.py`
-21. `tests/test_agent.py`
-22. `tests/test_langgraph_workflow.py`
-23. `tests/test_tool_calling.py`
-24. `tests/test_tool_loop.py`
-25. `cli/README.md`
+17. `versions/v40_standardized-mcp-execution-boundary.md`
+18. `docs/v40_standardized-mcp-execution-boundary-exercises.md`
+19. `mcp/schema.py`
+20. `mcp/adapter.py`
+21. `cli/mcp_demo.py`
+22. `tests/test_mcp.py`
+23. `mcp/README.md`
+24. `cli/README.md`
 然后继续执行当前具体任务。
 
 ## 下一步建议

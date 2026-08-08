@@ -25,10 +25,29 @@ mcp/
 
 ```text
 mcp/
-  schema.py              # MCPToolSpec / MCPRequest / MCPResponse
+  schema.py              # MCPToolSpec / MCPRequest / MCPResponse / MCPExecutionRecord
   adapter.py             # Agent-facing MCP adapter
   clients/local_client.py
   servers/local_server.py
+```
+
+## 标准执行边界
+
+当前适配层会把每次 MCP 调用整理成标准执行记录，包含：
+
+- request
+- permission policy
+- permission decision
+- response
+- error
+- protocol version
+- execution id
+
+查看执行记录：
+
+```bash
+python -m cli.mcp_demo --tool workspace_summary --show-execution
+python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hello mcp" --show-execution
 ```
 
 当前可用工具：

@@ -12,6 +12,7 @@ from mcp import (
     LocalMCPServer,
     MCPPermissionPolicy,
     call_mcp_tool,
+    call_mcp_tool_exchange,
     call_mcp_tool_response,
     list_mcp_tools,
 )
@@ -80,6 +81,15 @@ class LocalMCPTests(unittest.TestCase):
 
         self.assertIn("[mcp:error]", output)
         self.assertIn("Unknown MCP tool", output)
+
+    def test_adapter_returns_standardized_execution_record(self) -> None:
+        record = call_mcp_tool_exchange(Path("."), "workspace_summary")
+
+        self.assertEqual(record.protocol_version, "v1")
+        self.assertEqual(record.request.tool_name, "workspace_summary")
+        self.assertEqual(record.status, "ok")
+        self.assertIn("mcp_execution", record.to_response().metadata)
+        self.assertEqual(record.to_dict()["response"]["tool_name"], "workspace_summary")
 
     def test_route_to_mcp_tools(self) -> None:
         route = route_intent("List MCP tools.")
@@ -228,6 +238,28 @@ class LocalMCPTests(unittest.TestCase):
 
             self.assertIn("[mcp:ok]", result.stdout)
             self.assertEqual((Path(tmp) / "notes.txt").read_text(encoding="utf-8"), "hello mcp")
+
+    def test_mcp_demo_shows_execution_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "cli.mcp_demo",
+                    "--root",
+                    tmp,
+                    "--tool",
+                    "workspace_summary",
+                    "--show-execution",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertIn('"protocol_version": "v1"', result.stdout)
+            self.assertIn('"permission_decision"', result.stdout)
+            self.assertIn('"response"', result.stdout)
 
 
 if __name__ == "__main__":

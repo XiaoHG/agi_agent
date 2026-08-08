@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
-from mcp import MCPPermissionPolicy, call_mcp_tool, call_mcp_tool_response, list_mcp_tools
+from mcp import MCPPermissionPolicy, call_mcp_tool, call_mcp_tool_exchange, call_mcp_tool_response, list_mcp_tools
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,6 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--path", help="file path for read_project_file")
     parser.add_argument("--content", help="file content for write_project_file")
     parser.add_argument("--allow-write", action="store_true", help="allow write-capable MCP tools")
+    parser.add_argument("--show-execution", action="store_true", help="print the standardized execution record")
     return parser
 
 
@@ -34,22 +36,32 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.tool == "read_project_file":
-        print(call_mcp_tool(root, args.tool, {"path": args.path or ""}))
+        if args.show_execution:
+            print(json.dumps(call_mcp_tool_exchange(root, args.tool, {"path": args.path or ""}).to_dict(), indent=2))
+        else:
+            print(call_mcp_tool(root, args.tool, {"path": args.path or ""}))
         return 0
 
     if args.tool == "write_project_file":
-        response = call_mcp_tool_response(
+        record = call_mcp_tool_exchange(
             root,
             args.tool,
             {"path": args.path or "", "content": args.content or ""},
             policy=policy,
         )
-        status = "error" if response.is_error else "ok"
-        print(f"[mcp:{status}] {response.tool_name}\n{response.content}")
+        if args.show_execution:
+            print(json.dumps(record.to_dict(), indent=2))
+        else:
+            response = record.to_response()
+            status = "error" if response.is_error else "ok"
+            print(f"[mcp:{status}] {response.tool_name}\n{response.content}")
         return 0
 
     if args.tool:
-        print(call_mcp_tool(root, args.tool))
+        if args.show_execution:
+            print(json.dumps(call_mcp_tool_exchange(root, args.tool).to_dict(), indent=2))
+        else:
+            print(call_mcp_tool(root, args.tool))
         return 0
 
     parser.error("use --list-tools or --tool")
