@@ -48,8 +48,8 @@ class RAGAnswer:
 class VectorRAGAnswer:
     """A deterministic answer produced from vector-indexed local context."""
 
-    question: str
-    results: list[VectorSearchResult]
+    question: str  # 原始问题
+    results: list[VectorSearchResult]  # 向量检索结果
 
     def to_text(self) -> str:
         """Render vector retrieval results with explicit citations."""

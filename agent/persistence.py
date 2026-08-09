@@ -13,7 +13,7 @@ from typing import Any
 class RunCheckpointStore:
     """Small JSON checkpoint store for recent agent runs."""
 
-    history_dir: Path
+    history_dir: Path  # checkpoint 存储目录
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "history_dir", self.history_dir.resolve())

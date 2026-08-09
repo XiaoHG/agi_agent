@@ -40,9 +40,9 @@ class ToolError(Exception):
 class ToolResult:
     """Standard tool output wrapper."""
 
-    tool_name: str
-    output: str
-    metadata: dict[str, Any] | None = None
+    tool_name: str  # 工具名
+    output: str  # 工具输出
+    metadata: dict[str, Any] | None = None  # 附加元数据
 
 
 def _resolve_within_root(root: Path, raw_path: str) -> Path:

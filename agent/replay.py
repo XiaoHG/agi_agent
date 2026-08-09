@@ -12,21 +12,21 @@ from .events import RuntimeEvent, build_runtime_events
 class ReplaySummary:
     """Compact comparison-ready summary for one persisted run."""
 
-    run_id: str
-    run_kind: str
-    created_at: str
-    user_input: str
-    route_action: str
-    route_tool: str
-    graph_route: str
-    answer: str
-    step_count: int
-    runtime_event_count: int
-    tool_names: tuple[str, ...] = ()
-    skill_names: tuple[str, ...] = ()
-    delegation_names: tuple[str, ...] = ()
-    has_recovery: bool = False
-    failure_type: str = "none"
+    run_id: str  # 运行 ID
+    run_kind: str  # 运行类型
+    created_at: str  # 创建时间
+    user_input: str  # 用户输入
+    route_action: str  # 路由动作
+    route_tool: str  # 路由工具名
+    graph_route: str  # 图执行路由名
+    answer: str  # 最终答案
+    step_count: int  # 步骤数量
+    runtime_event_count: int  # runtime event 数量
+    tool_names: tuple[str, ...] = ()  # 涉及的工具名
+    skill_names: tuple[str, ...] = ()  # 涉及的技能名
+    delegation_names: tuple[str, ...] = ()  # 涉及的委派角色名
+    has_recovery: bool = False  # 是否包含恢复信息
+    failure_type: str = "none"  # 失败类型
 
     def answer_preview(self, limit: int = 120) -> str:
         """Return a compact answer preview for text reports."""
@@ -62,15 +62,15 @@ class ReplaySummary:
 class ReplayReport:
     """Structured replay report built from a saved checkpoint."""
 
-    run_id: str
-    run_kind: str
-    created_at: str
-    user_input: str
-    route: dict[str, Any]
-    answer: str
-    trace_text: str
-    events: list[RuntimeEvent] = field(default_factory=list)
-    stored_runtime_events: list[dict[str, Any]] = field(default_factory=list)
+    run_id: str  # 运行 ID
+    run_kind: str  # 运行类型
+    created_at: str  # 创建时间
+    user_input: str  # 用户输入
+    route: dict[str, Any]  # 路由信息
+    answer: str  # 最终答案
+    trace_text: str  # 原始 trace 文本
+    events: list[RuntimeEvent] = field(default_factory=list)  # 重建的 runtime events
+    stored_runtime_events: list[dict[str, Any]] = field(default_factory=list)  # 持久化的 runtime events
 
     def to_dict(self) -> dict[str, Any]:
         """Render the replay report as JSON-ready data."""
@@ -122,15 +122,15 @@ class ReplayReport:
 class ReplayDiffReport:
     """Structured diff between two replayable runs."""
 
-    older: ReplaySummary
-    newer: ReplaySummary
-    changed_fields: tuple[str, ...]
-    tool_names_added: tuple[str, ...] = ()
-    tool_names_removed: tuple[str, ...] = ()
-    skill_names_added: tuple[str, ...] = ()
-    skill_names_removed: tuple[str, ...] = ()
-    delegation_names_added: tuple[str, ...] = ()
-    delegation_names_removed: tuple[str, ...] = ()
+    older: ReplaySummary  # 较旧的运行摘要
+    newer: ReplaySummary  # 较新的运行摘要
+    changed_fields: tuple[str, ...]  # 变化字段名
+    tool_names_added: tuple[str, ...] = ()  # 新增工具名
+    tool_names_removed: tuple[str, ...] = ()  # 删除工具名
+    skill_names_added: tuple[str, ...] = ()  # 新增技能名
+    skill_names_removed: tuple[str, ...] = ()  # 删除技能名
+    delegation_names_added: tuple[str, ...] = ()  # 新增委派角色名
+    delegation_names_removed: tuple[str, ...] = ()  # 删除委派角色名
 
     def to_dict(self) -> dict[str, Any]:
         """Render the diff report as JSON-ready data."""
@@ -218,18 +218,18 @@ class ReplayDiffReport:
 class CheckpointResumePlan:
     """Plan for resuming a persisted checkpoint."""
 
-    source_run_id: str
-    source_run_kind: str
-    user_input: str
-    route_action: str
-    route_tool: str
-    graph_route: str
-    failure_type: str
-    has_recovery: bool
-    resume_mode: str
-    can_resume: bool
-    reason: str
-    next_safe_action: str
+    source_run_id: str  # 源运行 ID
+    source_run_kind: str  # 源运行类型
+    user_input: str  # 原始用户输入
+    route_action: str  # 源路由动作
+    route_tool: str  # 源路由工具名
+    graph_route: str  # 源 graph 路由
+    failure_type: str  # 源失败类型
+    has_recovery: bool  # 是否存在恢复信息
+    resume_mode: str  # 恢复模式
+    can_resume: bool  # 是否允许恢复
+    reason: str  # 恢复原因
+    next_safe_action: str  # 下一步安全动作
 
     def to_dict(self) -> dict[str, Any]:
         """Render the plan as JSON-ready data."""
@@ -271,10 +271,10 @@ class CheckpointResumePlan:
 class CheckpointResumeReport:
     """Structured report for a checkpoint-guided resume."""
 
-    plan: CheckpointResumePlan
-    source: ReplaySummary
-    resumed: ReplaySummary | None = None
-    diff: ReplayDiffReport | None = None
+    plan: CheckpointResumePlan  # 恢复计划
+    source: ReplaySummary  # 源运行摘要
+    resumed: ReplaySummary | None = None  # 恢复后的运行摘要
+    diff: ReplayDiffReport | None = None  # 恢复前后差异
 
     def to_dict(self) -> dict[str, Any]:
         """Render the resume report as JSON-ready data."""

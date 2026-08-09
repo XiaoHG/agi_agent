@@ -45,10 +45,10 @@ class MCPResponse:
 class MCPError:
     """Structured MCP error details for trace and recovery."""
 
-    stage: str
-    code: str
-    message: str
-    next_safe_action: str
+    stage: str  # 出错阶段
+    code: str  # 错误代码
+    message: str  # 错误信息
+    next_safe_action: str  # 下一步安全动作
 
     def to_dict(self) -> dict[str, str]:
         """Render the error as JSON-ready data."""
@@ -65,13 +65,13 @@ class MCPError:
 class MCPExecutionRecord:
     """Standardized MCP execution record shared by client, server, and adapter."""
 
-    request: MCPRequest
-    response: MCPResponse
-    permission_policy: MCPPermissionPolicy
-    permission_decision: MCPPermissionDecision
-    error: MCPError | None = None
-    protocol_version: str = "v1"
-    execution_id: str = field(default_factory=lambda: uuid4().hex[:8])
+    request: MCPRequest  # 请求对象
+    response: MCPResponse  # 响应对象
+    permission_policy: MCPPermissionPolicy  # 权限策略
+    permission_decision: MCPPermissionDecision  # 权限决策
+    error: MCPError | None = None  # 错误详情
+    protocol_version: str = "v1"  # 协议版本
+    execution_id: str = field(default_factory=lambda: uuid4().hex[:8])  # 执行 ID
 
     @property
     def status(self) -> str:
@@ -122,10 +122,10 @@ class MCPExecutionRecord:
 class MCPPermissionPolicy:
     """Policy that controls which classes of MCP tools may run."""
 
-    allow_read_only: bool = True
-    allow_write: bool = False
-    allow_network: bool = False
-    allow_destructive: bool = False
+    allow_read_only: bool = True  # 是否允许只读工具
+    allow_write: bool = False  # 是否允许写入工具
+    allow_network: bool = False  # 是否允许网络工具
+    allow_destructive: bool = False  # 是否允许破坏性工具
 
     def allows(self, permission_level: str) -> bool:
         """Return whether the policy allows the requested permission level."""
@@ -155,11 +155,11 @@ class MCPPermissionPolicy:
 class MCPPermissionDecision:
     """Permission check result for one MCP tool call."""
 
-    tool_name: str
-    permission_level: str
-    allowed: bool
-    reason: str
-    next_safe_action: str
+    tool_name: str  # 工具名
+    permission_level: str  # 权限级别
+    allowed: bool  # 是否允许
+    reason: str  # 决策原因
+    next_safe_action: str  # 下一步安全动作
 
     def to_dict(self) -> dict[str, object]:
         """Render the decision as JSON-ready data."""

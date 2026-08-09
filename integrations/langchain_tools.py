@@ -25,13 +25,13 @@ from agent import (
 class PathInput(BaseModel):
     """Input schema for tools that operate on a workspace-relative path."""
 
-    path: str = Field(default=".", description="Workspace-relative file or directory path.")
+    path: str = Field(default=".", description="Workspace-relative file or directory path.")  # 路径参数
 
 
 class QuestionInput(BaseModel):
     """Input schema for tools that answer or search with a natural-language question."""
 
-    question: str = Field(description="Natural-language question or task.")
+    question: str = Field(description="Natural-language question or task.")  # 问题参数
 
 
 class EmptyInput(BaseModel):

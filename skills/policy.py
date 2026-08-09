@@ -21,12 +21,12 @@ def _version_key(value: str) -> tuple[int, ...]:
 class SkillRuntimePolicy:
     """Policy that governs which skills may run in the current runtime."""
 
-    policy_name: str = "default"
-    allow_builtin: bool = True
-    allow_project: bool = True
-    allowed_skill_names: tuple[str, ...] = ()
-    denied_skill_names: tuple[str, ...] = ()
-    minimum_versions: dict[str, str] = field(default_factory=dict)
+    policy_name: str = "default"  # 策略名称
+    allow_builtin: bool = True  # 是否允许 builtin skill
+    allow_project: bool = True  # 是否允许 project skill
+    allowed_skill_names: tuple[str, ...] = ()  # 白名单技能名
+    denied_skill_names: tuple[str, ...] = ()  # 黑名单技能名
+    minimum_versions: dict[str, str] = field(default_factory=dict)  # 各技能最低版本要求
 
     def describe(self) -> str:
         """Render the policy as a compact text block."""
@@ -50,12 +50,12 @@ class SkillRuntimePolicy:
 class SkillPolicyDecision:
     """Decision made by the runtime policy for one skill."""
 
-    policy_name: str
-    skill_name: str
-    skill_version: str
-    allowed: bool
-    reason: str
-    next_safe_action: str
+    policy_name: str  # 决策来源策略名
+    skill_name: str  # 被评估的技能名
+    skill_version: str  # 被评估的技能版本
+    allowed: bool  # 是否允许执行
+    reason: str  # 允许或拒绝原因
+    next_safe_action: str  # 下一步安全动作
 
     def to_dict(self) -> dict[str, str | bool]:
         """Render the decision as JSON-ready data."""

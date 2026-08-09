@@ -11,10 +11,10 @@ from .llm import DeepSeekLLMClient, LLMMessage
 class DirectAnswerResult:
     """Structured direct-answer result shared by classic and graph runtimes."""
 
-    answer: str
+    answer: str  # 最终答案
     source: str  # llm / deterministic_fallback
     status: str  # completed / fallback
-    error: str = ""
+    error: str = ""  # 错误信息
 
     def to_dict(self) -> dict[str, str]:
         """Render the result as JSON-ready data."""

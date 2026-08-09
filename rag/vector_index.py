@@ -19,9 +19,9 @@ VECTOR_INDEX_SCHEMA_VERSION = 1
 class VectorRecord:
     """One vector-indexed chunk with citation metadata."""
 
-    chunk: TextChunk
-    embedding: tuple[float, ...]
-    metadata: dict[str, Any]
+    chunk: TextChunk  # 对应的文本块
+    embedding: tuple[float, ...]  # 向量表示
+    metadata: dict[str, Any]  # 附加元数据
 
     def to_dict(self) -> dict[str, Any]:
         """Export the record to JSON-ready data."""
@@ -58,9 +58,9 @@ class VectorRecord:
 class VectorIndex:
     """In-memory vector index for local RAG chunks."""
 
-    records: list[VectorRecord]
-    dimensions: int
-    schema_version: int = VECTOR_INDEX_SCHEMA_VERSION
+    records: list[VectorRecord]  # 索引记录
+    dimensions: int  # 向量维度
+    schema_version: int = VECTOR_INDEX_SCHEMA_VERSION  # 索引 schema 版本
 
     def to_dict(self) -> dict[str, Any]:
         """Export the index to JSON-ready data."""
@@ -86,8 +86,8 @@ class VectorIndex:
 class VectorSearchResult:
     """One vector retrieval result with source citation."""
 
-    record: VectorRecord
-    score: float
+    record: VectorRecord  # 命中的记录
+    score: float  # 相似度分数
 
     @property
     def chunk(self) -> TextChunk:
