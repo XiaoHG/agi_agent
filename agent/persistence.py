@@ -119,7 +119,7 @@ def build_graph_checkpoint(
             "output_preview": _preview_text(graph_state.get("answer", "")),
             "metadata": {
                 key: graph_state.get(key)
-                for key in ("tool_status", "tool_error", "skill_status", "skill_run", "recovery_plan")
+                for key in ("tool_status", "tool_error", "skill_status", "skill_run", "subagent_delegation", "recovery_plan")
                 if graph_state.get(key) is not None
             },
         },

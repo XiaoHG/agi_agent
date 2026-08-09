@@ -95,6 +95,18 @@ def build_runtime_events(
                     payload=skill_run,
                 )
             )
+        delegation = tool_result_metadata.get("subagent_delegation")
+        if isinstance(delegation, dict):
+            delegations = delegation.get("delegations", [])
+            events.append(
+                RuntimeEvent(
+                    index=len(events) + 1,
+                    event_type="delegation",
+                    name=delegation.get("objective", "subagent_delegation"),
+                    detail=f"delegations={len(delegations) if isinstance(delegations, list) else 0}",
+                    payload=delegation,
+                )
+            )
 
     if tool_error:
         events.append(

@@ -263,7 +263,7 @@ def plan_subagent_collaboration(task: str) -> ToolResult:
     """Build a small subagent collaboration plan."""
 
     plan = build_collaboration_plan(task)
-    return ToolResult("plan_subagents", plan.to_text())
+    return ToolResult("plan_subagents", plan.to_text(), {"subagent_delegation": plan.to_dict()})
 
 
 def _extract_skill_name(task: str) -> str | None:

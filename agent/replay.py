@@ -24,6 +24,7 @@ class ReplaySummary:
     runtime_event_count: int
     tool_names: tuple[str, ...] = ()
     skill_names: tuple[str, ...] = ()
+    delegation_names: tuple[str, ...] = ()
     has_recovery: bool = False
     failure_type: str = "none"
 
@@ -51,6 +52,7 @@ class ReplaySummary:
             "runtime_event_count": self.runtime_event_count,
             "tool_names": list(self.tool_names),
             "skill_names": list(self.skill_names),
+            "delegation_names": list(self.delegation_names),
             "has_recovery": self.has_recovery,
             "failure_type": self.failure_type,
         }
@@ -127,6 +129,8 @@ class ReplayDiffReport:
     tool_names_removed: tuple[str, ...] = ()
     skill_names_added: tuple[str, ...] = ()
     skill_names_removed: tuple[str, ...] = ()
+    delegation_names_added: tuple[str, ...] = ()
+    delegation_names_removed: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Render the diff report as JSON-ready data."""
@@ -139,6 +143,8 @@ class ReplayDiffReport:
             "tool_names_removed": list(self.tool_names_removed),
             "skill_names_added": list(self.skill_names_added),
             "skill_names_removed": list(self.skill_names_removed),
+            "delegation_names_added": list(self.delegation_names_added),
+            "delegation_names_removed": list(self.delegation_names_removed),
             "step_count_delta": self.step_count_delta,
             "runtime_event_delta": self.runtime_event_delta,
         }
@@ -170,6 +176,7 @@ class ReplayDiffReport:
             f"- Runtime events: {self.older.runtime_event_count}",
             f"- Tools: {', '.join(self.older.tool_names) if self.older.tool_names else 'none'}",
             f"- Skills: {', '.join(self.older.skill_names) if self.older.skill_names else 'none'}",
+            f"- Delegations: {', '.join(self.older.delegation_names) if self.older.delegation_names else 'none'}",
             f"- Recovery: {'yes' if self.older.has_recovery else 'no'}",
             f"- Failure type: {self.older.failure_type}",
             f"- Answer preview: {self.older.answer_preview()}",
@@ -181,6 +188,7 @@ class ReplayDiffReport:
             f"- Runtime events: {self.newer.runtime_event_count}",
             f"- Tools: {', '.join(self.newer.tool_names) if self.newer.tool_names else 'none'}",
             f"- Skills: {', '.join(self.newer.skill_names) if self.newer.skill_names else 'none'}",
+            f"- Delegations: {', '.join(self.newer.delegation_names) if self.newer.delegation_names else 'none'}",
             f"- Recovery: {'yes' if self.newer.has_recovery else 'no'}",
             f"- Failure type: {self.newer.failure_type}",
             f"- Answer preview: {self.newer.answer_preview()}",
@@ -199,6 +207,8 @@ class ReplayDiffReport:
                 f"Tools removed: {', '.join(self.tool_names_removed) if self.tool_names_removed else 'none'}",
                 f"Skills added: {', '.join(self.skill_names_added) if self.skill_names_added else 'none'}",
                 f"Skills removed: {', '.join(self.skill_names_removed) if self.skill_names_removed else 'none'}",
+                f"Delegations added: {', '.join(self.delegation_names_added) if self.delegation_names_added else 'none'}",
+                f"Delegations removed: {', '.join(self.delegation_names_removed) if self.delegation_names_removed else 'none'}",
             ]
         )
         return "\n".join(lines)
@@ -355,6 +365,7 @@ def build_replay_summary(record: dict[str, Any]) -> ReplaySummary:
 
     tool_names = _collect_tool_names(route, trace, tool_result, tool_metadata)
     skill_names = _collect_skill_names(skill_run)
+    delegation_names = _collect_delegation_names(tool_metadata.get("subagent_delegation"))
     events = build_replay_report(record).events
     return ReplaySummary(
         run_id=str(record.get("run_id", "unknown")),
@@ -369,6 +380,7 @@ def build_replay_summary(record: dict[str, Any]) -> ReplaySummary:
         runtime_event_count=len(events),
         tool_names=tool_names,
         skill_names=skill_names,
+        delegation_names=delegation_names,
         has_recovery=bool(recovery_plan),
         failure_type=_normalize_label(recovery_plan.get("failure_type"), default="none"),
     )
@@ -395,6 +407,8 @@ def compare_replay_reports(older_record: dict[str, Any], newer_record: dict[str,
         changed_fields.append("tool_usage")
     if older.skill_names != newer.skill_names:
         changed_fields.append("skill_usage")
+    if older.delegation_names != newer.delegation_names:
+        changed_fields.append("delegation_usage")
     if older.has_recovery != newer.has_recovery or older.failure_type != newer.failure_type:
         changed_fields.append("recovery")
 
@@ -402,6 +416,8 @@ def compare_replay_reports(older_record: dict[str, Any], newer_record: dict[str,
     newer_tools = set(newer.tool_names)
     older_skills = set(older.skill_names)
     newer_skills = set(newer.skill_names)
+    older_delegations = set(older.delegation_names)
+    newer_delegations = set(newer.delegation_names)
 
     return ReplayDiffReport(
         older=older,
@@ -411,6 +427,8 @@ def compare_replay_reports(older_record: dict[str, Any], newer_record: dict[str,
         tool_names_removed=tuple(sorted(older_tools - newer_tools)),
         skill_names_added=tuple(sorted(newer_skills - older_skills)),
         skill_names_removed=tuple(sorted(older_skills - newer_skills)),
+        delegation_names_added=tuple(sorted(newer_delegations - older_delegations)),
+        delegation_names_removed=tuple(sorted(older_delegations - newer_delegations)),
     )
 
 
@@ -548,6 +566,25 @@ def _collect_skill_names(skill_run: dict[str, Any]) -> tuple[str, ...]:
         name = skill.get("name")
         if isinstance(name, str) and name.strip():
             names.add(name.strip())
+    return tuple(sorted(names))
+
+
+def _collect_delegation_names(subagent_delegation: dict[str, Any] | None) -> tuple[str, ...]:
+    """Collect stable subagent delegation names mentioned by a run."""
+
+    if not isinstance(subagent_delegation, dict):
+        return ()
+    names = set()
+    delegations = subagent_delegation.get("delegations", [])
+    if isinstance(delegations, list):
+        for delegation in delegations:
+            if not isinstance(delegation, dict):
+                continue
+            role = delegation.get("role", {})
+            if isinstance(role, dict):
+                name = role.get("name")
+                if isinstance(name, str) and name.strip():
+                    names.add(name.strip())
     return tuple(sorted(names))
 
 

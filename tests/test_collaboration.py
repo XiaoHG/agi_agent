@@ -17,7 +17,7 @@ from skills import (
     get_available_skills,
     select_skill,
 )
-from subagent import build_collaboration_plan, describe_subagents
+from subagent import build_collaboration_plan, build_subagent_task_contract, describe_subagents
 
 
 class CollaborationTests(unittest.TestCase):
@@ -155,18 +155,34 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertIn("teacher_agent", output)
         self.assertIn("coding_agent", output)
+        self.assertIn("Input boundary", output)
+        self.assertIn("Output boundary", output)
+
+    def test_build_subagent_task_contract_exports_boundaries(self) -> None:
+        role = next(role for role in build_collaboration_plan("Explain RAG architecture.").assigned_roles if role.name == "teacher_agent")
+        contract = build_subagent_task_contract(role, "Explain RAG architecture.")
+
+        data = contract.to_dict()
+
+        self.assertEqual(data["role_name"], "teacher_agent")
+        self.assertIn("Clarify the request", data["objective"])
+        self.assertIn("learning checkpoint", contract.to_text())
 
     def test_build_collaboration_plan_for_code_task(self) -> None:
         plan = build_collaboration_plan("Implement a bug fix and test it.")
 
         self.assertIn("coding_agent", plan.to_text())
-        self.assertIn("Teacher Agent explains", plan.to_text())
+        self.assertIn("Teacher Agent defines the objective", plan.to_text())
+        self.assertIn("Coding Agent implements", plan.to_text())
+        self.assertIn("Delegations:", plan.to_text())
+        self.assertEqual(len(plan.to_dict()["delegations"]), 2)
 
     def test_build_collaboration_plan_for_teacher_task(self) -> None:
         plan = build_collaboration_plan("Explain RAG architecture.")
 
         self.assertIn("teacher_agent", plan.to_text())
-        self.assertNotIn("coding_agent", plan.to_text())
+        self.assertEqual([role["name"] for role in plan.to_dict()["assigned_roles"]], ["teacher_agent"])
+        self.assertEqual(len(plan.to_dict()["delegations"]), 1)
 
     def test_route_to_list_skills(self) -> None:
         route = route_intent("List available skills.")
@@ -202,6 +218,16 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertEqual(run.route.tool_name, "plan_subagents")
         self.assertIn("Collaboration objective", run.answer)
+        self.assertIn("Contracts:", run.answer)
+
+    def test_agent_trace_dict_contains_subagent_delegation(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+
+        trace = agent.to_trace_dict(agent.run("Plan subagent collaboration for a code review."))
+
+        self.assertIsNotNone(trace["subagent_delegation"])
+        self.assertEqual(trace["subagent_delegation"]["delegations"][0]["role"]["name"], "teacher_agent")
+        self.assertIn("delegation", [event["event_type"] for event in trace["runtime_events"]])
 
     def test_agent_executes_skill(self) -> None:
         agent = WorkspaceAgent(Path("."))

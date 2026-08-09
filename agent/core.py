@@ -1040,6 +1040,9 @@ class WorkspaceAgent:
             "skill_run": None
             if tool_metadata is None
             else tool_metadata.get("skill_run"),
+            "subagent_delegation": None
+            if tool_metadata is None
+            else tool_metadata.get("subagent_delegation"),
             "tool_error": run.tool_error,
             "answer_preview": self._summarize_text(run.answer, limit=8),
         }
