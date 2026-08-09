@@ -15,6 +15,7 @@ from .prompts import (  # 加载提示词
 )
 from .direct_answer import DirectAnswerResult, answer_directly, compose_direct_answer_fallback
 from .events import build_runtime_events  # 统一运行事件导出
+from .memory import AgentMemoryStore, MemorySnapshot, format_session_memory_list, format_task_memory_list
 from .persistence import (
     RunCheckpointStore,
     build_run_checkpoint,
@@ -59,15 +60,18 @@ from .workflow import WorkflowPlan, build_workflow_plan, build_workflow_summary 
 class AgentRun:
     """In-memory record of one agent execution."""
     run_id: str                  # 唯一会话ID（uuid4.hex[:8]生成）
+    session_id: str              # 长程会话 ID
+    task_id: str                 # 当前任务 ID
     user_input: str              # 用户原始输入
     route: ToolRoute             # 路由决策结果（来自route_intent）
-    tool_call: ToolCallSelection | None = None  # LLM 工具选择结果（仅 tool_call 分支使用）
+    tool_call: ToolCallSelection | None = None      # LLM 工具选择结果（仅 tool_call 分支使用）
     tool_loop_result: ToolLoopResult | None = None  # 多步工具循环结果
     direct_answer_result: DirectAnswerResult | None = None  # 直接回答结果
-    steps: list[AgentStep] = field(default_factory=list)  # 执行步骤列表
+    steps: list[AgentStep] = field(default_factory=list)    # 执行步骤列表
     tool_result: ToolResult | None = None  # 工具执行结果（成功时）
     tool_error: str | None = None          # 工具执行错误（失败时）
     answer: str = ""                       # 最终返回给用户的答案
+    memory_snapshot: MemorySnapshot | None = None  # 本次运行更新后的记忆快照
 
 
 class WorkspaceAgent:
@@ -78,6 +82,9 @@ class WorkspaceAgent:
         workspace_root: Path | str = ".",
         llm_client: Any | None = None,
         history_dir: Path | str | None = None,
+        memory_dir: Path | str | None = None,
+        session_id: str = "default",
+        task_id: str | None = None,
         use_graph_runtime: bool = True,
         skill_policy: SkillRuntimePolicy | None = None,
     ) -> None:
@@ -93,14 +100,29 @@ class WorkspaceAgent:
         self._skill_policy = skill_policy or build_default_skill_runtime_policy()  # Skills runtime policy
         checkpoint_root = history_dir if history_dir is not None else self.workspace_root / "logs" / "agent-runs"
         self._history_store = RunCheckpointStore(Path(checkpoint_root))  # 本地 checkpoint 存储
+        memory_root = memory_dir if memory_dir is not None else self.workspace_root / "logs" / "agent-memory"
+        self._memory_store = AgentMemoryStore(Path(memory_root))  # 本地长程记忆存储
+        self._session_id = session_id.strip() or "default"  # 默认会话 ID
+        self._task_id = task_id.strip() if isinstance(task_id, str) and task_id.strip() else None  # 默认任务 ID
 
-    def run(self, user_input: str, route_override: ToolRoute | None = None) -> AgentRun:
+    def run(
+        self,
+        user_input: str,
+        route_override: ToolRoute | None = None,
+        session_id: str | None = None,
+        task_id: str | None = None,
+    ) -> AgentRun:
         """Execute one turn and return a structured run record."""
+        resolved_route = route_override or route_intent(user_input)
+        resolved_session_id = (session_id or self._session_id).strip() or "default"
+        resolved_task_id = self._resolve_task_id(user_input, resolved_route, task_id)
         # 1. 初始化AgentRun会话
         run = AgentRun(
-            run_id=uuid4().hex[:8],  # 生成8位短UUID作为会话ID
+            run_id=uuid4().hex[:8],             # 生成8位短UUID作为会话ID
+            session_id=resolved_session_id,
+            task_id=resolved_task_id,
             user_input=user_input,
-            route=route_override or route_intent(user_input),  # 【关键】路由决策：判断是否需要调用工具
+            route=resolved_route,               # 【关键】路由决策：判断是否需要调用工具
             steps=[],
         )
 
@@ -690,6 +712,9 @@ class WorkspaceAgent:
         if self._history_store is None:
             return run
         trace = self.to_trace_dict(run)
+        memory_snapshot = self._memory_store.update_from_trace(run.session_id, run.task_id, trace)
+        run.memory_snapshot = memory_snapshot
+        trace["memory"] = memory_snapshot.to_dict()
         checkpoint = build_run_checkpoint(
             run_id=run.run_id,
             run_kind=run.route.action,
@@ -717,6 +742,37 @@ class WorkspaceAgent:
         if checkpoint is None:
             return "No checkpoint found."
         return format_checkpoint_summary(checkpoint)
+
+    def format_session_memory(self, session_id: str | None = None) -> str:
+        """Render one session memory record for CLI use."""
+
+        resolved_session_id = (session_id or self._session_id).strip() or "default"
+        record = self._memory_store.load_session(resolved_session_id)
+        if record is None:
+            return f"No session memory found for session id: {resolved_session_id}"
+        return record.to_text()
+
+    def format_task_memory(self, task_id: str | None = None) -> str:
+        """Render one task memory record for CLI use."""
+
+        resolved_task_id = task_id or self._task_id
+        if not resolved_task_id:
+            return "No task memory found."
+        record = self._memory_store.load_task(resolved_task_id)
+        if record is None:
+            return f"No task memory found for task id: {resolved_task_id}"
+        return record.to_text()
+
+    def list_session_memory(self, limit: int = 10) -> str:
+        """Render a compact list of stored session memory records."""
+
+        return format_session_memory_list(self._memory_store.list_sessions(limit=limit))
+
+    def list_task_memory(self, limit: int = 10, session_id: str | None = None) -> str:
+        """Render a compact list of stored task memory records."""
+
+        resolved_session_id = session_id.strip() if isinstance(session_id, str) and session_id.strip() else None
+        return format_task_memory_list(self._memory_store.list_tasks(limit=limit, session_id=resolved_session_id))
 
     def load_checkpoint(self, run_id: str) -> dict[str, Any] | None:
         """Load a checkpoint by its run id."""
@@ -791,9 +847,52 @@ class WorkspaceAgent:
         route = self._route_from_checkpoint_record(checkpoint)
         if route is None:
             return "Checkpoint is missing route information."
-        resumed_run = self.run(str(checkpoint.get("user_input", "")), route_override=route)
+        resumed_run = self.run(
+            str(checkpoint.get("user_input", "")),
+            route_override=route,
+            session_id=self._session_id_from_checkpoint(checkpoint),
+            task_id=self._task_id_from_checkpoint(checkpoint),
+        )
         resumed_checkpoint = self.load_latest_checkpoint()
         return format_checkpoint_resume_report(checkpoint, resumed_checkpoint)
+
+    def _resolve_task_id(self, user_input: str, route: ToolRoute, task_id: str | None) -> str:
+        """Resolve the task id used for long-horizon task memory."""
+
+        if isinstance(task_id, str) and task_id.strip():
+            return task_id.strip()
+        if self._task_id:
+            return self._task_id
+        tool_name = route.tool_name or "general"
+        token = "".join(character if character.isalnum() else "-" for character in (route.tool_input or user_input).lower())
+        normalized = "-".join(part for part in token.split("-") if part)[:48].strip("-")
+        return f"{tool_name}-{normalized or 'task'}"
+
+    def _session_id_from_checkpoint(self, checkpoint: dict[str, Any]) -> str | None:
+        """Read the persisted session id from a checkpoint if available."""
+
+        trace = checkpoint.get("trace", {})
+        if not isinstance(trace, dict):
+            return None
+        if isinstance(trace.get("session_id"), str) and str(trace["session_id"]).strip():
+            return str(trace["session_id"]).strip()
+        memory = trace.get("memory", {})
+        if isinstance(memory, dict) and isinstance(memory.get("session_id"), str) and str(memory["session_id"]).strip():
+            return str(memory["session_id"]).strip()
+        return None
+
+    def _task_id_from_checkpoint(self, checkpoint: dict[str, Any]) -> str | None:
+        """Read the persisted task id from a checkpoint if available."""
+
+        trace = checkpoint.get("trace", {})
+        if not isinstance(trace, dict):
+            return None
+        if isinstance(trace.get("task_id"), str) and str(trace["task_id"]).strip():
+            return str(trace["task_id"]).strip()
+        memory = trace.get("memory", {})
+        if isinstance(memory, dict) and isinstance(memory.get("task_id"), str) and str(memory["task_id"]).strip():
+            return str(memory["task_id"]).strip()
+        return None
 
     def _route_from_checkpoint_record(self, checkpoint: dict[str, Any]) -> ToolRoute | None:
         """Normalize a persisted checkpoint route into a runtime ToolRoute."""
@@ -956,6 +1055,8 @@ class WorkspaceAgent:
     def format_trace(self, run: AgentRun) -> str:
         """Render the run as a human-readable execution trace."""
         parts: list[str] = [f"Run ID: {run.run_id}"]
+        parts.append(f"Session ID: {run.session_id}")
+        parts.append(f"Task ID: {run.task_id}")
         # 格式化每一步执行记录
         for index, step in enumerate(run.steps, start=1):
             parts.append(f"{index}. {step.title}: {step.detail}")
@@ -981,6 +1082,9 @@ class WorkspaceAgent:
         if run.tool_error is not None:
             parts.append("\n[Tool Error]")
             parts.append(run.tool_error)
+        if run.memory_snapshot is not None:
+            parts.append("\n[Memory]")
+            parts.append(run.memory_snapshot.to_text())
         runtime_events = build_runtime_events(
             run.steps,
             None if run.tool_result is None else run.tool_result.metadata,
@@ -1001,6 +1105,8 @@ class WorkspaceAgent:
         runtime_events = build_runtime_events(run.steps, tool_metadata, run.tool_error)
         return {
             "run_id": run.run_id,
+            "session_id": run.session_id,
+            "task_id": run.task_id,
             "user_input": run.user_input,
             "route": {
                 "action": run.route.action,
@@ -1043,6 +1149,7 @@ class WorkspaceAgent:
             "subagent_delegation": None
             if tool_metadata is None
             else tool_metadata.get("subagent_delegation"),
+            "memory": None if run.memory_snapshot is None else run.memory_snapshot.to_dict(),
             "tool_error": run.tool_error,
             "answer_preview": self._summarize_text(run.answer, limit=8),
         }

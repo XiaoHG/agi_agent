@@ -4,6 +4,14 @@ from .core import AgentRun, WorkspaceAgent
 from .direct_answer import DirectAnswerResult, answer_directly, build_direct_answer_messages, compose_direct_answer_fallback
 from .events import RuntimeEvent, build_runtime_events
 from .llm import DeepSeekConfig, DeepSeekLLMClient, LLMError, LLMMessage, LLMResponse
+from .memory import (
+    AgentMemoryStore,
+    MemorySnapshot,
+    SessionMemory,
+    TaskMemory,
+    format_session_memory_list,
+    format_task_memory_list,
+)
 from .persistence import (
     RunCheckpointStore,
     build_graph_checkpoint,
@@ -73,6 +81,7 @@ __all__ = [
     "LLMError",
     "LLMMessage",
     "LLMResponse",
+    "MemorySnapshot",
     "GraphPlan",
     "RecoveryPlan",
     "ReplayReport",
@@ -82,6 +91,9 @@ __all__ = [
     "CheckpointResumeReport",
     "RuntimeEvent",
     "RunCheckpointStore",
+    "SessionMemory",
+    "TaskMemory",
+    "AgentMemoryStore",
     "WorkspaceAgent",
     "ToolRoute",
     "ToolCallSelection",
@@ -116,6 +128,8 @@ __all__ = [
     "build_workspace_tool_specs",
     "answer_docs_with_llm",
     "answer_directly",
+    "format_session_memory_list",
+    "format_task_memory_list",
     "format_checkpoint_summary",
     "list_agent_skills",
     "list_dir",

@@ -12,21 +12,24 @@ from .events import RuntimeEvent, build_runtime_events
 class ReplaySummary:
     """Compact comparison-ready summary for one persisted run."""
 
-    run_id: str  # 运行 ID
-    run_kind: str  # 运行类型
-    created_at: str  # 创建时间
-    user_input: str  # 用户输入
-    route_action: str  # 路由动作
-    route_tool: str  # 路由工具名
-    graph_route: str  # 图执行路由名
-    answer: str  # 最终答案
-    step_count: int  # 步骤数量
-    runtime_event_count: int  # runtime event 数量
-    tool_names: tuple[str, ...] = ()  # 涉及的工具名
-    skill_names: tuple[str, ...] = ()  # 涉及的技能名
+    run_id: str                             # 运行 ID
+    run_kind: str                           # 运行类型
+    created_at: str                         # 创建时间
+    session_id: str                         # 会话 ID
+    task_id: str                            # 任务 ID
+    user_input: str                         # 用户输入
+    route_action: str                       # 路由动作
+    route_tool: str                         # 路由工具名
+    graph_route: str                        # 图执行路由名
+    answer: str                             # 最终答案
+    step_count: int                         # 步骤数量
+    runtime_event_count: int                # runtime event 数量
+    tool_names: tuple[str, ...] = ()        # 涉及的工具名
+    skill_names: tuple[str, ...] = ()       # 涉及的技能名
     delegation_names: tuple[str, ...] = ()  # 涉及的委派角色名
-    has_recovery: bool = False  # 是否包含恢复信息
-    failure_type: str = "none"  # 失败类型
+    has_memory: bool = False                # 是否包含长程记忆快照
+    has_recovery: bool = False              # 是否包含恢复信息
+    failure_type: str = "none"              # 失败类型
 
     def answer_preview(self, limit: int = 120) -> str:
         """Return a compact answer preview for text reports."""
@@ -43,6 +46,8 @@ class ReplaySummary:
             "run_id": self.run_id,
             "run_kind": self.run_kind,
             "created_at": self.created_at,
+            "session_id": self.session_id,
+            "task_id": self.task_id,
             "user_input": self.user_input,
             "route_action": self.route_action,
             "route_tool": self.route_tool,
@@ -53,6 +58,7 @@ class ReplaySummary:
             "tool_names": list(self.tool_names),
             "skill_names": list(self.skill_names),
             "delegation_names": list(self.delegation_names),
+            "has_memory": self.has_memory,
             "has_recovery": self.has_recovery,
             "failure_type": self.failure_type,
         }
@@ -62,15 +68,15 @@ class ReplaySummary:
 class ReplayReport:
     """Structured replay report built from a saved checkpoint."""
 
-    run_id: str  # 运行 ID
-    run_kind: str  # 运行类型
-    created_at: str  # 创建时间
-    user_input: str  # 用户输入
-    route: dict[str, Any]  # 路由信息
-    answer: str  # 最终答案
-    trace_text: str  # 原始 trace 文本
-    events: list[RuntimeEvent] = field(default_factory=list)  # 重建的 runtime events
-    stored_runtime_events: list[dict[str, Any]] = field(default_factory=list)  # 持久化的 runtime events
+    run_id: str             # 运行 ID
+    run_kind: str           # 运行类型
+    created_at: str         # 创建时间
+    user_input: str         # 用户输入
+    route: dict[str, Any]   # 路由信息
+    answer: str             # 最终答案
+    trace_text: str         # 原始 trace 文本
+    events: list[RuntimeEvent] = field(default_factory=list)                    # 重建的 runtime events
+    stored_runtime_events: list[dict[str, Any]] = field(default_factory=list)   # 持久化的 runtime events
 
     def to_dict(self) -> dict[str, Any]:
         """Render the replay report as JSON-ready data."""
@@ -97,6 +103,8 @@ class ReplayReport:
             f"Run ID: {self.run_id}",
             f"Run kind: {self.run_kind}",
             f"Created at: {self.created_at}",
+            f"Session ID: {self.route.get('session_id', 'default') if isinstance(self.route, dict) else 'default'}",
+            f"Task ID: {self.route.get('task_id', 'unknown') if isinstance(self.route, dict) else 'unknown'}",
             f"User input: {self.user_input}",
             f"Route: {route_action} / {route_tool}",
         ]
@@ -122,14 +130,14 @@ class ReplayReport:
 class ReplayDiffReport:
     """Structured diff between two replayable runs."""
 
-    older: ReplaySummary  # 较旧的运行摘要
-    newer: ReplaySummary  # 较新的运行摘要
-    changed_fields: tuple[str, ...]  # 变化字段名
-    tool_names_added: tuple[str, ...] = ()  # 新增工具名
-    tool_names_removed: tuple[str, ...] = ()  # 删除工具名
-    skill_names_added: tuple[str, ...] = ()  # 新增技能名
-    skill_names_removed: tuple[str, ...] = ()  # 删除技能名
-    delegation_names_added: tuple[str, ...] = ()  # 新增委派角色名
+    older: ReplaySummary                            # 较旧的运行摘要
+    newer: ReplaySummary                            # 较新的运行摘要
+    changed_fields: tuple[str, ...]                 # 变化字段名
+    tool_names_added: tuple[str, ...] = ()          # 新增工具名
+    tool_names_removed: tuple[str, ...] = ()        # 删除工具名
+    skill_names_added: tuple[str, ...] = ()         # 新增技能名
+    skill_names_removed: tuple[str, ...] = ()       # 删除技能名
+    delegation_names_added: tuple[str, ...] = ()    # 新增委派角色名
     delegation_names_removed: tuple[str, ...] = ()  # 删除委派角色名
 
     def to_dict(self) -> dict[str, Any]:
@@ -170,6 +178,7 @@ class ReplayDiffReport:
             f"Newer run: {self.newer.run_id} [{self.newer.run_kind}] {self.newer.created_at}",
             "",
             "Older summary:",
+            f"- Session / Task: {self.older.session_id} / {self.older.task_id}",
             f"- Route: {self.older.route_action} / {self.older.route_tool}",
             f"- Graph route: {self.older.graph_route}",
             f"- Steps: {self.older.step_count}",
@@ -177,11 +186,13 @@ class ReplayDiffReport:
             f"- Tools: {', '.join(self.older.tool_names) if self.older.tool_names else 'none'}",
             f"- Skills: {', '.join(self.older.skill_names) if self.older.skill_names else 'none'}",
             f"- Delegations: {', '.join(self.older.delegation_names) if self.older.delegation_names else 'none'}",
+            f"- Memory: {'yes' if self.older.has_memory else 'no'}",
             f"- Recovery: {'yes' if self.older.has_recovery else 'no'}",
             f"- Failure type: {self.older.failure_type}",
             f"- Answer preview: {self.older.answer_preview()}",
             "",
             "Newer summary:",
+            f"- Session / Task: {self.newer.session_id} / {self.newer.task_id}",
             f"- Route: {self.newer.route_action} / {self.newer.route_tool}",
             f"- Graph route: {self.newer.graph_route}",
             f"- Steps: {self.newer.step_count}",
@@ -189,6 +200,7 @@ class ReplayDiffReport:
             f"- Tools: {', '.join(self.newer.tool_names) if self.newer.tool_names else 'none'}",
             f"- Skills: {', '.join(self.newer.skill_names) if self.newer.skill_names else 'none'}",
             f"- Delegations: {', '.join(self.newer.delegation_names) if self.newer.delegation_names else 'none'}",
+            f"- Memory: {'yes' if self.newer.has_memory else 'no'}",
             f"- Recovery: {'yes' if self.newer.has_recovery else 'no'}",
             f"- Failure type: {self.newer.failure_type}",
             f"- Answer preview: {self.newer.answer_preview()}",
@@ -218,18 +230,20 @@ class ReplayDiffReport:
 class CheckpointResumePlan:
     """Plan for resuming a persisted checkpoint."""
 
-    source_run_id: str  # 源运行 ID
-    source_run_kind: str  # 源运行类型
-    user_input: str  # 原始用户输入
-    route_action: str  # 源路由动作
-    route_tool: str  # 源路由工具名
-    graph_route: str  # 源 graph 路由
-    failure_type: str  # 源失败类型
-    has_recovery: bool  # 是否存在恢复信息
-    resume_mode: str  # 恢复模式
-    can_resume: bool  # 是否允许恢复
-    reason: str  # 恢复原因
-    next_safe_action: str  # 下一步安全动作
+    source_run_id: str      # 源运行 ID
+    source_run_kind: str    # 源运行类型
+    session_id: str         # 源会话 ID
+    task_id: str            # 源任务 ID
+    user_input: str         # 原始用户输入
+    route_action: str       # 源路由动作
+    route_tool: str         # 源路由工具名
+    graph_route: str        # 源 graph 路由
+    failure_type: str       # 源失败类型
+    has_recovery: bool      # 是否存在恢复信息
+    resume_mode: str        # 恢复模式
+    can_resume: bool        # 是否允许恢复
+    reason: str             # 恢复原因
+    next_safe_action: str   # 下一步安全动作
 
     def to_dict(self) -> dict[str, Any]:
         """Render the plan as JSON-ready data."""
@@ -237,6 +251,8 @@ class CheckpointResumePlan:
         return {
             "source_run_id": self.source_run_id,
             "source_run_kind": self.source_run_kind,
+            "session_id": self.session_id,
+            "task_id": self.task_id,
             "user_input": self.user_input,
             "route_action": self.route_action,
             "route_tool": self.route_tool,
@@ -255,6 +271,7 @@ class CheckpointResumePlan:
         lines = [
             "Checkpoint resume plan",
             f"Source run: {self.source_run_id} [{self.source_run_kind}]",
+            f"Session / Task: {self.session_id} / {self.task_id}",
             f"Route: {self.route_action} / {self.route_tool}",
             f"Graph route: {self.graph_route}",
             f"Failure type: {self.failure_type}",
@@ -271,10 +288,10 @@ class CheckpointResumePlan:
 class CheckpointResumeReport:
     """Structured report for a checkpoint-guided resume."""
 
-    plan: CheckpointResumePlan  # 恢复计划
-    source: ReplaySummary  # 源运行摘要
-    resumed: ReplaySummary | None = None  # 恢复后的运行摘要
-    diff: ReplayDiffReport | None = None  # 恢复前后差异
+    plan: CheckpointResumePlan              # 恢复计划
+    source: ReplaySummary                   # 源运行摘要
+    resumed: ReplaySummary | None = None    # 恢复后的运行摘要
+    diff: ReplayDiffReport | None = None    # 恢复前后差异
 
     def to_dict(self) -> dict[str, Any]:
         """Render the resume report as JSON-ready data."""
@@ -337,7 +354,11 @@ def build_replay_report(record: dict[str, Any]) -> ReplayReport:
         run_kind=str(record.get("run_kind", "unknown")),
         created_at=str(record.get("created_at", "unknown")),
         user_input=str(record.get("user_input", "")),
-        route=route,
+        route={
+            **route,
+            "session_id": trace.get("session_id", "default"),
+            "task_id": trace.get("task_id", "unknown"),
+        },
         answer=str(record.get("answer", "")),
         trace_text=str(record.get("trace_text", "")),
         events=events,
@@ -366,11 +387,14 @@ def build_replay_summary(record: dict[str, Any]) -> ReplaySummary:
     tool_names = _collect_tool_names(route, trace, tool_result, tool_metadata)
     skill_names = _collect_skill_names(skill_run)
     delegation_names = _collect_delegation_names(tool_metadata.get("subagent_delegation"))
+    has_memory = isinstance(trace.get("memory"), dict)
     events = build_replay_report(record).events
     return ReplaySummary(
         run_id=str(record.get("run_id", "unknown")),
         run_kind=str(record.get("run_kind", "unknown")),
         created_at=str(record.get("created_at", "unknown")),
+        session_id=str(trace.get("session_id", "default")),
+        task_id=str(trace.get("task_id", "unknown")),
         user_input=str(record.get("user_input", "")),
         route_action=_normalize_label(route.get("action"), default="unknown"),
         route_tool=_normalize_label(route.get("tool_name"), default="none"),
@@ -381,6 +405,7 @@ def build_replay_summary(record: dict[str, Any]) -> ReplaySummary:
         tool_names=tool_names,
         skill_names=skill_names,
         delegation_names=delegation_names,
+        has_memory=has_memory,
         has_recovery=bool(recovery_plan),
         failure_type=_normalize_label(recovery_plan.get("failure_type"), default="none"),
     )
@@ -409,6 +434,8 @@ def compare_replay_reports(older_record: dict[str, Any], newer_record: dict[str,
         changed_fields.append("skill_usage")
     if older.delegation_names != newer.delegation_names:
         changed_fields.append("delegation_usage")
+    if older.session_id != newer.session_id or older.task_id != newer.task_id or older.has_memory != newer.has_memory:
+        changed_fields.append("memory_continuity")
     if older.has_recovery != newer.has_recovery or older.failure_type != newer.failure_type:
         changed_fields.append("recovery")
 
@@ -463,6 +490,8 @@ def build_checkpoint_resume_plan(record: dict[str, Any]) -> CheckpointResumePlan
     return CheckpointResumePlan(
         source_run_id=summary.run_id,
         source_run_kind=summary.run_kind,
+        session_id=summary.session_id,
+        task_id=summary.task_id,
         user_input=summary.user_input,
         route_action=summary.route_action,
         route_tool=summary.route_tool,

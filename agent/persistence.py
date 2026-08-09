@@ -145,11 +145,15 @@ def format_checkpoint_summary(record: dict[str, Any]) -> str:
     route = trace.get("route", {}) if isinstance(trace.get("route"), dict) else record.get("route", {})
     if not isinstance(route, dict):
         route = {}
+    session_id = trace.get("session_id", "default")
+    task_id = trace.get("task_id", "unknown")
     answer_preview = _preview_text(record.get("answer", ""))
     return (
         f"Run ID: {record.get('run_id', 'unknown')}\n"
         f"Run kind: {record.get('run_kind', 'unknown')}\n"
         f"Created at: {record.get('created_at', 'unknown')}\n"
+        f"Session ID: {session_id}\n"
+        f"Task ID: {task_id}\n"
         f"User input: {record.get('user_input', '')}\n"
         f"Route: {route.get('action', 'unknown')} / {route.get('tool_name', 'none')}\n"
         f"Answer preview: {answer_preview}"
@@ -170,6 +174,8 @@ def format_checkpoint_history(records: list[dict[str, Any]]) -> str:
         lines.append(
             f"{index}. {record.get('run_id', 'unknown')} "
             f"[{record.get('run_kind', 'unknown')}] "
+            f"session={trace.get('session_id', 'default')} "
+            f"task={trace.get('task_id', 'unknown')} "
             f"{record.get('created_at', 'unknown')} "
             f"{route.get('action', 'unknown')} / {route.get('tool_name', 'none')}"
         )

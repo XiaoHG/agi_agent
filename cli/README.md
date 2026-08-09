@@ -99,6 +99,36 @@ Resume one saved run by id:
 python -m cli.main --resume-run abc12345
 ```
 
+Run with explicit session/task continuity:
+
+```bash
+python -m cli.main --input "Read README.md." --session-id learning-session --task-id readme-learning
+```
+
+List stored session memory:
+
+```bash
+python -m cli.main --list-session-memory
+```
+
+Show one session memory record:
+
+```bash
+python -m cli.main --session-id learning-session --show-session-memory
+```
+
+List stored task memory:
+
+```bash
+python -m cli.main --list-task-memory
+```
+
+Show one task memory record:
+
+```bash
+python -m cli.main --task-id readme-learning --show-task-memory
+```
+
 Compare the latest two saved runs:
 
 ```bash

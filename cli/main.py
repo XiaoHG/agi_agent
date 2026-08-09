@@ -19,7 +19,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="checkpoint directory; defaults to <root>/logs/agent-runs",
     )
+    parser.add_argument(
+        "--memory-dir",
+        default=None,
+        help="memory directory; defaults to <root>/logs/agent-memory",
+    )
+    parser.add_argument("--session-id", default="default", help="session id used for long-horizon memory")
+    parser.add_argument("--task-id", default=None, help="task id used for long-horizon memory")
     parser.add_argument("--list-runs", action="store_true", help="list recent checkpoints")
+    parser.add_argument("--list-session-memory", action="store_true", help="list stored session memory records")
+    parser.add_argument("--list-task-memory", action="store_true", help="list stored task memory records")
     parser.add_argument("--input", help="single user input")
     parser.add_argument("--show-run", help="show a checkpoint by run id")
     parser.add_argument("--show-last-run", action="store_true", help="show the latest persisted run")
@@ -38,6 +47,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--resume-run", help="resume a checkpoint by run id")
     parser.add_argument("--resume-last-run", action="store_true", help="resume the latest persisted run")
+    parser.add_argument(
+        "--show-session-memory",
+        nargs="?",
+        const="",
+        help="show one session memory record; empty means current session",
+    )
+    parser.add_argument(
+        "--show-task-memory",
+        nargs="?",
+        const="",
+        help="show one task memory record; empty means current task",
+    )
     parser.add_argument("--llm-planner", action="store_true", help="use real DeepSeek planning for LangGraph runs")
     parser.add_argument("--classic-runtime", action="store_true", help="disable the default LangGraph runtime wrapper")
     parser.add_argument(
@@ -80,6 +101,20 @@ def list_runs(agent: WorkspaceAgent) -> int:
     return 0
 
 
+def list_session_memory(agent: WorkspaceAgent) -> int:
+    """Print stored session memory records."""
+
+    print(agent.list_session_memory())
+    return 0
+
+
+def list_task_memory(agent: WorkspaceAgent, session_id: str | None = None) -> int:
+    """Print stored task memory records."""
+
+    print(agent.list_task_memory(session_id=session_id))
+    return 0
+
+
 def replay_last_run(agent: WorkspaceAgent) -> int:
     """Print a replay report for the latest persisted checkpoint."""
 
@@ -119,6 +154,22 @@ def resume_run(agent: WorkspaceAgent, run_id: str) -> int:
     """Print a checkpoint-guided resume report for a checkpoint selected by run id."""
 
     print(agent.resume_checkpoint(run_id))
+    return 0
+
+
+def show_session_memory(agent: WorkspaceAgent, session_id: str | None) -> int:
+    """Print one session memory record."""
+
+    resolved_session_id = None if session_id == "" else session_id
+    print(agent.format_session_memory(resolved_session_id))
+    return 0
+
+
+def show_task_memory(agent: WorkspaceAgent, task_id: str | None) -> int:
+    """Print one task memory record."""
+
+    resolved_task_id = None if task_id == "" else task_id
+    print(agent.format_task_memory(resolved_task_id))
     return 0
 
 
@@ -190,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     history_dir = Path(args.history_dir) if args.history_dir else None
+    memory_dir = Path(args.memory_dir) if args.memory_dir else None
     llm_client = None
     if args.llm_planner:
         from agent import DeepSeekLLMClient
@@ -200,11 +252,18 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.root),
         llm_client=llm_client,
         history_dir=history_dir,
+        memory_dir=memory_dir,
+        session_id=args.session_id,
+        task_id=args.task_id,
         use_graph_runtime=not args.classic_runtime,
         skill_policy=skill_policy,
     )
     if args.list_runs:
         return list_runs(agent)
+    if args.list_session_memory:
+        return list_session_memory(agent)
+    if args.list_task_memory:
+        return list_task_memory(agent, args.session_id)
     if args.replay_run:
         return replay_run(agent, args.replay_run)
     if args.replay_last_run:
@@ -217,6 +276,10 @@ def main(argv: list[str] | None = None) -> int:
         return resume_run(agent, args.resume_run)
     if args.resume_last_run:
         return resume_last_run(agent)
+    if args.show_session_memory is not None:
+        return show_session_memory(agent, args.show_session_memory or args.session_id)
+    if args.show_task_memory is not None:
+        return show_task_memory(agent, args.show_task_memory or args.task_id)
     if args.show_run:
         return show_run(agent, args.show_run, args.trace)
     if args.show_last_run:

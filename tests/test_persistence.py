@@ -101,6 +101,7 @@ class PersistenceTests(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             self.assertIn("Run ID:", output.getvalue())
+            self.assertIn("Session ID:", output.getvalue())
             self.assertIn("Route:", output.getvalue())
 
     def test_cli_main_can_list_runs(self) -> None:
@@ -351,16 +352,94 @@ class PersistenceTests(unittest.TestCase):
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
             history_dir = root / "history"
-            agent = WorkspaceAgent(root, history_dir=history_dir)
+            memory_dir = root / "memory"
+            agent = WorkspaceAgent(
+                root,
+                history_dir=history_dir,
+                memory_dir=memory_dir,
+                session_id="resume-session",
+                task_id="resume-task",
+            )
             source_run = agent.run("Use LangGraph to read README.md.")
 
             resume_text = agent.resume_latest_checkpoint()
             resumed = load_checkpoint(history_dir / "latest.json")
 
             self.assertIn("Checkpoint resume plan", resume_text)
+            self.assertIn("Session / Task: resume-session / resume-task", resume_text)
             self.assertIn("Source summary:", resume_text)
             self.assertIsNotNone(resumed)
             self.assertNotEqual(resumed["run_id"], source_run.run_id)
+
+    def test_cli_main_can_show_session_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            memory_dir = root / "memory"
+            agent = WorkspaceAgent(
+                root,
+                history_dir=history_dir,
+                memory_dir=memory_dir,
+                session_id="cli-session",
+                task_id="cli-task",
+            )
+            agent.run("Read README.md.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--memory-dir",
+                        str(memory_dir),
+                        "--session-id",
+                        "cli-session",
+                        "--show-session-memory",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Session memory", output.getvalue())
+            self.assertIn("cli-session", output.getvalue())
+
+    def test_cli_main_can_show_task_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            memory_dir = root / "memory"
+            agent = WorkspaceAgent(
+                root,
+                history_dir=history_dir,
+                memory_dir=memory_dir,
+                session_id="cli-session",
+                task_id="cli-task",
+            )
+            agent.run("Read README.md.")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = cli_main.main(
+                    [
+                        "--root",
+                        str(root),
+                        "--history-dir",
+                        str(history_dir),
+                        "--memory-dir",
+                        str(memory_dir),
+                        "--task-id",
+                        "cli-task",
+                        "--show-task-memory",
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Task memory", output.getvalue())
+            self.assertIn("cli-task", output.getvalue())
 
     def test_cli_main_can_resume_last_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
