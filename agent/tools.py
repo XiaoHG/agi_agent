@@ -9,7 +9,16 @@ from typing import Any
 
 from mcp import call_mcp_tool_response, list_mcp_tools
 from rag import answer_question, answer_question_with_llm, answer_question_with_vector_index
-from skills import SkillToolRequest, SkillToolResponse, describe_skills, execute_skill, select_skill
+from skills import (
+    SkillRuntimePolicy,
+    SkillToolRequest,
+    SkillToolResponse,
+    build_default_skill_runtime_policy,
+    describe_skills,
+    execute_skill,
+    evaluate_skill_runtime_policy,
+    select_skill,
+)
 from subagent import build_collaboration_plan, describe_subagents
 
 from .llm import LLMError
@@ -171,20 +180,26 @@ def mcp_write_project_file(root: Path, task: str) -> ToolResult:
     )
 
 
-def list_agent_skills(root: Path = Path(".")) -> ToolResult:
+def list_agent_skills(root: Path = Path("."), policy: SkillRuntimePolicy | None = None) -> ToolResult:
     """List reusable skills available to the agent."""
 
-    return ToolResult("list_skills", describe_skills(root))
+    resolved_policy = policy or build_default_skill_runtime_policy()
+    return ToolResult("list_skills", describe_skills(root, policy=resolved_policy))
 
-
-def plan_skill(root: Path, task: str) -> ToolResult:
+def plan_skill(root: Path, task: str, policy: SkillRuntimePolicy | None = None) -> ToolResult:
     """Select a skill for a task and explain the skill steps."""
 
+    resolved_policy = policy or build_default_skill_runtime_policy()
     skill = select_skill(task, root=root, skill_name=_extract_skill_name(task))
-    return ToolResult("plan_skill", skill.describe())
+    decision = evaluate_skill_runtime_policy(skill, resolved_policy)
+    return ToolResult(
+        "plan_skill",
+        f"{resolved_policy.describe()}\n\nPolicy decision: {'allowed' if decision.allowed else 'blocked'}\n"
+        f"Reason: {decision.reason}\n\n{skill.describe()}",
+    )
 
 
-def run_skill(task: str, root: Path = Path(".")) -> ToolResult:
+def run_skill(task: str, root: Path = Path("."), policy: SkillRuntimePolicy | None = None) -> ToolResult:
     """Execute a selected skill with workspace tool support."""
 
     skill_run = execute_skill(
@@ -192,11 +207,16 @@ def run_skill(task: str, root: Path = Path(".")) -> ToolResult:
         tool_runner=_build_skill_tool_runner(root),
         root=root,
         skill_name=_extract_skill_name(task),
+        policy=policy or build_default_skill_runtime_policy(),
     )
     return ToolResult("execute_skill", skill_run.to_text(), {"skill_run": skill_run.to_dict()})
 
 
-def run_skill_with_workspace(root: Path, task: str) -> ToolResult:
+def run_skill_with_workspace(
+    root: Path,
+    task: str,
+    policy: SkillRuntimePolicy | None = None,
+) -> ToolResult:
     """Execute a selected skill with access to workspace tools."""
 
     skill_run = execute_skill(
@@ -204,6 +224,7 @@ def run_skill_with_workspace(root: Path, task: str) -> ToolResult:
         tool_runner=_build_skill_tool_runner(root),
         root=root,
         skill_name=_extract_skill_name(task),
+        policy=policy or build_default_skill_runtime_policy(),
     )
     return ToolResult("execute_skill", skill_run.to_text(), {"skill_run": skill_run.to_dict()})
 

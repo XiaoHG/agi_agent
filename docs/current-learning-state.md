@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已完成实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已完成实现，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：沿总纲进入 Skills 治理与运行时策略阶段，继续把能力层从“可调用”推进到“可治理、可约束、可演化”。
+下一阶段建议：沿总纲进入多 Agent 任务委派与 subagent contract 阶段，继续把能力层从“可治理”推进到“可分工、可委派、可追踪”。
 
 ## 当前教师判断
 
@@ -103,6 +103,9 @@ v29 功能基线提交：
 - built-in skills 与 project skills merged catalog
 - `professional-code-review` Agent 可发现能力
 - project skill structured trace metadata
+- skill version metadata
+- skill runtime policy
+- skill policy decision trace
 - MCP tool permission classification
 - default read-only MCP policy
 - MCP permission decision trace metadata
@@ -135,7 +138,7 @@ v29 功能基线提交：
 
 - RAG 已开始接入本地 vector index，但还不是外部 embedding provider / production vector store。
 - MCP tool result 已可通过 tool loop 进入 LLM 综合，并已具备最小权限分类和拒绝路径；但 MCP 协议仍是本地 in-process 学习版。
-- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，但还没有更完整的动态配置和 skill-level 权限模型。
+- Skills 已可通过 runner 调用部分 workspace tools，并已进入 structured trace；LangGraph 已经可以通过独立 skill node 执行 Skills，并能为失败 Skill 和失败普通 tool 生成统一 `RecoveryPlan`；项目内 Skill Registry 已经打通，并已具备 skill version 与 runtime policy，但还没有外部 registry 和集中治理服务。
 - LangGraph workflow 已成为默认主执行器，workflow / tool_call / tool_loop 已并入统一 graph runtime。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，并已支持 report-level replay、跨 run diff 与 checkpoint-guided resume，但还没有做真正的恢复分叉和 continue execution。
@@ -162,10 +165,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v39 LLM-first direct answer 与 v40 standardized MCP execution boundary：`versions/v39_llm-first-direct-answer-and-intent-entry.md`、`versions/v40_standardized-mcp-execution-boundary.md`。
-2. 查看对应练习：`docs/v39_llm-first-direct-answer-and-intent-entry-exercises.md`、`docs/v40_standardized-mcp-execution-boundary-exercises.md`。
+1. 复盘 v40 standardized MCP execution boundary 与 v41 skill permissions, versioning and runtime policy：`versions/v40_standardized-mcp-execution-boundary.md`、`versions/v41_skill-permissions-versioning-and-runtime-policy.md`。
+2. 查看对应练习：`docs/v40_standardized-mcp-execution-boundary-exercises.md`、`docs/v41_skill-permissions-versioning-and-runtime-policy-exercises.md`。
 3. 运行恢复验证：`python -m unittest discover -s tests -v` 和 `python -m cli.eval_runner`。
-4. 进入下一阶段：进入 Skills 权限、版本和运行时策略治理。
+4. 进入下一阶段：进入主 Agent 与 subagent 的委派协议和任务 contract。
 
 ## 当前学习重点
 
@@ -242,7 +245,8 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v37：Run Replay Diff and Comparative Analysis。
 - 完成 v38：Checkpoint-Guided Recovery and Resume。
 - 完成 v39：LLM-First Direct Answer and Intent Entry。
-- 完成 v40：Standardized MCP Execution Boundary（本地未提交）。
+- 完成 v40：Standardized MCP Execution Boundary。
+- 完成 v41：Skill Permissions, Versioning and Runtime Policy（本地未提交）。
 
 ## 未完成
 
@@ -283,12 +287,18 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 16. `docs/v39_llm-first-direct-answer-and-intent-entry-exercises.md`
 17. `versions/v40_standardized-mcp-execution-boundary.md`
 18. `docs/v40_standardized-mcp-execution-boundary-exercises.md`
-19. `mcp/schema.py`
-20. `mcp/adapter.py`
-21. `cli/mcp_demo.py`
-22. `tests/test_mcp.py`
-23. `mcp/README.md`
-24. `cli/README.md`
+19. `versions/v41_skill-permissions-versioning-and-runtime-policy.md`
+20. `docs/v41_skill-permissions-versioning-and-runtime-policy-exercises.md`
+21. `agent/core.py`
+22. `agent/tools.py`
+23. `integrations/langgraph_workflow.py`
+24. `skills/policy.py`
+25. `skills/catalog.py`
+26. `skills/execution.py`
+27. `cli/collaboration_demo.py`
+28. `cli/main.py`
+29. `tests/test_collaboration.py`
+30. `cli/README.md`
 然后继续执行当前具体任务。
 
 ## 下一步建议
@@ -299,4 +309,4 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 建议优先进入：
 
-- graph 内统一多步 orchestration：已完成 workflow / tool_call / tool_loop graph 化；下一步应更多转向 replay、恢复和可观测性深化，而不是继续扩 classic 分支。
+- Skills runtime policy 已进入可运行状态；下一步应更多转向 subagent contract、任务委派和多 Agent trace，而不是继续停留在单 Agent 内部能力拼接。

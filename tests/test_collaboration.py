@@ -9,6 +9,7 @@ from agent import WorkspaceAgent, route_intent
 from skills import (
     SkillToolRequest,
     SkillToolResponse,
+    SkillRuntimePolicy,
     build_skill_steps,
     describe_skills,
     discover_project_skills,
@@ -29,6 +30,7 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("research_brief", output)
         self.assertIn("code_review", output)
         self.assertIn("professional-code-review", output)
+        self.assertIn("Version: v1", output)
         self.assertIn("Source: project", output)
 
     def test_discover_project_skills(self) -> None:
@@ -127,9 +129,26 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertEqual(run.skill.name, "professional-code-review")
         self.assertEqual(run.skill.source, "project")
+        self.assertEqual(run.skill.version, "v1")
         self.assertEqual(run.status, "completed")
         self.assertGreaterEqual(len(run.steps), 4)
         self.assertIn("Expected output format:", run.final_output)
+
+    def test_execute_skill_blocks_project_skill_with_policy(self) -> None:
+        policy = SkillRuntimePolicy(policy_name="builtin-only", allow_builtin=True, allow_project=False)
+
+        run = execute_skill(
+            "Review the current changes before commit.",
+            root=Path("."),
+            skill_name="professional-code-review",
+            policy=policy,
+        )
+
+        self.assertEqual(run.status, "blocked")
+        self.assertEqual(run.skill.name, "professional-code-review")
+        self.assertFalse(run.policy_decision.allowed if run.policy_decision else True)
+        self.assertIn("Blocked skill", run.final_output)
+        self.assertEqual(len(run.steps), 0)
 
     def test_describe_subagents(self) -> None:
         output = describe_subagents()

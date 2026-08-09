@@ -1,0 +1,136 @@
+"""Runtime policy for skill governance."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import re
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .catalog import SkillSpec
+
+#like："1.5.2" to (1,5,2)
+def _version_key(value: str) -> tuple[int, ...]:
+    """Convert a version label into a sortable numeric key."""
+
+    parts = [int(part) for part in re.findall(r"\d+", value)]
+    return tuple(parts) if parts else (0,)
+
+
+@dataclass(frozen=True)
+class SkillRuntimePolicy:
+    """Policy that governs which skills may run in the current runtime."""
+
+    policy_name: str = "default"
+    allow_builtin: bool = True
+    allow_project: bool = True
+    allowed_skill_names: tuple[str, ...] = ()
+    denied_skill_names: tuple[str, ...] = ()
+    minimum_versions: dict[str, str] = field(default_factory=dict)
+
+    def describe(self) -> str:
+        """Render the policy as a compact text block."""
+
+        allowed = ", ".join(self.allowed_skill_names) if self.allowed_skill_names else "<any>"
+        denied = ", ".join(self.denied_skill_names) if self.denied_skill_names else "<none>"
+        minimum_versions = ", ".join(f"{name}>={version}" for name, version in sorted(self.minimum_versions.items()))
+        if not minimum_versions:
+            minimum_versions = "<none>"
+        return (
+            f"Policy: {self.policy_name}\n"
+            f"Allow builtin: {self.allow_builtin}\n"
+            f"Allow project: {self.allow_project}\n"
+            f"Allowed skills: {allowed}\n"
+            f"Denied skills: {denied}\n"
+            f"Minimum versions: {minimum_versions}"
+        )
+
+
+@dataclass(frozen=True)
+class SkillPolicyDecision:
+    """Decision made by the runtime policy for one skill."""
+
+    policy_name: str
+    skill_name: str
+    skill_version: str
+    allowed: bool
+    reason: str
+    next_safe_action: str
+
+    def to_dict(self) -> dict[str, str | bool]:
+        """Render the decision as JSON-ready data."""
+
+        return {
+            "policy_name": self.policy_name,
+            "skill_name": self.skill_name,
+            "skill_version": self.skill_version,
+            "allowed": self.allowed,
+            "reason": self.reason,
+            "next_safe_action": self.next_safe_action,
+        }
+
+
+def build_default_skill_runtime_policy() -> SkillRuntimePolicy:
+    """Return the permissive default runtime policy used by the learning project."""
+
+    return SkillRuntimePolicy()
+
+
+def evaluate_skill_runtime_policy(skill: SkillSpec, policy: SkillRuntimePolicy | None = None) -> SkillPolicyDecision:
+    """Evaluate whether a skill may run under the given policy."""
+
+    resolved_policy = policy or build_default_skill_runtime_policy()
+    if skill.name in resolved_policy.denied_skill_names:
+        return SkillPolicyDecision(
+            policy_name=resolved_policy.policy_name,
+            skill_name=skill.name,
+            skill_version=skill.version,
+            allowed=False,
+            reason=f"Skill '{skill.name}' is explicitly denied by runtime policy.",
+            next_safe_action="Choose a different skill or relax the deny list.",
+        )
+    if resolved_policy.allowed_skill_names and skill.name not in resolved_policy.allowed_skill_names:
+        return SkillPolicyDecision(
+            policy_name=resolved_policy.policy_name,
+            skill_name=skill.name,
+            skill_version=skill.version,
+            allowed=False,
+            reason=f"Skill '{skill.name}' is not in the policy allow list.",
+            next_safe_action="Add the skill to the allow list or choose an allowed skill.",
+        )
+    if skill.source == "builtin" and not resolved_policy.allow_builtin:
+        return SkillPolicyDecision(
+            policy_name=resolved_policy.policy_name,
+            skill_name=skill.name,
+            skill_version=skill.version,
+            allowed=False,
+            reason=f"Builtin skill '{skill.name}' is disabled by runtime policy.",
+            next_safe_action="Enable builtin skills or choose a project skill.",
+        )
+    if skill.source == "project" and not resolved_policy.allow_project:
+        return SkillPolicyDecision(
+            policy_name=resolved_policy.policy_name,
+            skill_name=skill.name,
+            skill_version=skill.version,
+            allowed=False,
+            reason=f"Project skill '{skill.name}' is disabled by runtime policy.",
+            next_safe_action="Enable project skills or choose a builtin skill.",
+        )
+    minimum_version = resolved_policy.minimum_versions.get(skill.name)
+    if minimum_version and _version_key(skill.version) < _version_key(minimum_version):
+        return SkillPolicyDecision(
+            policy_name=resolved_policy.policy_name,
+            skill_name=skill.name,
+            skill_version=skill.version,
+            allowed=False,
+            reason=f"Skill '{skill.name}' version {skill.version} is below the minimum required {minimum_version}.",
+            next_safe_action="Upgrade the skill version or relax the minimum version requirement.",
+        )
+    return SkillPolicyDecision(
+        policy_name=resolved_policy.policy_name,
+        skill_name=skill.name,
+        skill_version=skill.version,
+        allowed=True,
+        reason=f"Policy allows skill '{skill.name}' version {skill.version}.",
+        next_safe_action=f"Proceed with {skill.name}.",
+    )

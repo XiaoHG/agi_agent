@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .catalog import SkillSpec, select_skill
+from .policy import SkillPolicyDecision, SkillRuntimePolicy, build_default_skill_runtime_policy, evaluate_skill_runtime_policy
 
 
 @dataclass(frozen=True)
@@ -112,6 +113,8 @@ class SkillRun:
     task: str  # 用户原始任务
     skill: SkillSpec  # 被选择并执行的技能
     status: str  # 当前 run 状态
+    policy: SkillRuntimePolicy = field(default_factory=build_default_skill_runtime_policy)  # 运行时策略
+    policy_decision: SkillPolicyDecision | None = None  # 策略决策
     steps: list[SkillStepResult] = field(default_factory=list)  # 步骤执行结果
     final_output: str = ""  # 面向 Agent 的最终输出
 
@@ -123,7 +126,10 @@ class SkillRun:
             step_lines = ["- no skill step was executed"]
         return (
             f"Skill run: {self.skill.name}\n"
+            f"Skill version: {self.skill.version}\n"
             f"Status: {self.status}\n"
+            f"Policy: {self.policy.policy_name}\n"
+            f"Policy decision: {self.policy_decision.reason if self.policy_decision else 'n/a'}\n"
             f"Task: {self.task}\n"
             f"Purpose: {self.skill.purpose}\n\n"
             "Executed steps:\n"
@@ -138,12 +144,22 @@ class SkillRun:
             "task": self.task,
             "skill": {
                 "name": self.skill.name,
+                "version": self.skill.version,
                 "purpose": self.skill.purpose,
                 "output_format": self.skill.output_format,
                 "source": self.skill.source,
                 "path": self.skill.path,
             },
             "status": self.status,
+            "policy": {
+                "policy_name": self.policy.policy_name,
+                "allow_builtin": self.policy.allow_builtin,
+                "allow_project": self.policy.allow_project,
+                "allowed_skill_names": list(self.policy.allowed_skill_names),
+                "denied_skill_names": list(self.policy.denied_skill_names),
+                "minimum_versions": self.policy.minimum_versions,
+            },
+            "policy_decision": None if self.policy_decision is None else self.policy_decision.to_dict(),
             "step_count": len(self.steps),
             "completed_steps": sum(1 for step in self.steps if step.status == "completed"),
             "failed_steps": sum(1 for step in self.steps if step.status == "failed"),
@@ -162,10 +178,23 @@ def execute_skill(
     *,
     root: Path = Path("."),
     skill_name: str | None = None,
+    policy: SkillRuntimePolicy | None = None,
 ) -> SkillRun:
     """Select and execute one built-in or project skill with optional tool-backed steps."""
 
+    resolved_policy = policy or build_default_skill_runtime_policy()
     skill = select_skill(task, root=root, skill_name=skill_name)
+    policy_decision = evaluate_skill_runtime_policy(skill, resolved_policy)
+    if not policy_decision.allowed:
+        return SkillRun(
+            task=task,
+            skill=skill,
+            status="blocked",
+            policy=resolved_policy,
+            policy_decision=policy_decision,
+            steps=[],
+            final_output=_build_blocked_output(skill, task, policy_decision),
+        )
     step_specs = build_skill_steps(skill, task)
     steps: list[SkillStepResult] = []
     status = "completed"
@@ -181,6 +210,8 @@ def execute_skill(
         task=task,
         skill=skill,
         status=status,
+        policy=resolved_policy,
+        policy_decision=policy_decision,
         steps=steps,
         final_output=_build_final_output(skill, task, steps, status),
     )
@@ -318,6 +349,16 @@ def _build_final_output(
         f"Executed skill '{skill.name}' for task '{task}' with status '{status}'. "
         f"Completed steps: {completed}; failed steps: {failed}; tool-backed steps: {tool_steps}. "
         f"Expected output format: {skill.output_format}"
+    )
+
+
+def _build_blocked_output(skill: SkillSpec, task: str, decision: SkillPolicyDecision) -> str:
+    """Build the final output for a policy-blocked skill run."""
+
+    return (
+        f"Blocked skill '{skill.name}' for task '{task}' under policy '{decision.policy_name}'. "
+        f"Reason: {decision.reason} "
+        f"Next safe action: {decision.next_safe_action}"
     )
 
 

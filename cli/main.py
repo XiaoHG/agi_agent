@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from agent import WorkspaceAgent
+from skills import SkillRuntimePolicy
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,6 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--resume-last-run", action="store_true", help="resume the latest persisted run")
     parser.add_argument("--llm-planner", action="store_true", help="use real DeepSeek planning for LangGraph runs")
     parser.add_argument("--classic-runtime", action="store_true", help="disable the default LangGraph runtime wrapper")
+    parser.add_argument(
+        "--skill-policy",
+        choices=["default", "builtin-only", "project-only"],
+        default="default",
+        help="skill runtime policy preset",
+    )
+    parser.add_argument("--allow-skill", action="append", default=[], help="explicitly allow a skill name")
+    parser.add_argument("--deny-skill", action="append", default=[], help="explicitly deny a skill name")
     parser.add_argument("--trace", action="store_true", help="print reasoning trace")
     return parser
 
@@ -147,6 +156,34 @@ def interactive_loop(agent: WorkspaceAgent, show_trace: bool) -> None:
         print()
 
 
+def _build_skill_policy(args: argparse.Namespace) -> SkillRuntimePolicy:
+    """Build a runtime skill policy from CLI arguments."""
+
+    if args.skill_policy == "builtin-only":
+        return SkillRuntimePolicy(
+            policy_name="builtin-only",
+            allow_builtin=True,
+            allow_project=False,
+            allowed_skill_names=tuple(args.allow_skill),
+            denied_skill_names=tuple(args.deny_skill),
+        )
+    if args.skill_policy == "project-only":
+        return SkillRuntimePolicy(
+            policy_name="project-only",
+            allow_builtin=False,
+            allow_project=True,
+            allowed_skill_names=tuple(args.allow_skill),
+            denied_skill_names=tuple(args.deny_skill),
+        )
+    return SkillRuntimePolicy(
+        policy_name="default",
+        allow_builtin=True,
+        allow_project=True,
+        allowed_skill_names=tuple(args.allow_skill),
+        denied_skill_names=tuple(args.deny_skill),
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     """Program entrypoint."""
 
@@ -158,11 +195,13 @@ def main(argv: list[str] | None = None) -> int:
         from agent import DeepSeekLLMClient
 
         llm_client = DeepSeekLLMClient()
+    skill_policy = _build_skill_policy(args)
     agent = WorkspaceAgent(
         Path(args.root),
         llm_client=llm_client,
         history_dir=history_dir,
         use_graph_runtime=not args.classic_runtime,
+        skill_policy=skill_policy,
     )
     if args.list_runs:
         return list_runs(agent)

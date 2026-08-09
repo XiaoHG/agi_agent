@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from skills import describe_skills, execute_skill, select_skill
+from skills import SkillRuntimePolicy, describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents
 
 
@@ -19,6 +19,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tool-backed", action="store_true", help="execute skill steps with workspace tools")
     parser.add_argument("--skill", help="explicit skill name to inspect or execute")
     parser.add_argument("--task", help="task to route through skills and subagents")
+    parser.add_argument(
+        "--skill-policy",
+        choices=["default", "builtin-only", "project-only"],
+        default="default",
+        help="skill runtime policy preset",
+    )
+    parser.add_argument("--allow-skill", action="append", default=[], help="explicitly allow a skill name")
+    parser.add_argument("--deny-skill", action="append", default=[], help="explicitly deny a skill name")
     return parser
 
 
@@ -28,9 +36,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     root = Path(".")
+    policy = _build_skill_policy(args)
 
     if args.list_skills:
-        print(describe_skills(root))
+        print(describe_skills(root, policy=policy))
         return 0
 
     if args.list_subagents:
@@ -43,9 +52,9 @@ def main(argv: list[str] | None = None) -> int:
                 from agent import run_skill_with_workspace
 
                 task = _inject_skill_hint(args.task, args.skill)
-                print(run_skill_with_workspace(root, task).output)
+                print(run_skill_with_workspace(root, task, policy=policy).output)
                 return 0
-            print(execute_skill(args.task, root=root, skill_name=args.skill).to_text())
+            print(execute_skill(args.task, root=root, skill_name=args.skill, policy=policy).to_text())
             return 0
 
         skill = select_skill(args.task, root=root, skill_name=args.skill)
@@ -57,6 +66,34 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error("use --list-skills, --list-subagents, or --task")
     return 2
+
+
+def _build_skill_policy(args: argparse.Namespace) -> SkillRuntimePolicy:
+    """Build a runtime skill policy from CLI arguments."""
+
+    if args.skill_policy == "builtin-only":
+        return SkillRuntimePolicy(
+            policy_name="builtin-only",
+            allow_builtin=True,
+            allow_project=False,
+            allowed_skill_names=tuple(args.allow_skill),
+            denied_skill_names=tuple(args.deny_skill),
+        )
+    if args.skill_policy == "project-only":
+        return SkillRuntimePolicy(
+            policy_name="project-only",
+            allow_builtin=False,
+            allow_project=True,
+            allowed_skill_names=tuple(args.allow_skill),
+            denied_skill_names=tuple(args.deny_skill),
+        )
+    return SkillRuntimePolicy(
+        policy_name="default",
+        allow_builtin=True,
+        allow_project=True,
+        allowed_skill_names=tuple(args.allow_skill),
+        denied_skill_names=tuple(args.deny_skill),
+    )
 
 
 def _inject_skill_hint(task: str, skill_name: str | None) -> str:

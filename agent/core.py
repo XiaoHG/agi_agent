@@ -31,6 +31,7 @@ from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具
 from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
 from .tool_synthesis import synthesize_tool_loop_answer  # 工具循环最终综合
 from .tool_schema import build_workspace_tool_specs  # 工具 schema 目录
+from skills import SkillRuntimePolicy, build_default_skill_runtime_policy
 from .tools import (  # 工具定义与异常
     ToolError,
     ToolResult,
@@ -78,6 +79,7 @@ class WorkspaceAgent:
         llm_client: Any | None = None,
         history_dir: Path | str | None = None,
         use_graph_runtime: bool = True,
+        skill_policy: SkillRuntimePolicy | None = None,
     ) -> None:
         self.workspace_root = Path(workspace_root).resolve()  # 解析为绝对路径
         self.system_prompt = load_system_prompt()            # 加载系统提示词
@@ -88,6 +90,7 @@ class WorkspaceAgent:
         self.tool_specs = build_workspace_tool_specs()  # 工具 schema 目录
         self._llm_client = llm_client  # 测试可注入 fake client；生产环境延迟创建真实 client
         self._use_graph_runtime = use_graph_runtime  # 默认主执行器：LangGraph；可显式退回 classic runtime
+        self._skill_policy = skill_policy or build_default_skill_runtime_policy()  # Skills runtime policy
         checkpoint_root = history_dir if history_dir is not None else self.workspace_root / "logs" / "agent-runs"
         self._history_store = RunCheckpointStore(Path(checkpoint_root))  # 本地 checkpoint 存储
 
@@ -258,6 +261,7 @@ class WorkspaceAgent:
                     self.workspace_root,
                     question,
                     planner_client=self._llm_client,
+                    skill_policy=self._skill_policy,
                     route_hint_action=route_hint_action,
                     route_hint_tool_name=route_hint_tool_name,
                     route_hint_tool_input=route_hint_tool_input,
@@ -842,11 +846,11 @@ class WorkspaceAgent:
         if route.tool_name == "mcp_write_project_file":
             return mcp_write_project_file(self.workspace_root, route.tool_input or "")
         if route.tool_name == "list_skills":
-            return list_agent_skills(self.workspace_root)
+            return list_agent_skills(self.workspace_root, policy=self._skill_policy)
         if route.tool_name == "plan_skill":
-            return plan_skill(self.workspace_root, route.tool_input or "")
+            return plan_skill(self.workspace_root, route.tool_input or "", policy=self._skill_policy)
         if route.tool_name == "execute_skill":
-            return run_skill_with_workspace(self.workspace_root, route.tool_input or "")
+            return run_skill_with_workspace(self.workspace_root, route.tool_input or "", policy=self._skill_policy)
         if route.tool_name == "list_subagents":
             return list_project_subagents()
         if route.tool_name == "plan_subagents":

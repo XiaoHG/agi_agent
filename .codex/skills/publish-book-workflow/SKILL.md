@@ -1,5 +1,6 @@
 ---
 name: publish-book-workflow
+version: v1
 description: Book writing workflow for the project publication track. Use when organizing, drafting, revising, or scheduling the book version of the project learning process under publish/.
 ---
 

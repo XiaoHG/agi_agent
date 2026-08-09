@@ -1,5 +1,6 @@
 ---
 name: professional-code-review
+version: v1
 description: Professional code review workflow for Agent engineering projects. Use when Codex is asked to review code, inspect changes before commit, assess bugs, evaluate architecture quality, check tests/evals, review LangGraph/LangChain/RAG/MCP/Skills integrations, or provide release-readiness feedback without immediately modifying code.
 ---
 

@@ -103,6 +103,7 @@ def build_rag_graph(
     workspace_root: Path | str = ".",
     planner_client: DeepSeekLLMClient | None = None,
     planner_prompt: str | None = None,
+    skill_policy: Any | None = None,
 ):
     """Build a LangGraph workflow with simple conditional tool routing."""
 
@@ -112,7 +113,7 @@ def build_rag_graph(
     tool_calling_prompt = load_tool_calling_prompt()
     tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()
     direct_answer_prompt = load_direct_answer_prompt()
-    tools = _build_graph_tool_registry(root)
+    tools = _build_graph_tool_registry(root, skill_policy=skill_policy)
 
     def route(state: RAGGraphState) -> RAGGraphState:
         """Choose a route and tool input for the current question."""
@@ -916,13 +917,14 @@ def run_rag_graph(
     workspace_root: Path | str,
     question: str,
     planner_client: DeepSeekLLMClient | None = None,
+    skill_policy: Any | None = None,
     route_hint_action: str | None = None,
     route_hint_tool_name: str | None = None,
     route_hint_tool_input: str | None = None,
 ) -> RAGGraphState:
     """Run the minimal LangGraph RAG workflow."""
 
-    graph = build_rag_graph(workspace_root, planner_client=planner_client)
+    graph = build_rag_graph(workspace_root, planner_client=planner_client, skill_policy=skill_policy)
     return graph.invoke(
         {
             "question": question,
@@ -1045,7 +1047,7 @@ def _extract_file_path(question: str) -> str:
     return match.group(1) if match else "."
 
 
-def _build_graph_tool_registry(root: Path) -> dict[str, Any]:
+def _build_graph_tool_registry(root: Path, skill_policy: Any | None = None) -> dict[str, Any]:
     """Build the tool registry used by the graph runtime."""
 
     return {
@@ -1059,8 +1061,8 @@ def _build_graph_tool_registry(root: Path) -> dict[str, Any]:
         "summarize_workspace_with_mcp": lambda payload: mcp_workspace_summary(root),
         "read_workspace_file_through_mcp": lambda payload: mcp_read_project_file(root, payload.get("path", "")),
         "write_workspace_file_through_mcp": lambda payload: mcp_write_project_file(root, payload.get("task", "")),
-        "list_workspace_skills": lambda payload: list_agent_skills(root),
-        "plan_workspace_skill": lambda payload: plan_skill(root, payload.get("question", "")),
+        "list_workspace_skills": lambda payload: list_agent_skills(root, policy=skill_policy),
+        "plan_workspace_skill": lambda payload: plan_skill(root, payload.get("question", ""), policy=skill_policy),
         "list_workspace_subagents": lambda payload: list_project_subagents(),
         "plan_workspace_subagents": lambda payload: plan_subagent_collaboration(payload.get("question", "")),
     }
@@ -1280,7 +1282,7 @@ def _execute_tool_loop_capability(root: Path, tools: dict[str, Any], selection: 
     """Execute one tool-loop capability, including normal tools and skills."""
 
     if selection.tool_name == "execute_skill":
-        return run_skill_with_workspace(root, selection.tool_input or "")
+        return run_skill_with_workspace(root, selection.tool_input or "", policy=skill_policy)
     selected_tool = _map_agent_tool_to_graph_tool(selection.tool_name or "unknown")
     tool = tools[selected_tool]
     return tool(_build_tool_payload_from_selection(selection))

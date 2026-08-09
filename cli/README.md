@@ -188,3 +188,21 @@ Show the standardized MCP execution record:
 ```bash
 python -m cli.mcp_demo --tool workspace_summary --show-execution
 ```
+
+List skills with a runtime policy:
+
+```bash
+python -m cli.collaboration_demo --list-skills --skill-policy project-only
+```
+
+Block a project skill under a builtin-only policy:
+
+```bash
+python -m cli.collaboration_demo --task "Execute skill professional-code-review." --execute-skill --skill professional-code-review --skill-policy builtin-only
+```
+
+Run the main agent with a skill policy:
+
+```bash
+python -m cli.main --input "Execute skill professional-code-review." --skill-policy project-only
+```

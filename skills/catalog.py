@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
+from .policy import SkillRuntimePolicy, evaluate_skill_runtime_policy
+
 
 PROJECT_SKILLS_DIR = Path(".codex/skills")
 FRONTMATTER_BOUNDARY = "---"
@@ -22,6 +24,7 @@ class SkillSpec:
     purpose: str  # 技能解决的问题
     steps: tuple[str, ...]  # 标准执行步骤
     output_format: str  # 期望输出格式
+    version: str = "v1"  # 技能版本
     source: str = "builtin"  # builtin / project
     path: str | None = None  # project skill 对应的文件路径
     aliases: tuple[str, ...] = ()  # 可用于显式匹配的别名
@@ -31,6 +34,7 @@ class SkillSpec:
 
         lines = [
             f"Skill: {self.name}",
+            f"Version: {self.version}",
             f"Purpose: {self.purpose}",
             f"Source: {self.source}",
         ]
@@ -59,6 +63,7 @@ def get_builtin_skills() -> list[SkillSpec]:
                 "Summarize limits and next actions.",
             ),
             output_format="Brief with findings, sources, limits, and next actions.",
+            version="v1",
         ),
         SkillSpec(
             name="code_review",
@@ -70,6 +75,7 @@ def get_builtin_skills() -> list[SkillSpec]:
                 "Report issues and safe fixes.",
             ),
             output_format="Review notes with issues, evidence, and recommended fixes.",
+            version="v1",
         ),
         SkillSpec(
             name="learning_explanation",
@@ -81,6 +87,7 @@ def get_builtin_skills() -> list[SkillSpec]:
                 "List common mistakes and exercises.",
             ),
             output_format="Explanation with flow, key points, mistakes, and practice tasks.",
+            version="v1",
         ),
     ]
 
@@ -111,12 +118,17 @@ def get_available_skills(root: Path = Path(".")) -> list[SkillSpec]:
     return list(merged.values())
 
 
-def describe_skills(root: Path = Path(".")) -> str:
+def describe_skills(root: Path = Path("."), policy: SkillRuntimePolicy | None = None) -> str:
     """Render the merged skill catalog."""
 
     parts = ["Available skills:"]
+    if policy is not None:
+        parts.append(policy.describe())
     for skill in get_available_skills(root):
+        decision = evaluate_skill_runtime_policy(skill, policy)
         parts.append(skill.describe())
+        parts.append(f"Policy decision: {'allowed' if decision.allowed else 'blocked'}")
+        parts.append(f"Policy reason: {decision.reason}")
     return "\n\n".join(parts)
 
 
@@ -194,6 +206,7 @@ def _parse_project_skill(workspace_root: Path, skill_file: Path) -> SkillSpec | 
     frontmatter, body = _split_frontmatter(text)
     metadata = _parse_frontmatter(frontmatter)
     name = metadata.get("name", skill_file.parent.name)
+    version = metadata.get("version", "v1")
     purpose = metadata.get("description", f"Project skill loaded from {skill_file.parent.name}.")
     steps = _parse_skill_steps(body)
     if not steps:
@@ -206,6 +219,7 @@ def _parse_project_skill(workspace_root: Path, skill_file: Path) -> SkillSpec | 
         purpose=purpose,
         steps=steps,
         output_format=output_format,
+        version=version,
         source="project",
         path=relative_path,
         aliases=aliases,

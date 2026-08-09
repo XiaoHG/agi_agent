@@ -54,5 +54,5 @@ Current tool families:
 - File tools: read files, list directories, and count file lines.
 - RAG tools: search local documents and answer with grounded LLM context.
 - MCP tools: list MCP tools, summarize the workspace, and read project files through the MCP adapter.
-- Skills tools: list reusable skills, select a skill plan, and execute structured or tool-backed skill runs.
+- Skills tools: list reusable skills, inspect versioned skill plans, apply runtime policy, and execute structured or tool-backed skill runs.
 - Subagent tools: list project subagents and plan collaboration.
