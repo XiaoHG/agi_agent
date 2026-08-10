@@ -1,0 +1,12 @@
+{
+  "name": "industrial-failure-bench",
+  "suites": [
+    {
+      "id": "failure-bench",
+      "title": "Failure Bench",
+      "category": "failure",
+      "cases_path": "evals/failure-bench/v44_failure_bench_cases.json",
+      "description": "Validate that known failure paths stay explicit, recoverable, and comparable."
+    }
+  ]
+}

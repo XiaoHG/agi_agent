@@ -1,10 +1,14 @@
 """Tests for deterministic eval runner."""
 
+from contextlib import redirect_stdout
+import io
 from pathlib import Path
 import unittest  # Python 官方测试框架
 
 from agent import WorkspaceAgent
 from agent.llm import LLMResponse
+from cli import eval_runner as cli_eval_runner
+from evals.matrix import format_eval_matrix_report, load_eval_matrix, run_eval_matrix
 from evals.runner import EvalCase, build_eval_report, load_eval_cases, run_eval_cases
 
 
@@ -40,6 +44,8 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertIn("passed", report)
         self.assertIn("failed", report)
         self.assertIn("results", report)
+        self.assertIn("by_category", report)
+        self.assertIn("by_operation", report)
 
     def test_eval_runner_reports_failed_case(self) -> None:
         cases = [
@@ -73,6 +79,48 @@ class EvalRunnerTests(unittest.TestCase):
 
         self.assertTrue(results[0].passed)
         self.assertEqual(results[0].selected_tool_name, "read_file")
+
+    def test_load_eval_matrix(self) -> None:
+        matrix = load_eval_matrix(Path("evals/industrial_eval_matrix.json"))
+
+        self.assertEqual(matrix.name, "industrial-eval-matrix")
+        self.assertGreaterEqual(len(matrix.suites), 5)
+        self.assertEqual(matrix.suites[0].id, "route")
+
+    def test_run_eval_matrix(self) -> None:
+        matrix = load_eval_matrix(Path("evals/industrial_eval_matrix.json"))
+        report = run_eval_matrix(Path("."), matrix)
+        rendered = format_eval_matrix_report(report)
+
+        self.assertEqual(report.failed, 0)
+        self.assertGreaterEqual(report.total_suites, 5)
+        self.assertGreaterEqual(report.total_cases, 10)
+        self.assertIn("Industrial eval matrix report", rendered)
+        self.assertIn("Suite breakdown:", rendered)
+
+    def test_run_failure_bench(self) -> None:
+        matrix = load_eval_matrix(Path("evals/industrial_failure_bench.json"))
+        report = run_eval_matrix(Path("."), matrix)
+
+        self.assertEqual(report.failed, 0)
+        self.assertEqual(report.total_suites, 1)
+        self.assertGreaterEqual(report.total_cases, 5)
+
+    def test_cli_eval_runner_can_run_matrix(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            exit_code = cli_eval_runner.main(["--matrix", "evals/industrial_eval_matrix.json"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Industrial eval matrix report", output.getvalue())
+
+    def test_cli_eval_runner_can_run_failure_bench(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            exit_code = cli_eval_runner.main(["--failure-bench", "evals/industrial_failure_bench.json"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Industrial eval matrix report", output.getvalue())
 
 
 if __name__ == "__main__":

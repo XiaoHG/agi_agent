@@ -1,0 +1,26 @@
+[
+  {
+    "id": "skill-list",
+    "category": "skill",
+    "input": "List available skills.",
+    "expected_route": "use_tool",
+    "expected_tool": "list_skills",
+    "required_answer_terms": ["Available skills", "code_review", "professional-code-review"]
+  },
+  {
+    "id": "skill-execution",
+    "category": "skill",
+    "input": "Execute skill for code review.",
+    "expected_route": "use_tool",
+    "expected_tool": "execute_skill",
+    "required_answer_terms": ["Skill run: code_review", "tool-backed steps", "[list_dir]"]
+  },
+  {
+    "id": "skill-project-execution",
+    "category": "skill",
+    "input": "Execute skill professional-code-review.",
+    "expected_route": "use_tool",
+    "expected_tool": "execute_skill",
+    "required_answer_terms": ["Skill run: professional-code-review", "Expected output format:", "Status: completed"]
+  }
+]

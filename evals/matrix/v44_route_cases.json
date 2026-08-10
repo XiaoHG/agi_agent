@@ -1,0 +1,34 @@
+[
+  {
+    "id": "route-direct-answer",
+    "category": "route",
+    "input": "Explain the difference between an agent and a chatbot.",
+    "expected_route": "direct_answer",
+    "expected_tool": null,
+    "required_answer_terms": ["main difference", "tools", "state"]
+  },
+  {
+    "id": "route-read-file",
+    "category": "route",
+    "input": "Read README.md and summarize the project learning goals.",
+    "expected_route": "use_tool",
+    "expected_tool": "read_file",
+    "required_answer_terms": ["Result: read README.md", "agi_agent"]
+  },
+  {
+    "id": "route-workflow",
+    "category": "route",
+    "input": "Read README.md and then count lines.",
+    "expected_route": "workflow",
+    "expected_tool": null,
+    "required_answer_terms": ["workflow completed", "count_lines"]
+  },
+  {
+    "id": "route-graph",
+    "category": "route",
+    "input": "Use LangGraph to search docs for MCP.",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: search_docs", "search_workspace_docs"]
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "replay-latest-run",
+    "category": "replay",
+    "operation": "replay_latest_checkpoint",
+    "setup_inputs": ["Use LangGraph to read README.md."],
+    "required_answer_terms": ["Replay report", "Rebuilt runtime events:", "Graph route:"]
+  },
+  {
+    "id": "replay-compare-latest-two",
+    "category": "replay",
+    "operation": "compare_latest_two_checkpoints",
+    "setup_inputs": ["Use LangGraph to read README.md.", "Read README.md and then count lines."],
+    "required_answer_terms": ["Replay diff report", "Older run:", "Differences:"]
+  },
+  {
+    "id": "replay-resume-latest",
+    "category": "replay",
+    "operation": "resume_latest_checkpoint",
+    "setup_inputs": ["Use LangGraph to read not-exist.md."],
+    "required_answer_terms": ["Checkpoint resume plan", "Failure type:", "Resume diff:"]
+  }
+]

@@ -23,12 +23,23 @@ Agent 项目的质量不能只靠“这次跑起来了”判断，必须有可�
 
 ## 当前实现
 
-当前阶段新增 deterministic regression eval runner。
+当前阶段已有 deterministic regression eval runner，并新增更接近工业交付的 eval matrix 与 failure bench。
 
 ```text
 evals/
-  regression_cases.json   # 固定回归用例
-  runner.py               # 加载、运行、判断、生成报告
+  regression_cases.json              # 固定回归用例
+  industrial_eval_matrix.json        # 工业评估矩阵规格
+  industrial_failure_bench.json      # 失败基准规格
+  matrix/
+    v44_route_cases.json             # route 类别用例
+    v44_tool_cases.json              # tool 类别用例
+    v44_skill_cases.json             # skill 类别用例
+    v44_recovery_cases.json          # recovery 类别用例
+    v44_replay_cases.json            # replay 类别用例
+  failure-bench/
+    v44_failure_bench_cases.json     # 失败基准集
+  runner.py                          # 单 case 文件 runner
+  matrix.py                          # eval matrix / failure bench 聚合执行
 ```
 
 运行：
@@ -36,16 +47,33 @@ evals/
 ```bash
 python -m cli.eval_runner
 python -m cli.eval_runner --output logs/eval-report.json
+python -m cli.eval_runner --matrix evals/industrial_eval_matrix.json
+python -m cli.eval_runner --failure-bench evals/industrial_failure_bench.json
 ```
 
-当前判断维度：
+当前 regression 判断维度：
 
 - route 是否符合预期
 - tool 是否符合预期
 - tool_call 分支下模型选择的实际工具是否符合预期
 - answer 是否包含必要关键词
 
-当前 regression cases 已包含一个 LLM-grounded RAG 工具接线用例，以及三个 LangGraph 入口用例。LLM-grounded 用例使用无本地上下文的问题，因此不会触发真实 DeepSeek 网络请求；LangGraph 用例分别覆盖搜索、读文件、无上下文回答三条主路径。
+当前工业矩阵结构：
+
+- route
+- tool
+- skill
+- recovery
+- replay
+
+当前 failure bench 会固定覆盖已知失败路径，例如：
+
+- missing file
+- workflow failure
+- MCP write denial
+- LangGraph tool recovery
+- failed-run replay
+- failed-run resume
 
 后续可以继续扩展：
 

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "recovery-missing-file",
+    "category": "recovery",
+    "input": "Read not-exist.md.",
+    "expected_route": "use_tool",
+    "expected_tool": "read_file",
+    "required_answer_terms": ["tool call failed", "File does not exist"]
+  },
+  {
+    "id": "recovery-workflow-missing-file",
+    "category": "recovery",
+    "input": "Read not-exist.md and then count lines.",
+    "expected_route": "workflow",
+    "expected_tool": null,
+    "required_answer_terms": ["workflow failed", "File does not exist"]
+  },
+  {
+    "id": "recovery-mcp-write-denied",
+    "category": "recovery",
+    "input": "Use MCP to write notes.txt with content hello mcp.",
+    "expected_route": "use_tool",
+    "expected_tool": "mcp_write_project_file",
+    "required_answer_terms": ["[mcp:error]", "Permission denied for MCP tool", "write_project_file"]
+  },
+  {
+    "id": "recovery-langgraph-tool-failure",
+    "category": "recovery",
+    "input": "Use LangGraph to read not-exist.md.",
+    "expected_route": "graph",
+    "expected_tool": "langgraph_workflow",
+    "required_answer_terms": ["Graph route: read_file", "Tool status: failed", "Tool recovery plan", "missing_resource"]
+  }
+]

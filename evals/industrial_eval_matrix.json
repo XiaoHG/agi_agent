@@ -1,0 +1,40 @@
+{
+  "name": "industrial-eval-matrix",
+  "suites": [
+    {
+      "id": "route",
+      "title": "Route Layer",
+      "category": "route",
+      "cases_path": "evals/matrix/v44_route_cases.json",
+      "description": "Validate top-level route selection across direct answer, tool, workflow, and graph entrypoints."
+    },
+    {
+      "id": "tool",
+      "title": "Tool Layer",
+      "category": "tool",
+      "cases_path": "evals/matrix/v44_tool_cases.json",
+      "description": "Validate deterministic tool behaviors and MCP entrypoints."
+    },
+    {
+      "id": "skill",
+      "title": "Skill Layer",
+      "category": "skill",
+      "cases_path": "evals/matrix/v44_skill_cases.json",
+      "description": "Validate built-in and project skill execution behaviors."
+    },
+    {
+      "id": "recovery",
+      "title": "Recovery Layer",
+      "category": "recovery",
+      "cases_path": "evals/matrix/v44_recovery_cases.json",
+      "description": "Validate stable failure outputs and recovery plans."
+    },
+    {
+      "id": "replay",
+      "title": "Replay Layer",
+      "category": "replay",
+      "cases_path": "evals/matrix/v44_replay_cases.json",
+      "description": "Validate replay, compare, and resume continuity entrypoints."
+    }
+  ]
+}

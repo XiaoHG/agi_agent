@@ -236,3 +236,15 @@ Run the main agent with a skill policy:
 ```bash
 python -m cli.main --input "Execute skill professional-code-review." --skill-policy project-only
 ```
+
+Run the industrial eval matrix:
+
+```bash
+python -m cli.eval_runner --matrix evals/industrial_eval_matrix.json
+```
+
+Run the industrial failure bench:
+
+```bash
+python -m cli.eval_runner --failure-bench evals/industrial_failure_bench.json
+```
