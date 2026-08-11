@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已开始实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已开始实现，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：完成 v46 checkpoint branch resume 后，进入 v47 standardized MCP governance，继续推进可交付级工具治理。
+下一阶段建议：完成 v47 standardized MCP governance 后，进入 v48 skills governance and versioning，继续推进可交付级能力治理。
 
 ## 当前教师判断
 
@@ -168,10 +168,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v46 checkpoint branch resume：`versions/v46_checkpoint-branch-resume.md`。
-2. 查看对应练习：`docs/v46_checkpoint-branch-resume-exercises.md`。
-3. 运行验证：`python -m unittest tests.test_persistence -v`、`python -m unittest discover -s tests -v` 和 `python -m cli.main --resume-last-run`。
-4. 下一阶段进入 v47 standardized MCP governance。
+1. 复盘 v47 standardized MCP governance：`versions/v47_standardized-mcp-governance.md`。
+2. 查看对应练习：`docs/v47_standardized-mcp-governance-exercises.md`。
+3. 运行验证：`python -m unittest tests.test_mcp -v`、`python -m unittest discover -s tests -q` 和 `python -m cli.mcp_demo --tool workspace_summary --show-execution`。
+4. 下一阶段进入 v48 skills governance and versioning。
 
 ## 当前学习重点
 

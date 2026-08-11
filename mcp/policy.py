@@ -2,15 +2,37 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from .schema import (
     DESTRUCTIVE_PERMISSION,
     MCPPermissionDecision,
     MCPPermissionPolicy,
+    MCPRequest,
+    MCPRequestValidationResult,
     MCPToolSpec,
     NETWORK_PERMISSION,
     READ_ONLY_PERMISSION,
     WRITE_PERMISSION,
 )
+
+
+@dataclass(frozen=True)
+class MCPGovernancePolicy:
+    """Policy that controls MCP request validation and audit behavior."""
+
+    protocol_version: str = "v2"                    # 治理协议版本
+    reject_unknown_arguments: bool = True           # 是否拒绝多余参数
+    reject_missing_required_arguments: bool = True  # 是否拒绝缺失必填参数
+
+    def to_dict(self) -> dict[str, object]:
+        """Render the governance policy as JSON-ready data."""
+
+        return {
+            "protocol_version": self.protocol_version,
+            "reject_unknown_arguments": self.reject_unknown_arguments,
+            "reject_missing_required_arguments": self.reject_missing_required_arguments,
+        }
 
 
 def build_default_mcp_policy() -> MCPPermissionPolicy:
@@ -22,6 +44,12 @@ def build_default_mcp_policy() -> MCPPermissionPolicy:
         allow_network=False,
         allow_destructive=False,
     )
+
+
+def build_default_mcp_governance_policy() -> MCPGovernancePolicy:
+    """Return the default governance policy for MCP request validation."""
+
+    return MCPGovernancePolicy()
 
 
 def evaluate_mcp_tool_permission(spec: MCPToolSpec, policy: MCPPermissionPolicy) -> MCPPermissionDecision:
@@ -43,6 +71,55 @@ def evaluate_mcp_tool_permission(spec: MCPToolSpec, policy: MCPPermissionPolicy)
         allowed=False,
         reason=_build_denial_reason(spec.permission_level),
         next_safe_action=_build_next_safe_action(spec.permission_level),
+    )
+
+
+def validate_mcp_request(
+    spec: MCPToolSpec,
+    request: MCPRequest,
+    policy: MCPGovernancePolicy,
+) -> MCPRequestValidationResult:
+    """Validate and normalize one MCP request against the tool schema."""
+
+    arguments = request.arguments if isinstance(request.arguments, dict) else {}
+    schema = spec.input_schema if isinstance(spec.input_schema, dict) else {}
+    properties = schema.get("properties", {}) if isinstance(schema.get("properties", {}), dict) else {}
+    required = schema.get("required", []) if isinstance(schema.get("required", []), list) else []
+
+    missing = tuple(name for name in required if name not in arguments or _is_blank_argument(arguments.get(name)))
+    extra = tuple(name for name in arguments if name not in properties)
+    normalized = {
+        name: value
+        for name, value in arguments.items()
+        if name in properties
+    } if properties else dict(arguments)
+
+    if missing and policy.reject_missing_required_arguments:
+        return MCPRequestValidationResult(
+            tool_name=spec.name,
+            valid=False,
+            reason=f"Missing required argument(s): {', '.join(missing)}",
+            missing_arguments=missing,
+            extra_arguments=extra,
+            normalized_arguments=normalized,
+        )
+    if extra and policy.reject_unknown_arguments:
+        return MCPRequestValidationResult(
+            tool_name=spec.name,
+            valid=False,
+            reason=f"Unexpected argument(s): {', '.join(extra)}",
+            missing_arguments=missing,
+            extra_arguments=extra,
+            normalized_arguments=normalized,
+        )
+
+    return MCPRequestValidationResult(
+        tool_name=spec.name,
+        valid=True,
+        reason="Request matched the tool schema.",
+        missing_arguments=missing,
+        extra_arguments=extra,
+        normalized_arguments=normalized,
     )
 
 
@@ -70,3 +147,9 @@ def _build_next_safe_action(permission_level: str) -> str:
     if permission_level == DESTRUCTIVE_PERMISSION:
         return "Do not retry automatically. Require explicit approval and a stricter review before allowing this tool."
     return "Inspect the MCP tool policy and rerun with an explicit allow rule only if the action is necessary."
+
+
+def _is_blank_argument(value: object) -> bool:
+    """Return whether an argument should count as missing."""
+
+    return value is None or (isinstance(value, str) and not value.strip())

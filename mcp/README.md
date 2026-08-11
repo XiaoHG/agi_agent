@@ -36,12 +36,18 @@ mcp/
 当前适配层会把每次 MCP 调用整理成标准执行记录，包含：
 
 - request
+- request validation
 - permission policy
 - permission decision
 - response
 - error
+- governance audit
 - protocol version
 - execution id
+
+当前协议版本：
+
+- `v2`：增加请求校验与治理审计轨迹
 
 查看执行记录：
 
@@ -69,6 +75,12 @@ python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hel
 - 拒绝 `write`
 - 拒绝 `network`
 - 拒绝 `destructive`
+
+当前治理规则：
+
+- 必须满足工具 schema 的必填参数
+- 默认拒绝多余参数
+- 校验失败先阻断，再进入权限判断
 
 运行：
 

@@ -5,8 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 
 from mcp.clients.local_client import LocalMCPClient
-from mcp.policy import build_default_mcp_policy, evaluate_mcp_tool_permission
-from mcp.schema import MCPError, MCPExecutionRecord, MCPPermissionDecision, MCPPermissionPolicy, MCPRequest, MCPResponse
+from mcp.policy import (
+    MCPGovernancePolicy,
+    build_default_mcp_governance_policy,
+    build_default_mcp_policy,
+    evaluate_mcp_tool_permission,
+    validate_mcp_request,
+)
+from mcp.schema import (
+    MCPError,
+    MCPExecutionRecord,
+    MCPPermissionDecision,
+    MCPPermissionPolicy,
+    MCPRequest,
+    MCPRequestValidationResult,
+    MCPResponse,
+)
 from mcp.servers.local_server import LocalMCPServer
 
 
@@ -46,13 +60,17 @@ def call_mcp_tool_exchange(
     arguments: dict[str, object] | None = None,
     *,
     policy: MCPPermissionPolicy | None = None,
+    governance_policy: MCPGovernancePolicy | None = None,
 ) -> MCPExecutionRecord:
     """Call a local MCP tool and return a standardized execution record."""
 
     client = _build_client(root)
     spec = client.get_tool_spec(tool_name)
+    resolved_policy = policy or build_default_mcp_policy()
+    resolved_governance_policy = governance_policy or build_default_mcp_governance_policy()
+    request = MCPRequest(tool_name=tool_name, arguments=arguments or {})
+    audit_trail: list[dict[str, object]] = []
     if spec is None:
-        request = MCPRequest(tool_name=tool_name, arguments=arguments or {})
         response = MCPResponse(tool_name, f"Unknown MCP tool: {tool_name}", is_error=True)
         decision = _build_unknown_tool_decision(tool_name)
         error = MCPError(
@@ -64,14 +82,62 @@ def call_mcp_tool_exchange(
         return MCPExecutionRecord(
             request=request,
             response=response,
-            permission_policy=policy or build_default_mcp_policy(),
+            permission_policy=resolved_policy,
             permission_decision=decision,
+            request_validation=MCPRequestValidationResult(
+                tool_name=tool_name,
+                valid=False,
+                reason=f"Unknown MCP tool: {tool_name}",
+            ),
+            governance_audit=[{"stage": "lookup", "status": "error", "reason": "unknown tool"}],
             error=error,
+            protocol_version=resolved_governance_policy.protocol_version,
         )
 
-    resolved_policy = policy or build_default_mcp_policy()
+    audit_trail.append({"stage": "lookup", "status": "ok", "tool_name": spec.name})
+    validation = validate_mcp_request(spec, request, resolved_governance_policy)
+    audit_trail.append({"stage": "validation", "status": "ok" if validation.valid else "error", "reason": validation.reason})
+    if not validation.valid:
+        response = MCPResponse(
+            tool_name,
+            (
+                f"Request validation failed for MCP tool: {tool_name}\n"
+                f"Reason: {validation.reason}\n"
+                f"Missing arguments: {', '.join(validation.missing_arguments) if validation.missing_arguments else 'none'}\n"
+                f"Extra arguments: {', '.join(validation.extra_arguments) if validation.extra_arguments else 'none'}\n"
+                f"Next safe action: fix the request shape and rerun the same MCP tool."
+            ),
+            is_error=True,
+            metadata={
+                "request_validation": validation.to_dict(),
+                "governance_policy": resolved_governance_policy.to_dict(),
+            },
+        )
+        error = MCPError(
+            stage="validation",
+            code="invalid_request",
+            message=response.content,
+            next_safe_action="Fix the request shape and rerun the same MCP tool.",
+        )
+        return MCPExecutionRecord(
+            request=request,
+            response=response,
+            permission_policy=resolved_policy,
+            permission_decision=MCPPermissionDecision(
+                tool_name=spec.name,
+                permission_level=spec.permission_level,
+                allowed=False,
+                reason=validation.reason,
+                next_safe_action="Fix the request shape and rerun the same MCP tool.",
+            ),
+            request_validation=validation,
+            governance_audit=audit_trail,
+            error=error,
+            protocol_version=resolved_governance_policy.protocol_version,
+        )
+
     decision = evaluate_mcp_tool_permission(spec, resolved_policy)
-    request = MCPRequest(tool_name=tool_name, arguments=arguments or {})
+    audit_trail.append({"stage": "permission", "status": "ok" if decision.allowed else "error", "reason": decision.reason})
     if not decision.allowed:
         response = MCPResponse(
             tool_name,
@@ -85,6 +151,8 @@ def call_mcp_tool_exchange(
             metadata={
                 "permission_decision": decision.to_dict(),
                 "permission_policy": resolved_policy.to_dict(),
+                "request_validation": validation.to_dict(),
+                "governance_policy": resolved_governance_policy.to_dict(),
             },
         )
         error = MCPError(
@@ -98,10 +166,14 @@ def call_mcp_tool_exchange(
             response=response,
             permission_policy=resolved_policy,
             permission_decision=decision,
+            request_validation=validation,
+            governance_audit=audit_trail,
             error=error,
+            protocol_version=resolved_governance_policy.protocol_version,
         )
 
-    response = client.call_tool(tool_name, arguments)
+    response = client.call_tool(tool_name, validation.normalized_arguments or request.arguments)
+    audit_trail.append({"stage": "execution", "status": "error" if response.is_error else "ok", "tool_name": response.tool_name})
     if response.is_error:
         error = MCPError(
             stage="server",
@@ -120,12 +192,17 @@ def call_mcp_tool_exchange(
             metadata={
                 "permission_decision": decision.to_dict(),
                 "permission_policy": resolved_policy.to_dict(),
+                "request_validation": validation.to_dict(),
+                "governance_policy": resolved_governance_policy.to_dict(),
                 **response.metadata,
             },
         ),
         permission_policy=resolved_policy,
         permission_decision=decision,
+        request_validation=validation,
+        governance_audit=audit_trail,
         error=error,
+        protocol_version=resolved_governance_policy.protocol_version,
     )
 
 

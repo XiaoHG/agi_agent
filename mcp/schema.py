@@ -17,10 +17,10 @@ DESTRUCTIVE_PERMISSION = "destructive"
 class MCPToolSpec:
     """Description of one tool exposed by an MCP server."""
 
-    name: str  # 工具名，client 通过它选择要调用的能力
-    description: str  # 工具用途说明
+    name: str           # 工具名，client 通过它选择要调用的能力
+    description: str    # 工具用途说明
     input_schema: dict[str, Any] = field(default_factory=dict)  # 简化版输入 schema
-    permission_level: str = READ_ONLY_PERMISSION  # read_only / write / network / destructive
+    permission_level: str = READ_ONLY_PERMISSION                # read_only / write / network / destructive
 
 
 @dataclass(frozen=True)
@@ -35,8 +35,8 @@ class MCPRequest:
 class MCPResponse:
     """Response returned from an MCP server to a client."""
 
-    tool_name: str  # 已调用的工具名
-    content: str  # 工具返回内容
+    tool_name: str          # 已调用的工具名
+    content: str            # 工具返回内容
     is_error: bool = False  # 是否为错误响应
     metadata: dict[str, Any] = field(default_factory=dict)  # 扩展 metadata，供 trace / policy 使用
 
@@ -45,10 +45,10 @@ class MCPResponse:
 class MCPError:
     """Structured MCP error details for trace and recovery."""
 
-    stage: str  # 出错阶段
-    code: str  # 错误代码
-    message: str  # 错误信息
-    next_safe_action: str  # 下一步安全动作
+    stage: str              # 出错阶段
+    code: str               # 错误代码
+    message: str            # 错误信息
+    next_safe_action: str   # 下一步安全动作
 
     def to_dict(self) -> dict[str, str]:
         """Render the error as JSON-ready data."""
@@ -62,16 +62,42 @@ class MCPError:
 
 
 @dataclass(frozen=True)
+class MCPRequestValidationResult:
+    """Structured validation result for one MCP request."""
+
+    tool_name: str      # 工具名
+    valid: bool         # 是否通过校验
+    reason: str         # 校验结论
+    missing_arguments: tuple[str, ...] = ()     # 缺失参数
+    extra_arguments: tuple[str, ...] = ()       # 多余参数
+    normalized_arguments: dict[str, Any] = field(default_factory=dict)  # 规范化后的参数
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the validation result as JSON-ready data."""
+
+        return {
+            "tool_name": self.tool_name,
+            "valid": self.valid,
+            "reason": self.reason,
+            "missing_arguments": list(self.missing_arguments),
+            "extra_arguments": list(self.extra_arguments),
+            "normalized_arguments": self.normalized_arguments,
+        }
+
+
+@dataclass(frozen=True)
 class MCPExecutionRecord:
     """Standardized MCP execution record shared by client, server, and adapter."""
 
-    request: MCPRequest  # 请求对象
-    response: MCPResponse  # 响应对象
-    permission_policy: MCPPermissionPolicy  # 权限策略
+    request: MCPRequest     # 请求对象
+    response: MCPResponse   # 响应对象
+    permission_policy: MCPPermissionPolicy      # 权限策略
     permission_decision: MCPPermissionDecision  # 权限决策
-    error: MCPError | None = None  # 错误详情
-    protocol_version: str = "v1"  # 协议版本
-    execution_id: str = field(default_factory=lambda: uuid4().hex[:8])  # 执行 ID
+    request_validation: MCPRequestValidationResult | None = None            # 请求校验结果
+    governance_audit: list[dict[str, Any]] = field(default_factory=list)    # 治理审计轨迹
+    error: MCPError | None = None   # 错误详情
+    protocol_version: str = "v2"    # 协议版本
+    execution_id: str = field(default_factory=lambda: uuid4().hex[:8])      # 执行 ID
 
     @property
     def status(self) -> str:
@@ -94,6 +120,8 @@ class MCPExecutionRecord:
             },
             "permission_policy": self.permission_policy.to_dict(),
             "permission_decision": self.permission_decision.to_dict(),
+            "request_validation": None if self.request_validation is None else self.request_validation.to_dict(),
+            "governance_audit": self.governance_audit,
             "response": {
                 "tool_name": self.response.tool_name,
                 "content": self.response.content,
@@ -122,10 +150,10 @@ class MCPExecutionRecord:
 class MCPPermissionPolicy:
     """Policy that controls which classes of MCP tools may run."""
 
-    allow_read_only: bool = True  # 是否允许只读工具
-    allow_write: bool = False  # 是否允许写入工具
-    allow_network: bool = False  # 是否允许网络工具
-    allow_destructive: bool = False  # 是否允许破坏性工具
+    allow_read_only: bool = True        # 是否允许只读工具
+    allow_write: bool = False           # 是否允许写入工具
+    allow_network: bool = False         # 是否允许网络工具
+    allow_destructive: bool = False     # 是否允许破坏性工具
 
     def allows(self, permission_level: str) -> bool:
         """Return whether the policy allows the requested permission level."""
@@ -155,11 +183,11 @@ class MCPPermissionPolicy:
 class MCPPermissionDecision:
     """Permission check result for one MCP tool call."""
 
-    tool_name: str  # 工具名
-    permission_level: str  # 权限级别
-    allowed: bool  # 是否允许
-    reason: str  # 决策原因
-    next_safe_action: str  # 下一步安全动作
+    tool_name: str          # 工具名
+    permission_level: str   # 权限级别
+    allowed: bool           # 是否允许
+    reason: str             # 决策原因
+    next_safe_action: str   # 下一步安全动作
 
     def to_dict(self) -> dict[str, object]:
         """Render the decision as JSON-ready data."""

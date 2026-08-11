@@ -85,11 +85,24 @@ class LocalMCPTests(unittest.TestCase):
     def test_adapter_returns_standardized_execution_record(self) -> None:
         record = call_mcp_tool_exchange(Path("."), "workspace_summary")
 
-        self.assertEqual(record.protocol_version, "v1")
+        self.assertEqual(record.protocol_version, "v2")
         self.assertEqual(record.request.tool_name, "workspace_summary")
         self.assertEqual(record.status, "ok")
         self.assertIn("mcp_execution", record.to_response().metadata)
         self.assertEqual(record.to_dict()["response"]["tool_name"], "workspace_summary")
+        self.assertIn("request_validation", record.to_dict())
+        self.assertIn("governance_audit", record.to_dict())
+
+    def test_adapter_rejects_missing_required_arguments_during_governance_validation(self) -> None:
+        record = call_mcp_tool_exchange(Path("."), "read_project_file", {})
+
+        self.assertEqual(record.protocol_version, "v2")
+        self.assertTrue(record.response.is_error)
+        self.assertEqual(record.error.stage, "validation")
+        self.assertIn("Request validation failed", record.response.content)
+        self.assertFalse(record.request_validation.valid)
+        self.assertGreaterEqual(len(record.governance_audit), 2)
+        self.assertEqual(record.governance_audit[1]["stage"], "validation")
 
     def test_route_to_mcp_tools(self) -> None:
         route = route_intent("List MCP tools.")
@@ -257,8 +270,10 @@ class LocalMCPTests(unittest.TestCase):
                 text=True,
             )
 
-            self.assertIn('"protocol_version": "v1"', result.stdout)
+            self.assertIn('"protocol_version": "v2"', result.stdout)
             self.assertIn('"permission_decision"', result.stdout)
+            self.assertIn('"request_validation"', result.stdout)
+            self.assertIn('"governance_audit"', result.stdout)
             self.assertIn('"response"', result.stdout)
 
 
