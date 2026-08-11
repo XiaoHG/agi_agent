@@ -8,19 +8,19 @@
 
 ## Last Updated
 
-2026-08-10
+2026-08-11
 
 ## 当前阶段
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已开始实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已开始实现，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：完成 v45 发布门禁与 CI 准备后，进入 v46 checkpoint branch resume，继续把恢复能力推进到真正可续跑。
+下一阶段建议：完成 v46 checkpoint branch resume 后，进入 v47 standardized MCP governance，继续推进可交付级工具治理。
 
 ## 当前教师判断
 
@@ -134,6 +134,7 @@ v29 功能基线提交：
 - MCP structured error model
 - MCP execution CLI inspection
 - release gate / CI readiness 门禁模型
+- checkpoint branch resume lineage
 
 当前缺口：
 
@@ -143,7 +144,7 @@ v29 功能基线提交：
 - LangGraph workflow 已成为默认主执行器，workflow / tool_call / tool_loop 已并入统一 graph runtime。
 - MCP / Skills 还需要继续升级为标准化、可扩展、可观测的专业能力层。
 - Runtime events 已经能随 checkpoint 一起落盘，并已支持 report-level replay、跨 run diff 与 checkpoint-guided resume，但还没有做真正的恢复分叉和 continue execution。
-- checkpoint 已可浏览、可回放、可比较，并已支持基于 checkpoint route hints 的 guided resume。
+- checkpoint 已可浏览、可回放、可比较，并已支持基于 checkpoint route hints 的 branch resume。
 - 发布门禁已开始搭建，但还没有接入远程 CI 平台。
 - LangGraph route 已有 DeepSeek planner 和 deterministic fallback，但还没有成为默认主执行器。
 
@@ -167,10 +168,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v45 release gate and CI readiness：`versions/v45_release-gate-and-ci-readiness.md`。
-2. 查看对应练习：`docs/v45_release-gate-and-ci-readiness-exercises.md`。
-3. 运行验证：`python -m unittest tests.test_release_gate -v`、`python -m unittest discover -s tests -v` 和 `python -m cli.release_gate`。
-4. 下一阶段进入 v46 checkpoint branch resume。
+1. 复盘 v46 checkpoint branch resume：`versions/v46_checkpoint-branch-resume.md`。
+2. 查看对应练习：`docs/v46_checkpoint-branch-resume-exercises.md`。
+3. 运行验证：`python -m unittest tests.test_persistence -v`、`python -m unittest discover -s tests -v` 和 `python -m cli.main --resume-last-run`。
+4. 下一阶段进入 v47 standardized MCP governance。
 
 ## 当前学习重点
 
@@ -205,6 +206,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - LLM Planner 的职责是产生结构化 plan；代码的职责是校验 plan、执行 plan，并在 LLM 不可用或输出不合格时 fallback。
 - 专业 RAG 不只是“能搜到文本”，还需要 index rebuild、chunk metadata、source citation、可测试检索行为和可替换的 embedding 层。
 - 发布门禁必须同时覆盖 tests、eval、matrix 和 failure bench，才能接近可交付标准。
+- 恢复后的运行必须成为正式的 branch run，而不是没有来源关系的匿名重跑。
 
 ## 已完成
 

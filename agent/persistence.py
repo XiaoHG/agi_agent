@@ -74,11 +74,12 @@ def build_run_checkpoint(
     trace_text: str,
     tool_error: str | None = None,
     tool_result: dict[str, Any] | None = None,
+    resume: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a JSON-ready checkpoint record for a single run."""
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "run_id": run_id,
         "run_kind": run_kind,
         "created_at": _now_iso(),
@@ -90,6 +91,7 @@ def build_run_checkpoint(
         "answer": answer,
         "trace": trace,
         "trace_text": trace_text,
+        "resume": resume,
     }
 
 
@@ -148,12 +150,19 @@ def format_checkpoint_summary(record: dict[str, Any]) -> str:
     session_id = trace.get("session_id", "default")
     task_id = trace.get("task_id", "unknown")
     answer_preview = _preview_text(record.get("answer", ""))
+    resume = record.get("resume", {})
+    if not isinstance(resume, dict):
+        resume = {}
+    branch_parent = resume.get("source_run_id", "none")
+    branch_depth = resume.get("branch_depth", 0)
     return (
         f"Run ID: {record.get('run_id', 'unknown')}\n"
         f"Run kind: {record.get('run_kind', 'unknown')}\n"
         f"Created at: {record.get('created_at', 'unknown')}\n"
         f"Session ID: {session_id}\n"
         f"Task ID: {task_id}\n"
+        f"Branch parent: {branch_parent}\n"
+        f"Branch depth: {branch_depth}\n"
         f"User input: {record.get('user_input', '')}\n"
         f"Route: {route.get('action', 'unknown')} / {route.get('tool_name', 'none')}\n"
         f"Answer preview: {answer_preview}"
@@ -171,13 +180,18 @@ def format_checkpoint_history(records: list[dict[str, Any]]) -> str:
         route = trace.get("route", {}) if isinstance(trace.get("route"), dict) else record.get("route", {})
         if not isinstance(route, dict):
             route = {}
+        resume = record.get("resume", {})
+        if not isinstance(resume, dict):
+            resume = {}
         lines.append(
             f"{index}. {record.get('run_id', 'unknown')} "
             f"[{record.get('run_kind', 'unknown')}] "
             f"session={trace.get('session_id', 'default')} "
             f"task={trace.get('task_id', 'unknown')} "
             f"{record.get('created_at', 'unknown')} "
-            f"{route.get('action', 'unknown')} / {route.get('tool_name', 'none')}"
+            f"{route.get('action', 'unknown')} / {route.get('tool_name', 'none')} "
+            f"branch_parent={resume.get('source_run_id', 'none')} "
+            f"depth={resume.get('branch_depth', 0)}"
         )
     return "\n".join(lines)
 

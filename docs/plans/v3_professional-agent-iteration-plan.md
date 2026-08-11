@@ -388,6 +388,96 @@ LLM
 
 - 没有发布门禁，项目只能说明“本地跑过”，不能说明“可以稳定交付”。
 
+### v46：Checkpoint Branch Resume
+
+主目标：
+
+- 把 checkpoint resume 从“带 route hints 的重跑”升级为“带 branch lineage 的正式分支恢复”。
+
+应覆盖：
+
+- branch resume 数据模型
+- checkpoint 中的 branch lineage 持久化
+- resume 前后 summary / diff 强化
+- 嵌套 resume 深度
+- 文档与练习
+
+为什么它是大功能：
+
+- 没有 branch lineage，恢复后的运行只是另一条匿名重跑记录，不能形成真正可审计的恢复链。
+
+### v47：Standardized MCP Governance
+
+主目标：
+
+- 统一 MCP client/server 边界与权限治理。
+
+应覆盖：
+
+- 标准化 MCP request / response 协议
+- tool I/O 校验
+- 权限与拒绝策略
+- 审计 trace
+- 测试与练习
+
+为什么它是大功能：
+
+- MCP 是外部工具层的正式边界，必须先治理协议和权限，才能稳定扩展。
+
+### v48：Skills Governance and Versioning
+
+主目标：
+
+- 把 Skills 做成可治理、可版本化、可演化的正式能力层。
+
+应覆盖：
+
+- skill version policy
+- skill registry 治理
+- 权限与运行策略
+- trace / eval / recovery 联动
+- 文档与练习
+
+为什么它是大功能：
+
+- Skills 不能只是一组脚本，必须有版本、策略和治理边界，才能进入交付级能力层。
+
+### v49：Production RAG Backend Hardening
+
+主目标：
+
+- 把 RAG 从学习版升级为可替换后端架构。
+
+应覆盖：
+
+- embedding / index 后端抽象
+- 增量更新策略
+- source citation
+- 检索评估
+- CLI/demo 与测试
+
+为什么它是大功能：
+
+- RAG 是专业 Agent 的知识底座，后端硬化是走向生产化的关键一步。
+
+### v50：Multi-Agent Delegation Hardening
+
+主目标：
+
+- 把主 Agent 与 subagent 委派做成可交付协作协议。
+
+应覆盖：
+
+- delegation contract
+- task split / handoff / return
+- 子任务 trace
+- 失败恢复与 replay
+- 示例任务流与测试
+
+为什么它是大功能：
+
+- 多 Agent 协作要建立在更稳的工具、技能和恢复体系之上，适合作为收口版本。
+
 ## 10. 版本命名与内容约束
 
 后续版本必须遵守以下约束：

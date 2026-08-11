@@ -30,6 +30,8 @@ class ReplaySummary:
     has_memory: bool = False                # 是否包含长程记忆快照
     has_recovery: bool = False              # 是否包含恢复信息
     failure_type: str = "none"              # 失败类型
+    branch_parent_run_id: str = "none"      # 分支来源运行 ID
+    branch_depth: int = 0                   # 分支深度
 
     def answer_preview(self, limit: int = 120) -> str:
         """Return a compact answer preview for text reports."""
@@ -61,6 +63,8 @@ class ReplaySummary:
             "has_memory": self.has_memory,
             "has_recovery": self.has_recovery,
             "failure_type": self.failure_type,
+            "branch_parent_run_id": self.branch_parent_run_id,
+            "branch_depth": self.branch_depth,
         }
 
 
@@ -244,6 +248,9 @@ class CheckpointResumePlan:
     can_resume: bool        # 是否允许恢复
     reason: str             # 恢复原因
     next_safe_action: str   # 下一步安全动作
+    branch_session_id: str  # 分支会话 ID
+    branch_task_id: str     # 分支任务 ID
+    branch_depth: int       # 分支深度
 
     def to_dict(self) -> dict[str, Any]:
         """Render the plan as JSON-ready data."""
@@ -263,6 +270,9 @@ class CheckpointResumePlan:
             "can_resume": self.can_resume,
             "reason": self.reason,
             "next_safe_action": self.next_safe_action,
+            "branch_session_id": self.branch_session_id,
+            "branch_task_id": self.branch_task_id,
+            "branch_depth": self.branch_depth,
         }
 
     def to_text(self) -> str:
@@ -280,6 +290,8 @@ class CheckpointResumePlan:
             f"Can resume: {'yes' if self.can_resume else 'no'}",
             f"Reason: {self.reason}",
             f"Next safe action: {self.next_safe_action}",
+            f"Branch session / task: {self.branch_session_id} / {self.branch_task_id}",
+            f"Branch depth: {self.branch_depth}",
         ]
         return "\n".join(lines)
 
@@ -315,6 +327,8 @@ class CheckpointResumeReport:
                 f"- Runtime events: {self.source.runtime_event_count}",
                 f"- Tools: {', '.join(self.source.tool_names) if self.source.tool_names else 'none'}",
                 f"- Skills: {', '.join(self.source.skill_names) if self.source.skill_names else 'none'}",
+                f"- Branch parent: {self.source.branch_parent_run_id}",
+                f"- Branch depth: {self.source.branch_depth}",
             ]
         )
         if self.resumed is not None:
@@ -328,6 +342,8 @@ class CheckpointResumeReport:
                     f"- Runtime events: {self.resumed.runtime_event_count}",
                     f"- Tools: {', '.join(self.resumed.tool_names) if self.resumed.tool_names else 'none'}",
                     f"- Skills: {', '.join(self.resumed.skill_names) if self.resumed.skill_names else 'none'}",
+                    f"- Branch parent: {self.resumed.branch_parent_run_id}",
+                    f"- Branch depth: {self.resumed.branch_depth}",
                 ]
             )
         if self.diff is not None:
@@ -383,6 +399,9 @@ def build_replay_summary(record: dict[str, Any]) -> ReplaySummary:
     recovery_plan = tool_metadata.get("recovery_plan", trace.get("recovery_plan", {}))
     if not isinstance(recovery_plan, dict):
         recovery_plan = {}
+    resume = record.get("resume", {})
+    if not isinstance(resume, dict):
+        resume = {}
 
     tool_names = _collect_tool_names(route, trace, tool_result, tool_metadata)
     skill_names = _collect_skill_names(skill_run)
@@ -408,6 +427,8 @@ def build_replay_summary(record: dict[str, Any]) -> ReplaySummary:
         has_memory=has_memory,
         has_recovery=bool(recovery_plan),
         failure_type=_normalize_label(recovery_plan.get("failure_type"), default="none"),
+        branch_parent_run_id=_normalize_label(resume.get("source_run_id"), default="none"),
+        branch_depth=_normalize_int(resume.get("branch_depth"), default=0),
     )
 
 
@@ -438,6 +459,8 @@ def compare_replay_reports(older_record: dict[str, Any], newer_record: dict[str,
         changed_fields.append("memory_continuity")
     if older.has_recovery != newer.has_recovery or older.failure_type != newer.failure_type:
         changed_fields.append("recovery")
+    if older.branch_parent_run_id != newer.branch_parent_run_id or older.branch_depth != newer.branch_depth:
+        changed_fields.append("branch_lineage")
 
     older_tools = set(older.tool_names)
     newer_tools = set(newer.tool_names)
@@ -487,6 +510,7 @@ def build_checkpoint_resume_plan(record: dict[str, Any]) -> CheckpointResumePlan
         else "No failure was recorded; rerun the saved request with the persisted route hints."
     )
     resume_mode = "guided_retry" if summary.has_recovery else "checkpoint_rerun"
+    branch_depth = _normalize_int(record.get("resume", {}).get("branch_depth"), default=0) + 1 if isinstance(record.get("resume"), dict) else 1
     return CheckpointResumePlan(
         source_run_id=summary.run_id,
         source_run_kind=summary.run_kind,
@@ -502,7 +526,27 @@ def build_checkpoint_resume_plan(record: dict[str, Any]) -> CheckpointResumePlan
         can_resume=True,
         reason=reason,
         next_safe_action=next_safe_action,
+        branch_session_id=summary.session_id,
+        branch_task_id=summary.task_id,
+        branch_depth=branch_depth,
     )
+
+
+def build_checkpoint_branch_record(
+    source_record: dict[str, Any],
+    plan: CheckpointResumePlan,
+) -> dict[str, Any]:
+    """Build branch lineage metadata for a resumed checkpoint."""
+
+    return {
+        "source_run_id": plan.source_run_id,
+        "source_run_kind": plan.source_run_kind,
+        "source_created_at": str(source_record.get("created_at", "unknown")),
+        "resume_mode": plan.resume_mode,
+        "branch_depth": plan.branch_depth,
+        "session_id": plan.branch_session_id,
+        "task_id": plan.branch_task_id,
+    }
 
 
 def build_checkpoint_resume_report(
@@ -622,4 +666,16 @@ def _normalize_label(value: Any, default: str) -> str:
 
     if isinstance(value, str) and value.strip():
         return value.strip()
+    return default
+
+
+def _normalize_int(value: Any, default: int) -> int:
+    """Read an integer-like value safely."""
+
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
     return default

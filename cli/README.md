@@ -69,6 +69,8 @@ List recent saved runs:
 python -m cli.main --list-runs
 ```
 
+Recent history now includes `branch_parent` and `depth`, so resumed runs can be inspected as formal checkpoint branches.
+
 Show one saved run by id:
 
 ```bash
@@ -92,6 +94,8 @@ Resume the latest saved run:
 ```bash
 python -m cli.main --resume-last-run
 ```
+
+The resumed run is persisted as a new branch of the source checkpoint instead of overwriting the original history.
 
 Resume one saved run by id:
 

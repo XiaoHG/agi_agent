@@ -18,6 +18,6 @@
     "category": "replay",
     "operation": "resume_latest_checkpoint",
     "setup_inputs": ["Use LangGraph to read not-exist.md."],
-    "required_answer_terms": ["Checkpoint resume plan", "Failure type:", "Resume diff:"]
+    "required_answer_terms": ["Checkpoint resume plan", "Failure type:", "Resume diff:", "Branch depth:"]
   }
 ]

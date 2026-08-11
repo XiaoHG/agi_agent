@@ -23,6 +23,8 @@ from .persistence import (
     format_checkpoint_summary,
 )  # 运行记录持久化
 from .replay import (
+    build_checkpoint_branch_record,
+    build_checkpoint_resume_plan,
     format_checkpoint_resume_report,
     format_replay_diff_report,
     format_replay_report,
@@ -72,6 +74,7 @@ class AgentRun:
     tool_error: str | None = None          # 工具执行错误（失败时）
     answer: str = ""                       # 最终返回给用户的答案
     memory_snapshot: MemorySnapshot | None = None  # 本次运行更新后的记忆快照
+    resume_source: dict[str, Any] | None = None    # 恢复分支来源信息
 
 
 class WorkspaceAgent:
@@ -111,6 +114,7 @@ class WorkspaceAgent:
         route_override: ToolRoute | None = None,
         session_id: str | None = None,
         task_id: str | None = None,
+        resume_source: dict[str, Any] | None = None,
     ) -> AgentRun:
         """Execute one turn and return a structured run record."""
         resolved_route = route_override or route_intent(user_input)
@@ -124,6 +128,7 @@ class WorkspaceAgent:
             user_input=user_input,
             route=resolved_route,               # 【关键】路由决策：判断是否需要调用工具
             steps=[],
+            resume_source=resume_source,
         )
 
         # 2. 记录初始步骤（构建执行轨迹）
@@ -726,6 +731,7 @@ class WorkspaceAgent:
             trace_text=self.format_trace(run),
             tool_error=run.tool_error,
             tool_result=trace["tool_result"],
+            resume=run.resume_source,
         )
         self._history_store.save(checkpoint)
         return run
@@ -847,11 +853,13 @@ class WorkspaceAgent:
         route = self._route_from_checkpoint_record(checkpoint)
         if route is None:
             return "Checkpoint is missing route information."
+        plan = build_checkpoint_resume_plan(checkpoint)
         resumed_run = self.run(
             str(checkpoint.get("user_input", "")),
             route_override=route,
-            session_id=self._session_id_from_checkpoint(checkpoint),
-            task_id=self._task_id_from_checkpoint(checkpoint),
+            session_id=plan.branch_session_id,
+            task_id=plan.branch_task_id,
+            resume_source=build_checkpoint_branch_record(checkpoint, plan),
         )
         resumed_checkpoint = self.load_latest_checkpoint()
         return format_checkpoint_resume_report(checkpoint, resumed_checkpoint)
@@ -1150,6 +1158,7 @@ class WorkspaceAgent:
             if tool_metadata is None
             else tool_metadata.get("subagent_delegation"),
             "memory": None if run.memory_snapshot is None else run.memory_snapshot.to_dict(),
+            "resume": run.resume_source,
             "tool_error": run.tool_error,
             "answer_preview": self._summarize_text(run.answer, limit=8),
         }

@@ -342,7 +342,11 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(plan.source_run_id, "run-resume")
         self.assertEqual(plan.resume_mode, "checkpoint_rerun")
         self.assertTrue(plan.can_resume)
+        self.assertEqual(plan.branch_session_id, "default")
+        self.assertEqual(plan.branch_task_id, "unknown")
+        self.assertEqual(plan.branch_depth, 1)
         self.assertIn("Checkpoint resume plan", plan.to_text())
+        self.assertIn("Branch depth: 1", plan.to_text())
         self.assertIn("Checkpoint resume plan", report.to_text())
         self.assertIn("Source summary:", rendered)
         self.assertIn("Resume mode:", rendered)
@@ -368,8 +372,33 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Checkpoint resume plan", resume_text)
             self.assertIn("Session / Task: resume-session / resume-task", resume_text)
             self.assertIn("Source summary:", resume_text)
+            self.assertIn("Branch depth: 1", resume_text)
             self.assertIsNotNone(resumed)
             self.assertNotEqual(resumed["run_id"], source_run.run_id)
+            self.assertEqual(resumed["resume"]["source_run_id"], source_run.run_id)
+            self.assertEqual(resumed["resume"]["branch_depth"], 1)
+            self.assertEqual(resumed["trace"]["resume"]["source_run_id"], source_run.run_id)
+
+    def test_resume_branch_increments_depth_for_nested_resume(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
+            history_dir = root / "history"
+            agent = WorkspaceAgent(root, history_dir=history_dir, session_id="branch-session", task_id="branch-task")
+
+            source_run = agent.run("Use LangGraph to read README.md.")
+            agent.resume_latest_checkpoint()
+            first_branch = load_checkpoint(history_dir / "latest.json")
+            self.assertIsNotNone(first_branch)
+
+            agent.resume_latest_checkpoint()
+            second_branch = load_checkpoint(history_dir / "latest.json")
+
+            self.assertIsNotNone(second_branch)
+            self.assertEqual(first_branch["resume"]["source_run_id"], source_run.run_id)
+            self.assertEqual(first_branch["resume"]["branch_depth"], 1)
+            self.assertEqual(second_branch["resume"]["branch_depth"], 2)
+            self.assertEqual(second_branch["resume"]["source_run_id"], first_branch["run_id"])
 
     def test_cli_main_can_show_session_memory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -464,6 +493,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertIn("Checkpoint resume plan", output.getvalue())
             self.assertIn("Resume diff:", output.getvalue())
+            self.assertIn("Branch depth:", output.getvalue())
 
     def test_cli_main_can_resume_run_by_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -489,6 +519,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertIn(run.run_id, output.getvalue())
             self.assertIn("Checkpoint resume plan", output.getvalue())
+            self.assertIn("Branch depth:", output.getvalue())
 
     def test_cli_main_can_replay_last_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
