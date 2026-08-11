@@ -248,3 +248,9 @@ Run the industrial failure bench:
 ```bash
 python -m cli.eval_runner --failure-bench evals/industrial_failure_bench.json
 ```
+
+Run the release gate:
+
+```bash
+python -m cli.release_gate
+```

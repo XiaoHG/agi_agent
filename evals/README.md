@@ -40,6 +40,7 @@ evals/
     v44_failure_bench_cases.json     # 失败基准集
   runner.py                          # 单 case 文件 runner
   matrix.py                          # eval matrix / failure bench 聚合执行
+  release_gate.py                    # tests + eval + failure bench 发布门禁
 ```
 
 运行：
@@ -49,6 +50,7 @@ python -m cli.eval_runner
 python -m cli.eval_runner --output logs/eval-report.json
 python -m cli.eval_runner --matrix evals/industrial_eval_matrix.json
 python -m cli.eval_runner --failure-bench evals/industrial_failure_bench.json
+python -m cli.release_gate
 ```
 
 当前 regression 判断维度：

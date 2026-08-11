@@ -194,6 +194,12 @@ python -m cli.main --input "Plan subagent collaboration for a code review." --tr
 python -m cli.eval_runner
 ```
 
+运行发布门禁：
+
+```bash
+python -m cli.release_gate
+```
+
 运行综合项目 Demo：
 
 ```bash

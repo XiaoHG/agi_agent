@@ -370,6 +370,24 @@ LLM
 
 - 没有系统评估矩阵，Agent 项目无法真正进入“可回归、可比较、可发布”的工程状态。
 
+### v45：Release Gate and CI Readiness
+
+主目标：
+
+- 把 tests、eval、industrial matrix 和 failure bench 统一成可执行的发布门禁。
+
+应覆盖：
+
+- release gate 数据模型
+- 发布门禁 CLI
+- tests / eval / matrix / failure bench 的统一验收入口
+- 门禁失败阻断规则
+- 文档与练习
+
+为什么它是大功能：
+
+- 没有发布门禁，项目只能说明“本地跑过”，不能说明“可以稳定交付”。
+
 ## 10. 版本命名与内容约束
 
 后续版本必须遵守以下约束：
