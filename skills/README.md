@@ -22,11 +22,13 @@ skills/
 
 ## 当前实现
 
-当前阶段先实现代码内置 skill catalog，后续再扩展到从独立 skill 文件加载。
+当前阶段已经实现内置 skill catalog、project skill registry、runtime policy 和 registry governance。
 
 ```text
 skills/
-  catalog.py     # SkillSpec, built-in skills, skill selection
+  catalog.py     # SkillSpec, built-in/project registry, governance-aware listing
+  policy.py      # runtime policy + governance validation
+  execution.py   # structured SkillRun + governance audit
 ```
 
 当前内置 skills：
@@ -34,6 +36,14 @@ skills/
 - `research_brief`
 - `code_review`
 - `learning_explanation`
+
+当前治理能力：
+
+- skill version
+- declared tools
+- runtime policy
+- registry governance validation
+- governance audit trail
 
 运行：
 

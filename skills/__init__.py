@@ -18,10 +18,14 @@ from .execution import (
     execute_skill,
 )
 from .policy import (
+    SkillGovernancePolicy,
+    SkillGovernanceValidation,
     SkillPolicyDecision,
     SkillRuntimePolicy,
+    build_default_skill_governance_policy,
     build_default_skill_runtime_policy,
     evaluate_skill_runtime_policy,
+    validate_skill_governance,
 )
 
 __all__ = [
@@ -29,10 +33,13 @@ __all__ = [
     "SkillStep",
     "SkillSpec",
     "SkillStepResult",
+    "SkillGovernancePolicy",
+    "SkillGovernanceValidation",
     "SkillPolicyDecision",
     "SkillToolRequest",
     "SkillToolResponse",
     "build_skill_steps",
+    "build_default_skill_governance_policy",
     "build_default_skill_runtime_policy",
     "describe_skills",
     "discover_project_skills",
@@ -42,4 +49,5 @@ __all__ = [
     "SkillRuntimePolicy",
     "select_skill",
     "evaluate_skill_runtime_policy",
+    "validate_skill_governance",
 ]

@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
-from .policy import SkillRuntimePolicy, evaluate_skill_runtime_policy
+from .policy import (
+    SkillGovernancePolicy,
+    SkillRuntimePolicy,
+    build_default_skill_governance_policy,
+    evaluate_skill_runtime_policy,
+    validate_skill_governance,
+)
 
 
 PROJECT_SKILLS_DIR = Path(".codex/skills")
@@ -20,14 +26,15 @@ CODE_FENCE_PATTERN = re.compile(r"```(?:text)?\n(?P<body>.*?)```", re.DOTALL)
 class SkillSpec:
     """Reusable task capability that can be selected by the Agent."""
 
-    name: str  # 技能名，用于选择和展示
-    purpose: str  # 技能解决的问题
-    steps: tuple[str, ...]  # 标准执行步骤
-    output_format: str  # 期望输出格式
-    version: str = "v1"  # 技能版本
-    source: str = "builtin"  # builtin / project
-    path: str | None = None  # project skill 对应的文件路径
-    aliases: tuple[str, ...] = ()  # 可用于显式匹配的别名
+    name: str                               # 技能名，用于选择和展示
+    purpose: str                            # 技能解决的问题
+    steps: tuple[str, ...]                  # 标准执行步骤
+    output_format: str                      # 期望输出格式
+    version: str = "v1"                     # 技能版本
+    source: str = "builtin"                 # builtin / project
+    path: str | None = None                 # project skill 对应的文件路径
+    aliases: tuple[str, ...] = ()           # 可用于显式匹配的别名
+    declared_tools: tuple[str, ...] = ()    # skill 显式声明可使用的工具
 
     def describe(self) -> str:
         """Render one skill as a compact text block."""
@@ -40,6 +47,10 @@ class SkillSpec:
         ]
         if self.path:
             lines.append(f"Path: {self.path}")
+        lines.append(
+            "Declared tools: "
+            + (", ".join(self.declared_tools) if self.declared_tools else "<none>")
+        )
         lines.extend([
             "Steps:",
         ])
@@ -64,6 +75,7 @@ def get_builtin_skills() -> list[SkillSpec]:
             ),
             output_format="Brief with findings, sources, limits, and next actions.",
             version="v1",
+            declared_tools=("search_docs",),
         ),
         SkillSpec(
             name="code_review",
@@ -76,6 +88,7 @@ def get_builtin_skills() -> list[SkillSpec]:
             ),
             output_format="Review notes with issues, evidence, and recommended fixes.",
             version="v1",
+            declared_tools=("list_dir", "search_docs"),
         ),
         SkillSpec(
             name="learning_explanation",
@@ -88,6 +101,7 @@ def get_builtin_skills() -> list[SkillSpec]:
             ),
             output_format="Explanation with flow, key points, mistakes, and practice tasks.",
             version="v1",
+            declared_tools=("search_docs", "read_file"),
         ),
     ]
 
@@ -118,15 +132,29 @@ def get_available_skills(root: Path = Path(".")) -> list[SkillSpec]:
     return list(merged.values())
 
 
-def describe_skills(root: Path = Path("."), policy: SkillRuntimePolicy | None = None) -> str:
+def describe_skills(
+    root: Path = Path("."),
+    policy: SkillRuntimePolicy | None = None,
+    governance_policy: SkillGovernancePolicy | None = None,
+) -> str:
     """Render the merged skill catalog."""
 
     parts = ["Available skills:"]
     if policy is not None:
         parts.append(policy.describe())
+    resolved_governance_policy = governance_policy or build_default_skill_governance_policy()
+    parts.append(f"Governance protocol: {resolved_governance_policy.protocol_version}")
     for skill in get_available_skills(root):
+        executable_tools = _infer_executable_tools(skill)
+        validation = validate_skill_governance(
+            skill,
+            executable_tools=executable_tools,
+            policy=resolved_governance_policy,
+        )
         decision = evaluate_skill_runtime_policy(skill, policy)
         parts.append(skill.describe())
+        parts.append(f"Governance validation: {'valid' if validation.valid else 'blocked'}")
+        parts.append(f"Governance reason: {validation.reason}")
         parts.append(f"Policy decision: {'allowed' if decision.allowed else 'blocked'}")
         parts.append(f"Policy reason: {decision.reason}")
     return "\n\n".join(parts)
@@ -214,6 +242,7 @@ def _parse_project_skill(workspace_root: Path, skill_file: Path) -> SkillSpec | 
     output_format = _parse_output_format(body)
     relative_path = str(skill_file.resolve().relative_to(workspace_root))
     aliases = tuple(dict.fromkeys({_slug_to_identifier(name), skill_file.parent.name, name.replace("-", " ")}))
+    declared_tools = _parse_csv_tuple(metadata.get("tools", ""))
     return SkillSpec(
         name=name,
         purpose=purpose,
@@ -223,6 +252,7 @@ def _parse_project_skill(workspace_root: Path, skill_file: Path) -> SkillSpec | 
         source="project",
         path=relative_path,
         aliases=aliases,
+        declared_tools=declared_tools,
     )
 
 
@@ -281,3 +311,23 @@ def _slug_to_identifier(name: str) -> str:
     """Convert a slug-like skill name into an underscore identifier."""
 
     return name.replace("-", "_")
+
+
+def _parse_csv_tuple(value: str) -> tuple[str, ...]:
+    """Parse one comma-separated metadata value into a stable tuple."""
+
+    if not value.strip():
+        return ()
+    return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
+def _infer_executable_tools(skill: SkillSpec) -> tuple[str, ...]:
+    """Infer the deterministic tool set for registry governance views."""
+
+    if skill.name == "code_review":
+        return ("list_dir", "search_docs")
+    if skill.name == "research_brief":
+        return ("search_docs",)
+    if skill.name == "learning_explanation":
+        return ("search_docs", "read_file")
+    return ()

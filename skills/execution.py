@@ -7,7 +7,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .catalog import SkillSpec, select_skill
-from .policy import SkillPolicyDecision, SkillRuntimePolicy, build_default_skill_runtime_policy, evaluate_skill_runtime_policy
+from .policy import (
+    SkillGovernancePolicy,
+    SkillGovernanceValidation,
+    SkillPolicyDecision,
+    SkillRuntimePolicy,
+    build_default_skill_governance_policy,
+    build_default_skill_runtime_policy,
+    evaluate_skill_runtime_policy,
+    validate_skill_governance,
+)
 
 
 @dataclass(frozen=True)
@@ -110,12 +119,15 @@ class SkillStepResult:
 class SkillRun:
     """Structured record produced by executing one selected skill."""
 
-    task: str  # 用户原始任务
-    skill: SkillSpec  # 被选择并执行的技能
-    status: str  # 当前 run 状态
+    task: str           # 用户原始任务
+    skill: SkillSpec    # 被选择并执行的技能
+    status: str         # 当前 run 状态
     policy: SkillRuntimePolicy = field(default_factory=build_default_skill_runtime_policy)  # 运行时策略
     policy_decision: SkillPolicyDecision | None = None  # 策略决策
-    steps: list[SkillStepResult] = field(default_factory=list)  # 步骤执行结果
+    governance_policy: SkillGovernancePolicy = field(default_factory=build_default_skill_governance_policy)  # 技能治理策略
+    governance_validation: SkillGovernanceValidation | None = None              # 技能治理校验结果
+    governance_audit: list[dict[str, object]] = field(default_factory=list)     # 治理审计轨迹
+    steps: list[SkillStepResult] = field(default_factory=list)                  # 步骤执行结果
     final_output: str = ""  # 面向 Agent 的最终输出
 
     def to_text(self) -> str:
@@ -130,6 +142,8 @@ class SkillRun:
             f"Status: {self.status}\n"
             f"Policy: {self.policy.policy_name}\n"
             f"Policy decision: {self.policy_decision.reason if self.policy_decision else 'n/a'}\n"
+            f"Governance policy: {self.governance_policy.protocol_version}\n"
+            f"Governance validation: {self.governance_validation.reason if self.governance_validation else 'n/a'}\n"
             f"Task: {self.task}\n"
             f"Purpose: {self.skill.purpose}\n\n"
             "Executed steps:\n"
@@ -149,6 +163,7 @@ class SkillRun:
                 "output_format": self.skill.output_format,
                 "source": self.skill.source,
                 "path": self.skill.path,
+                "declared_tools": list(self.skill.declared_tools),
             },
             "status": self.status,
             "policy": {
@@ -160,6 +175,9 @@ class SkillRun:
                 "minimum_versions": self.policy.minimum_versions,
             },
             "policy_decision": None if self.policy_decision is None else self.policy_decision.to_dict(),
+            "governance_policy": self.governance_policy.to_dict(),
+            "governance_validation": None if self.governance_validation is None else self.governance_validation.to_dict(),
+            "governance_audit": self.governance_audit,
             "step_count": len(self.steps),
             "completed_steps": sum(1 for step in self.steps if step.status == "completed"),
             "failed_steps": sum(1 for step in self.steps if step.status == "failed"),
@@ -179,12 +197,49 @@ def execute_skill(
     root: Path = Path("."),
     skill_name: str | None = None,
     policy: SkillRuntimePolicy | None = None,
+    governance_policy: SkillGovernancePolicy | None = None,
 ) -> SkillRun:
     """Select and execute one built-in or project skill with optional tool-backed steps."""
 
     resolved_policy = policy or build_default_skill_runtime_policy()
+    resolved_governance_policy = governance_policy or build_default_skill_governance_policy()
     skill = select_skill(task, root=root, skill_name=skill_name)
+    step_specs = build_skill_steps(skill, task)
+    executable_tools = tuple(step.tool_name for step in step_specs if step.tool_name)
+    governance_validation = validate_skill_governance(
+        skill,
+        executable_tools=executable_tools,
+        policy=resolved_governance_policy,
+    )
+    governance_audit: list[dict[str, object]] = [
+        {"stage": "registry", "status": "ok", "skill_name": skill.name, "skill_version": skill.version},
+        {
+            "stage": "validation",
+            "status": "ok" if governance_validation.valid else "error",
+            "reason": governance_validation.reason,
+        },
+    ]
+    if not governance_validation.valid:
+        return SkillRun(
+            task=task,
+            skill=skill,
+            status="blocked",
+            policy=resolved_policy,
+            policy_decision=None,
+            governance_policy=resolved_governance_policy,
+            governance_validation=governance_validation,
+            governance_audit=governance_audit,
+            steps=[],
+            final_output=_build_governance_blocked_output(skill, task, governance_validation),
+        )
     policy_decision = evaluate_skill_runtime_policy(skill, resolved_policy)
+    governance_audit.append(
+        {
+            "stage": "policy",
+            "status": "ok" if policy_decision.allowed else "error",
+            "reason": policy_decision.reason,
+        }
+    )
     if not policy_decision.allowed:
         return SkillRun(
             task=task,
@@ -192,10 +247,12 @@ def execute_skill(
             status="blocked",
             policy=resolved_policy,
             policy_decision=policy_decision,
+            governance_policy=resolved_governance_policy,
+            governance_validation=governance_validation,
+            governance_audit=governance_audit,
             steps=[],
             final_output=_build_blocked_output(skill, task, policy_decision),
         )
-    step_specs = build_skill_steps(skill, task)
     steps: list[SkillStepResult] = []
     status = "completed"
 
@@ -205,6 +262,14 @@ def execute_skill(
         if result.status == "failed":
             status = "failed"
             break
+    governance_audit.append(
+        {
+            "stage": "execution",
+            "status": "ok" if status == "completed" else "error",
+            "completed_steps": sum(1 for step in steps if step.status == "completed"),
+            "failed_steps": sum(1 for step in steps if step.status == "failed"),
+        }
+    )
 
     return SkillRun(
         task=task,
@@ -212,6 +277,9 @@ def execute_skill(
         status=status,
         policy=resolved_policy,
         policy_decision=policy_decision,
+        governance_policy=resolved_governance_policy,
+        governance_validation=governance_validation,
+        governance_audit=governance_audit,
         steps=steps,
         final_output=_build_final_output(skill, task, steps, status),
     )
@@ -359,6 +427,16 @@ def _build_blocked_output(skill: SkillSpec, task: str, decision: SkillPolicyDeci
         f"Blocked skill '{skill.name}' for task '{task}' under policy '{decision.policy_name}'. "
         f"Reason: {decision.reason} "
         f"Next safe action: {decision.next_safe_action}"
+    )
+
+
+def _build_governance_blocked_output(skill: SkillSpec, task: str, validation: SkillGovernanceValidation) -> str:
+    """Build the final output for a governance-blocked skill run."""
+
+    return (
+        f"Blocked skill '{skill.name}' for task '{task}' during governance validation. "
+        f"Reason: {validation.reason} "
+        "Next safe action: fix the skill registry metadata or declared tool list, then rerun."
     )
 
 

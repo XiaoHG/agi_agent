@@ -7,15 +7,18 @@ import unittest  # Python 官方测试框架
 
 from agent import WorkspaceAgent, route_intent
 from skills import (
+    SkillGovernancePolicy,
     SkillToolRequest,
     SkillToolResponse,
     SkillRuntimePolicy,
     build_skill_steps,
     describe_skills,
+    build_default_skill_governance_policy,
     discover_project_skills,
     execute_skill,
     get_available_skills,
     select_skill,
+    validate_skill_governance,
 )
 from subagent import build_collaboration_plan, build_subagent_task_contract, describe_subagents
 
@@ -27,11 +30,13 @@ class CollaborationTests(unittest.TestCase):
         output = describe_skills(Path("."))
 
         self.assertIn("Available skills", output)
+        self.assertIn("Governance protocol: v2", output)
         self.assertIn("research_brief", output)
         self.assertIn("code_review", output)
         self.assertIn("professional-code-review", output)
         self.assertIn("Version: v1", output)
         self.assertIn("Source: project", output)
+        self.assertIn("Governance validation: valid", output)
 
     def test_discover_project_skills(self) -> None:
         skills = discover_project_skills(Path("."))
@@ -69,6 +74,9 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertEqual(run.skill.name, "code_review")
         self.assertEqual(run.status, "completed")
+        self.assertTrue(run.governance_validation.valid if run.governance_validation else False)
+        self.assertEqual(run.governance_policy.protocol_version, "v2")
+        self.assertEqual(run.governance_audit[0]["stage"], "registry")
         self.assertEqual(len(run.steps), len(run.skill.steps))
         self.assertIn("Executed skill 'code_review'", run.final_output)
 
@@ -99,9 +107,39 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertEqual(payload["skill"]["name"], "code_review")
         self.assertEqual(payload["skill"]["source"], "builtin")
+        self.assertEqual(payload["skill"]["declared_tools"], ["list_dir", "search_docs"])
         self.assertEqual(payload["status"], "completed")
+        self.assertEqual(payload["governance_policy"]["protocol_version"], "v2")
+        self.assertTrue(payload["governance_validation"]["valid"])
+        self.assertEqual(payload["governance_audit"][1]["stage"], "validation")
         self.assertEqual(payload["tool_backed_steps"], 3)
         self.assertEqual(payload["steps"][0]["tool_name"], "list_dir")
+
+    def test_validate_skill_governance_accepts_builtin_declared_tools(self) -> None:
+        skill = select_skill("Review this code and add tests.", root=Path("."))
+
+        validation = validate_skill_governance(
+            skill,
+            executable_tools=("list_dir", "search_docs"),
+            policy=build_default_skill_governance_policy(),
+        )
+
+        self.assertTrue(validation.valid)
+        self.assertEqual(validation.declared_tools, ("list_dir", "search_docs"))
+        self.assertEqual(validation.executable_tools, ("list_dir", "search_docs"))
+
+    def test_validate_skill_governance_rejects_undeclared_tools(self) -> None:
+        skill = select_skill("Research MCP adoption patterns.", root=Path("."))
+
+        validation = validate_skill_governance(
+            skill,
+            executable_tools=("search_docs", "read_file"),
+            policy=SkillGovernancePolicy(),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.undeclared_tools, ("read_file",))
+        self.assertIn("undeclared tool", validation.reason)
 
     def test_execute_skill_stops_on_tool_error(self) -> None:
         def runner(request: SkillToolRequest) -> SkillToolResponse:
