@@ -47,6 +47,7 @@ class GroundedRAGTests(unittest.TestCase):
 
             self.assertEqual(answer.sources, [])
             self.assertIn("insufficient", answer.answer)
+            self.assertTrue(answer.citation_validation.valid if answer.citation_validation else False)
 
     def test_answer_question_with_llm_preserves_sources(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -58,6 +59,7 @@ class GroundedRAGTests(unittest.TestCase):
 
             self.assertEqual(answer.sources, ["README.md:1-1"])
             self.assertIn("README.md:1-1", answer.answer)
+            self.assertTrue(answer.citation_validation.valid if answer.citation_validation else False)
             self.assertEqual(client.messages[0].role, "system")
             self.assertEqual(client.messages[1].role, "user")
 

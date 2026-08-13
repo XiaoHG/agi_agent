@@ -48,8 +48,9 @@ class RAGAnswer:
 class VectorRAGAnswer:
     """A deterministic answer produced from vector-indexed local context."""
 
-    question: str  # 原始问题
-    results: list[VectorSearchResult]  # 向量检索结果
+    question: str                               # 原始问题
+    results: list[VectorSearchResult]           # 向量检索结果
+    backend: dict[str, object] | None = None    # 当前检索后端
 
     def to_text(self) -> str:
         """Render vector retrieval results with explicit citations."""
@@ -62,6 +63,8 @@ class VectorRAGAnswer:
             )
 
         parts = [f"Result: found {len(self.results)} vector context chunk(s) for '{self.question}'."]
+        if self.backend:
+            parts.append(f"Backend: {self.backend.get('name')} ({self.backend.get('version')})")
         for index, result in enumerate(self.results, start=1):
             parts.append(
                 "\n".join(
@@ -90,7 +93,7 @@ def answer_question_with_vector_index(root: Path, question: str, top_k: int = 3)
 
     index = build_vector_index(root)
     results = search_vector_index(index, question, top_k=top_k)
-    return VectorRAGAnswer(question=question, results=results)
+    return VectorRAGAnswer(question=question, results=results, backend=index.embedding_backend)
 
 
 def _preview(text: str, limit: int = 8) -> str:

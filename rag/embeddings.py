@@ -6,6 +6,8 @@ from hashlib import sha256
 import math
 import re
 
+from .backends import EmbeddingBackendSpec, LOCAL_EMBEDDING_BACKEND
+
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_\-]+")
 STOPWORDS = {
@@ -35,6 +37,12 @@ class LocalEmbeddingModel:
         if dimensions <= 0:
             raise ValueError("dimensions must be greater than zero")
         self.dimensions = dimensions
+        self.backend = EmbeddingBackendSpec(
+            name=LOCAL_EMBEDDING_BACKEND.name,
+            version=LOCAL_EMBEDDING_BACKEND.version,
+            dimensions=dimensions,
+            provider=LOCAL_EMBEDDING_BACKEND.provider,
+        )
 
     def embed(self, text: str) -> tuple[float, ...]:
         """Embed text into a normalized deterministic vector."""
@@ -49,6 +57,11 @@ class LocalEmbeddingModel:
         if norm == 0:
             return tuple(vector)
         return tuple(value / norm for value in vector)
+
+    def describe_backend(self) -> dict[str, object]:
+        """Describe the embedding backend in JSON-ready form."""
+
+        return self.backend.to_dict()
 
 
 def cosine_similarity(left: tuple[float, ...], right: tuple[float, ...]) -> float:

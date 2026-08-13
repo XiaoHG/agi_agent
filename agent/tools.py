@@ -122,7 +122,10 @@ def search_vector_docs(root: Path, question: str) -> ToolResult:
     return ToolResult(
         "search_vector_docs",
         answer.to_text(),
-        {"citations": [result.citation() for result in answer.results]},
+        {
+            "citations": [result.citation() for result in answer.results],
+            "backend": answer.backend,
+        },
     )
 
 
@@ -133,7 +136,11 @@ def answer_docs_with_llm(root: Path, question: str) -> ToolResult:
         answer = answer_question_with_llm(root, question)
     except LLMError as error:
         raise ToolError(str(error)) from error
-    return ToolResult("answer_docs_with_llm", answer.to_text())
+    metadata = {
+        "sources": answer.sources,
+        "citation_validation": None if answer.citation_validation is None else answer.citation_validation.to_dict(),
+    }
+    return ToolResult("answer_docs_with_llm", answer.to_text(), metadata)
 
 
 def list_mcp_server_tools(root: Path) -> ToolResult:
