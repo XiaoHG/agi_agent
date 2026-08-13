@@ -2,7 +2,50 @@
 
 这是一个面向 Agent 开发学习的工作目录。目标不是只会调用模型接口，而是系统掌握 Agent 的核心机制、工程化能力和产品化落地方式。
 
+当前仓库已经不再是早期的“最小 Agent 教学样例”，而是一个持续迭代到 `v49` 的专业级工业 Agent 学习工作台。项目主线已经覆盖：
+
+- LLM-first Agent runtime
+- RAG / MCP / Skills / Subagent 能力层
+- LangGraph 主执行器
+- structured trace / runtime events
+- checkpoint / replay / recovery
+- release gate / evaluation matrix
+- skill governance / MCP governance / RAG backend hardening
+
 本文档提供一套 6 周学习路线，适合希望全面学习 Agent 开发的人。默认节奏是每周投入 8-12 小时；如果你是全职投入，可以把每周内容压缩到 3-4 天。
+
+如果你是第一次进入本仓库，建议优先阅读：
+
+- `docs/current-learning-state.md`
+- `docs/plans/v3_professional-agent-iteration-plan.md`
+- `versions/` 中最近几个版本文件
+
+## 当前项目状态
+
+截至 `2026-08-13`，项目已完成到：
+
+- `v49: Production RAG Backend Hardening` 已完成代码实现并推送
+
+当前项目定位：
+
+- 不是零散 Demo 集合
+- 不是只展示 prompt 技巧的实验仓库
+- 是一个围绕专业级工业 Agent 能力分层持续推进的学习项目
+
+当前主链路可以概括为：
+
+```text
+LLM / Planner
+-> LangGraph Runtime
+-> RAG / Tool / MCP / Skill / Subagent
+-> Trace / Runtime Events
+-> Checkpoint / Replay
+-> Recovery / Release Gate
+```
+
+当前下一阶段计划：
+
+- `v50: Multi-Agent Delegation Hardening`
 
 ## 学习目标
 
@@ -33,8 +76,10 @@ agi_agent/
   README.md
   agent/        # 单 Agent、任务循环、状态管理、工具调用主实验
   cli/          # 命令行入口、交互式运行脚本、开发调试入口
+  hooks/        # 项目钩子和自动化接入实验
   integrations/ # LangChain、LangGraph 等专业框架适配层
   mcp/          # MCP Server、MCP Client、工具协议集成实验
+  plugins/      # 项目扩展插件与插件化能力实验
   rag/          # 文档加载、切分、embedding、检索、问答实验
   skills/       # 可复用技能模块：任务说明、流程、工具组合、示例
   subagent/     # 多 Agent 协作、任务拆分、角色分工实验
@@ -43,6 +88,7 @@ agi_agent/
   tests/        # 自动化测试：单元测试、集成测试、回归测试
   examples/     # 可直接运行的示例输入、示例输出、演示任务
   docs/         # 架构图、学习笔记、设计文档、复盘记录
+  publish/      # 将项目学习过程整理为专业书稿的出版材料
   configs/      # 模型、工具、检索、日志等配置模板
   scripts/      # 一次性脚本、数据准备脚本、开发辅助脚本
   data/         # 本地实验数据。大文件和私密数据不要提交
@@ -126,7 +172,7 @@ agi_agent/
 
 ## 当前可运行 Demo
 
-当前已完成 Week 1 最小 CLI Agent、Week 2 状态与工作流、Week 3 本地 RAG / MCP、Week 4 Skills / Subagent、Week 5 工程化与评估，并开始 Week 6 综合项目。
+当前已完成 Week 1 到 Week 6 的主学习路线，并继续沿专业级版本迭代推进到 `v49`。当前可运行入口已经不只是基础 Demo，而是覆盖了 RAG、MCP、Skills、LangGraph、checkpoint、release gate 等完整工程链路。
 
 运行直接回答：
 
@@ -162,6 +208,13 @@ python -m cli.main --input "Search docs for workflow." --trace
 
 ```bash
 python -m cli.rag_demo --question "What does workflow mean in this project?"
+```
+
+运行专业 RAG vector index rebuild / incremental update：
+
+```bash
+python -m cli.rag_index_demo --question "agent workflow"
+python -m cli.rag_index_demo --question "agent workflow" --incremental
 ```
 
 列出本地 MCP 工具：
@@ -200,6 +253,12 @@ python -m cli.eval_runner
 python -m cli.release_gate
 ```
 
+运行 MCP 执行记录查看：
+
+```bash
+python -m cli.mcp_demo --tool workspace_summary --show-execution
+```
+
 运行综合项目 Demo：
 
 ```bash
@@ -236,6 +295,12 @@ python -m cli.rag_llm_demo --question "What does MCP mean in this project?"
 python -m cli.main --input "Answer with local docs and DeepSeek RAG: What does MCP mean in this project?" --trace
 ```
 
+通过主 Agent 调用专业 vector RAG：
+
+```bash
+python -m cli.main --input "Use professional RAG to search docs for workflow." --trace
+```
+
 列出 LangChain 工具适配：
 
 ```bash
@@ -265,6 +330,16 @@ python -m cli.main --input "Use LangGraph to search docs for MCP." --trace
 
 ```bash
 python -m unittest discover -s tests -v
+```
+
+当前常用验证命令：
+
+```bash
+python -m unittest tests.test_rag tests.test_rag_llm -v
+python -m unittest tests.test_mcp -v
+python -m unittest tests.test_collaboration -v
+python -m cli.eval_runner
+python -m cli.release_gate
 ```
 
 ## 六周总览
