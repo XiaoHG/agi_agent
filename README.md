@@ -2,7 +2,7 @@
 
 这是一个面向 Agent 开发学习的工作目录。目标不是只会调用模型接口，而是系统掌握 Agent 的核心机制、工程化能力和产品化落地方式。
 
-当前仓库已经不再是早期的“最小 Agent 教学样例”，而是一个持续迭代到 `v49` 的专业级工业 Agent 学习工作台。项目主线已经覆盖：
+当前仓库已经不再是早期的“最小 Agent 教学样例”，而是一个会持续迭代的专业级工业 Agent 学习工作台。项目主线已经覆盖：
 
 - LLM-first Agent runtime
 - RAG / MCP / Skills / Subagent 能力层
@@ -12,7 +12,7 @@
 - release gate / evaluation matrix
 - skill governance / MCP governance / RAG backend hardening
 
-本文档提供一套 6 周学习路线，适合希望全面学习 Agent 开发的人。默认节奏是每周投入 8-12 小时；如果你是全职投入，可以把每周内容压缩到 3-4 天。
+本文档不是短周期冲刺计划，而是一个需要持续投入、持续复盘、持续迭代的工业级 Agent 学习与开发说明。这个项目不适合用“几天学完”或“固定周期速成”的方式看待，更适合在真实工程推进中逐步理解架构、边界、验证和取舍。
 
 如果你是第一次进入本仓库，建议优先阅读：
 
@@ -20,11 +20,7 @@
 - `docs/plans/v3_professional-agent-iteration-plan.md`
 - `versions/` 中最近几个版本文件
 
-## 当前项目状态
-
-截至 `2026-08-13`，项目已完成到：
-
-- `v49: Production RAG Backend Hardening` 已完成代码实现并推送
+## 项目定位
 
 当前项目定位：
 
@@ -32,7 +28,7 @@
 - 不是只展示 prompt 技巧的实验仓库
 - 是一个围绕专业级工业 Agent 能力分层持续推进的学习项目
 
-当前主链路可以概括为：
+项目当前主链路可以概括为：
 
 ```text
 LLM / Planner
@@ -43,13 +39,61 @@ LLM / Planner
 -> Recovery / Release Gate
 ```
 
-当前下一阶段计划：
+## 项目整体目标
 
-- `v50: Multi-Agent Delegation Hardening`
+本项目的整体目标不是做一个单点 Demo，而是围绕工业级 Agent 的完整工程链路持续建设一个可学习、可运行、可验证、可复盘的项目基座。
+
+目标包括：
+
+- 建立清晰的 Agent 执行架构，而不是把能力堆进单一主循环
+- 建立专业的能力层，包括 RAG、MCP、Skills、Subagent 等
+- 建立运行期证据体系，包括 trace、runtime events、checkpoint、replay、recovery
+- 建立交付期质量体系，包括 tests、evals、release gate 和版本文档
+- 建立长期可演化的工程结构，支持后续继续增加治理、记忆、委派、审批和发布能力
+
+## 当前已包含内容
+
+当前项目已经包含以下主要模块和能力：
+
+- `agent/`：主 Agent runtime、route、tool use、workflow、checkpoint、replay、recovery
+- `rag/`：本地 RAG、vector index、grounded RAG、backend hardening、citation validation
+- `mcp/`：本地 MCP learning layer、request/response boundary、permission policy、governance audit
+- `skills/`：builtin/project skill registry、runtime policy、governance、structured skill run
+- `subagent/`：Teacher Agent / Coding Agent 基础协作和委派实验
+- `integrations/`：LangChain、LangGraph 等框架接入层
+- `cli/`：项目主要运行入口、调试入口、专项 demo
+- `tests/`：单元测试、回归测试、链路验证
+- `evals/`：行为评估、failure bench、industrial matrix、release gate
+- `docs/` 与 `versions/`：学习材料、版本说明、练习、总纲与计划
+- `publish/`：项目知识沉淀和后续专业书稿材料
+
+## 后续迭代方向
+
+后续会继续围绕专业级工业 Agent 能力扩展，重点可能包括：
+
+- 多 Agent / Subagent 的正式委派协议和回收协议
+- 更强的长期记忆、任务连续性和长时任务恢复
+- 更接近生产化的 RAG backend、检索评估和引用校验
+- 更标准化的 MCP client/server 治理与外部能力接入
+- 更严格的 skill registry、审批、权限和版本治理
+- 更完整的评估矩阵、发布门禁和 CI 集成
+- 更专业的 observability、审计和故障定位能力
+
+## README 维护规则
+
+此文件不是一次性说明，而是项目总入口说明。
+
+后续每个版本继续迭代时，应同步检查并更新本 README，确保以下信息始终与项目实际一致：
+
+- 项目定位
+- 当前主链路
+- 已包含的能力模块
+- 主要运行入口
+- 未来迭代方向
 
 ## 学习目标
 
-6 周结束后，应该具备以下能力：
+持续学习和迭代后，应该逐步具备以下能力：
 
 - 理解 Agent 和普通聊天问答程序的区别
 - 能设计一个带工具调用的单 Agent 系统
@@ -172,7 +216,7 @@ agi_agent/
 
 ## 当前可运行 Demo
 
-当前已完成 Week 1 到 Week 6 的主学习路线，并继续沿专业级版本迭代推进到 `v49`。当前可运行入口已经不只是基础 Demo，而是覆盖了 RAG、MCP、Skills、LangGraph、checkpoint、release gate 等完整工程链路。
+当前可运行入口已经不只是基础 Demo，而是覆盖了 RAG、MCP、Skills、LangGraph、checkpoint、release gate 等完整工程链路。
 
 运行直接回答：
 
