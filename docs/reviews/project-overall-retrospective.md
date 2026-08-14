@@ -1,377 +1,296 @@
-# 项目总复盘：从最小 Agent 到专业 Agent 学习工作台
+# 项目总复盘：v50 收口后的阶段总结
 
-这份复盘不是按“每次改了什么”写的，而是按“整个项目是怎么一步步长出来的”写的。
+日期：2026-08-14
 
-如果你要重新理解这个仓库，先抓住一句话：
+这份复盘不再按“做过哪些零散功能”组织，而是从工业级 Agent 项目的角度，回答三个问题：
 
-> 这个项目的主线，是把一个只能回答问题的程序，逐步升级成一个可路由、可调用工具、可接 RAG / MCP / Skills / Subagent、可测试、可评估、可复盘的 Agent 学习工作台。
+1. 这个项目现在到底走到了哪里。
+2. 目前已经形成了哪些稳定的工程能力。
+3. 下一阶段最应该补哪类缺口。
 
-## 一、先看总路线
+## 一、当前结论
 
-整个项目其实分成四层。
+结论很明确：
 
-### 1. 最小闭环层
+- 项目已经完成从“最小 Agent 学习样例”到“专业级工业 Agent 学习工作台”的转型。
+- `v50` 完成后，项目的主链路已经从单 Agent 执行，推进到带有正式委派协议的多 Agent 协作边界。
+- 当前最强的部分已经不是某一个单独功能，而是“运行时 + 能力层 + 证据层 + 交付层”的组合。
+- 当前最主要的缺口也很明确：多 Agent 仍是 deterministic 协议执行，不是真实长期运行的协作 runtime。
 
-先解决最基本的问题：
+如果只用一句话概括当前项目状态：
 
-- 用户输入怎么进入系统
-- 系统怎么决定要不要调用工具
-- 工具结果怎么回到模型或最终输出
+> 这个仓库已经具备工业级 Agent 的主干骨架，但距离真正的生产级多 Agent 持续运行系统，还差长期任务、审批治理、异步执行和外部化基础设施。
 
-这一层的目标不是“聪明”，而是“能跑通”。
+## 二、主链路复盘
 
-例子：
+当前项目的主链路已经比较完整：
 
-- 问 “Read README.md”
-- 系统判断要读文件
-- 调用 `read_file`
-- 把文件内容返回给用户
+```text
+LLM / Planner
+-> LangGraph Runtime
+-> Tool / RAG / MCP / Skill / Subagent
+-> Trace / Runtime Events
+-> Checkpoint / Replay / Resume
+-> Recovery / Release Gate / Evals
+```
 
-这一步完成后，Agent 和普通聊天程序的区别就开始出现了。
+这条链路的意义在于，项目已经不再只是“模型回答问题”，而是开始关注：
 
-### 2. 能力扩展层
+- 如何路由任务
+- 如何调用能力
+- 如何记录证据
+- 如何从失败中恢复
+- 如何做交付前验证
 
-在能跑通之后，开始加能力：
+这说明项目的学习重点已经从“会不会接模型”转向“能不能建设一个可验证、可复盘、可扩展的 Agent 系统”。
 
-- 状态管理
-- 工作流
-- RAG
-- MCP
-- Skills
-- Subagent
+## 三、阶段能力沉淀
 
-这一层的目标不是堆框架，而是让 Agent 能处理更复杂的任务。
+### 1. 运行时层
 
-例子：
+已经完成的关键演进：
 
-- 不是只读一个文件
-- 而是“先找资料，再总结，再解释，再给下一步建议”
+- 从最小 CLI Agent 升级到 LLM-first 执行入口
+- LangGraph 成为默认主执行器
+- workflow、tool_call、tool_loop 已并入统一 graph runtime
+- planner、route hint、classic fallback 之间的边界已经清晰
 
-### 3. 专业编排层
+这意味着项目现在具备了“主运行时框架”而不只是“若干 demo”。
 
-当能力变多后，重点就变成“怎么组织能力”。
+### 2. 能力层
 
-所以后面引入了：
+已经沉淀的能力模块包括：
 
-- LangChain adapter
-- LangGraph workflow
-- tool calling
-- tool loop
-- synthesis
+- RAG：本地索引、检索、引用、重建入口
+- MCP：本地协议、执行边界、权限分类、治理方向
+- Skills：registry、runtime policy、versioning、structured run
+- Subagent：teacher / coding 双角色协作、contract、delegation、execution protocol
 
-这一层的目标是让系统不只是“有工具”，而是“会按流程用工具”。
+这一层说明项目已经能覆盖工业 Agent 常见的四类扩展能力，而不是把工具调用单独看成全部。
 
-### 4. 工程化与可观测性层
+### 3. 证据与恢复层
 
-最后不是再加一个新能力，而是把系统变得可调试、可评估、可恢复。
+目前这是项目最有工程价值的部分之一：
 
-所以你又加了：
+- structured trace
+- runtime events
+- checkpoint persistence
+- replay
+- replay diff
+- checkpoint-guided resume
+- recovery plan
+- delegation recovery handoff
+
+这套体系的意义是：Agent 出错后不只是“重试”，而是可以定位、比较、恢复和解释。
+
+### 4. 交付层
+
+项目已经具备：
 
 - tests
 - evals
-- structured trace
-- recovery plan
-- runtime events
-- version docs
-- learning state
+- industrial evaluation matrix
+- failure bench
+- release gate
+- 版本文档、练习文档、学习状态文档
 
-这一层决定了这个项目是不是一个真正可长期迭代的 Agent 工程项目。
+这说明项目已经开始具备“交付前检查”的意识，而不是只追求新功能上线。
 
-## 二、按阶段看你到底学到了什么
+## 四、v50 的阶段意义
 
-| 阶段 | 重点 | 真正学到的东西 | 例子 |
-|---|---|---|---|
-| Week 1 | 最小 CLI Agent | Agent 的最小闭环 | 输入一句话，决定直接答还是读文件 |
-| Week 2 | 状态与工作流 | Agent 可以分步骤做事 | 先读 README，再整理摘要 |
-| Week 3 | RAG / MCP | Agent 能用本地知识和外部协议 | 搜索 docs、读 MCP 工具 |
-| Week 4 | Skills / Subagent | 高频任务可以封装，复杂任务可以分工 | 解释技能、规划协作 |
-| Week 5 | 工程化 / eval / project assistant | 不能只看输出，要看回归与可观测性 | trace、eval、demo |
-| Week 6 | 真实 LLM / Tool Calling / LangGraph | 专业 Agent 不是一个函数，而是一条执行链 | DeepSeek、tool loop、graph、recovery |
+`v50: Multi-Agent Delegation Hardening` 是一个很关键的收口版本。
 
-## 三、几个关键转折点
+它的价值不在于“新增了一个 subagent demo”，而在于把多 Agent 协作从概念层推进到协议层：
 
-### 转折 1：从“聊天程序”变成“工具程序”
+- 有 delegation
+- 有 handoff
+- 有 execution
+- 有 return
+- 有 recovery handoff
 
-最开始你要理解的是：
+这是一个工程边界的变化。
 
-- 不是所有问题都该直接回答
-- 有些问题应该交给工具
+在 `v42` 时，项目已经能表达“谁应该做什么”；到了 `v50`，项目开始能表达“任务如何正式交出去、执行、交回并在失败时回退”。
 
-例如：
+这一点决定了后续版本能不能继续做：
 
-- “Read README.md”
-- “List the main directories”
+- 真实多 Agent runtime
+- 异步任务协作
+- 审批与人工介入
+- 长期任务管理
+- 委派过程审计
 
-这类问题如果直接靠模型猜，风险高、答案不稳定。
-正确做法是让 Agent 调工具，再根据工具结果回答。
+所以 `v50` 不是孤立功能，而是多 Agent 主线上的协议加固版本。
 
-这一步的本质是：
+## 五、当前优势
 
-> 模型负责决策，代码负责执行。
+站在代码审查和项目治理角度，当前项目有四个明显优势。
 
-### 转折 2：从“单步工具”变成“多步任务”
+### 1. 演进主线清晰
 
-有了工具之后，下一步不是继续加新工具，而是让 Agent 会分步骤做事。
+从 `versions/` 和 `docs/` 可以清楚看出项目不是随机堆功能，而是沿着：
 
-例如：
+- 执行
+- 工具
+- 编排
+- 证据
+- 恢复
+- 治理
+- 协作
 
-1. 先读 README
-2. 再看目录结构
-3. 再总结当前项目目标
+这条主线逐步推进。
 
-这就是状态和工作流的意义。
+### 2. 学习材料和工程实现绑定较紧
 
-你学到的不是 workflow 这个词，而是：
+这个仓库不是“代码在一边，文档在另一边”。
 
-> 复杂任务不能一次性做完，必须把中间状态留下来。
+当前已经形成：
 
-### 转折 3：从“本地能力”变成“专业能力接入”
+- 版本文档
+- 对应练习
+- 当前学习状态
+- 总纲计划
+- review 复盘
 
-后面你引入了 RAG、MCP、Skills、Subagent。
+这对学习型工程项目非常重要，因为它降低了跨会话恢复和回顾成本。
 
-这一步的意义是：
+### 3. 测试与验证意识较强
 
-- RAG 解决“知识从哪里来”
-- MCP 解决“外部工具怎么接”
-- Skills 解决“高频任务怎么封装”
-- Subagent 解决“复杂任务怎么分工”
+项目在后半段逐步建立了：
 
-这四个方向不是并列炫技，而是四种不同的工程问题。
+- 单元测试
+- 回归测试
+- CLI 验证命令
+- eval matrix
+- release gate
 
-### 转折 4：从“能运行”变成“能复盘、能恢复”
+这让版本推进不是“凭感觉成功”，而是能通过稳定证据验证。
 
-这是最关键的一步。
+### 4. 边界意识明显增强
 
-因为 Agent 项目真正难的地方不是“跑一次”，而是：
+近几个版本最明显的提升不是功能数量，而是边界表达能力：
 
-- 出错后知道错在哪里
-- 失败后能不能恢复
-- 下次能不能复现
+- tool request / response boundary
+- skill run boundary
+- MCP execution boundary
+- checkpoint lineage boundary
+- delegation / recovery boundary
 
-所以你后来补了：
+这是专业 Agent 工程逐步走向稳定的标志。
 
-- structured trace
-- eval
-- recovery plan
-- runtime events
+## 六、当前问题与缺口
 
-这一步让项目从 demo 变成了工程。
+当前问题不在“没有功能”，而在“工业终局能力还没有完全打通”。
 
-## 四、最重要的几个设计原则
+### 1. 多 Agent 仍是确定性协议执行
 
-### 1. 先简单闭环，再升级框架
+当前 subagent execution 是 deterministic 的。
 
-不要一开始就上复杂编排框架。
+这适合：
 
-正确顺序是：
+- 讲解
+- 测试
+- replay
+- 回归验证
 
-1. 最小 Agent 闭环
-2. 工具调用
-3. 状态与工作流
-4. RAG / MCP / Skills
-5. LangGraph / observability / recovery
+但还不等于：
+
+- 真实异步协作
+- 独立上下文运行
+- 多轮消息往返
+- 长任务持续执行
+
+### 2. MCP / Skills 仍偏本地治理
+
+目前已经有了标准化边界和治理方向，但还缺：
+
+- 更真实的外部 registry / catalog
+- 更完整的审批流程
+- 更稳定的外部服务接入约束
+- 更强的多环境配置能力
+
+### 3. 长期任务能力仍不够强
+
+当前已有 checkpoint、resume、memory、delegation protocol，但还没有真正形成：
+
+- 长任务生命周期
+- 阶段性人工确认
+- 中途暂停与继续执行策略
+- 跨天任务审计与续跑
+
+### 4. 文档状态需要持续校正
+
+虽然项目文档体系已经建立，但仍出现过：
+
+- 当前学习状态滞后于实际提交状态
+- 局部文案仍保留过期阶段描述
+- 已完成列表和真实版本状态不完全一致
+
+这类问题不是架构问题，但会直接影响学习效率和版本判断。
+
+## 七、整理后的项目判断
+
+结合当前代码、版本、练习和计划文件，可以把项目理解成三层结构：
+
+### 第一层：可运行主系统
+
+- `agent/`
+- `cli/`
+- `integrations/`
+- `subagent/`
+
+### 第二层：质量与验证系统
+
+- `tests/`
+- `evals/`
+- `docs/plans/`
+- `docs/current-learning-state.md`
+
+### 第三层：学习与沉淀系统
+
+- `versions/`
+- `docs/vNN_*.md`
+- `docs/reviews/`
+- `publish/`
+
+这个结构是合理的，后续整理工作的重点不该是改目录，而应是保持三层内容同步。
+
+## 八、下一阶段建议
+
+当前最合理的后续方向，不是回去做小修补，而是继续围绕工业级缺口推进大版本：
+
+1. 真实多 Agent runtime 与异步委派执行
+2. 人工审批、治理和风险控制链路
+3. 长任务生命周期与跨会话续跑
+4. 外部化 MCP / Skill registry 与环境治理
+5. 交付层继续向 CI / audit / release policy 深化
+
+如果只选一个最优先方向，建议优先继续推进：
+
+> 多 Agent runtime 从 deterministic protocol 走向真实执行体系。
 
 原因很简单：
 
-如果你连“为什么要调用工具”都没想清楚，上框架只会增加理解负担。
+- `v50` 已经把协议边界准备好了
+- 当前主线最顺的是继续把委派能力做深
+- 这条线能同时带动长期任务、审批、恢复和审计
 
-### 2. 输出给人看的，和输出给程序看的，必须分开
+## 九、复盘后的执行要求
 
-例子：
+复盘完成后，后续每次版本推进都建议坚持下面三点：
 
-- `ToolResult.output`：给人看
-- `ToolResult.metadata`：给程序看
+1. 先更新真实状态，再写下一阶段计划，避免计划与代码脱节。
+2. 每次版本完成后同步校正 `README.md`、`docs/current-learning-state.md`、`versions/` 和练习文档。
+3. 后续版本继续坚持“大功能版本”原则，不再回到碎片化小 patch 节奏。
 
-后面 `RecoveryPlan.to_text()` / `to_dict()`、`RuntimeEvent.to_text()` / `to_dict()` 也是一样。
+## 十、最终判断
 
-这不是重复设计，而是工程上必要的分层。
+这个项目现在最值得肯定的，不是它已经做了多少功能，而是它已经形成了专业 Agent 项目最关键的开发习惯：
 
-### 3. 失败不是垃圾，失败是数据
+- 先建主链路
+- 再补能力层
+- 再补证据层
+- 再补恢复和治理
+- 用版本化文档把演进过程保留下来
 
-你这次项目逐步把失败变成了结构化对象：
-
-- tool failure -> `RecoveryPlan`
-- skill failure -> `RecoveryPlan`
-- runtime trace -> `RuntimeEvent`
-
-这意味着失败不再只是“报错退出”，而是可以：
-
-- 测试
-- 评估
-- 记录
-- 恢复
-- 复盘
-
-### 4. 代码和学习材料要同步
-
-这个仓库不是只写代码，而是代码、练习、版本文档、学习状态一起维护。
-
-这很重要，因为你学的不是“一个功能”，而是“一个演进过程”。
-
-## 五、几个具体例子，帮你把主线串起来
-
-### 例子 1：读 README
-
-问题：
-
-> Read README.md and summarize the project learning goals.
-
-系统会做什么：
-
-1. 路由到 `read_file`
-2. 读取 README
-3. 摘要关键内容
-
-你学到的是：
-
-- agent 不只是回答
-- agent 可以先执行，再总结
-
-### 例子 2：搜索本地资料
-
-问题：
-
-> Search docs for MCP.
-
-系统会做什么：
-
-1. 路由到 `search_docs`
-2. 搜索本地文档
-3. 返回相关上下文
-
-你学到的是：
-
-- RAG 的核心不是“模型会不会记”
-- 而是“先找证据，再回答”
-
-### 例子 3：Skill 执行
-
-问题：
-
-> Execute skill for learning explanation.
-
-系统会做什么：
-
-1. 选择一个 skill
-2. 按步骤执行
-3. 记录 step、observation、status
-
-你学到的是：
-
-- 高频任务适合封装成 skill
-- 不是每次都重新写流程
-
-### 例子 4：工具失败恢复
-
-问题：
-
-> Use LangGraph to read not-exist.md.
-
-系统会做什么：
-
-1. 进入 graph
-2. 调用读文件工具
-3. 失败后进入 recovery node
-4. 生成 `RecoveryPlan`
-
-你学到的是：
-
-- 失败路径也应该是主流程的一部分
-- 失败不是中断，而是输入给下一步的结构化信息
-
-### 例子 5：运行事件
-
-同样一次 run，系统现在能输出：
-
-- 原始 step
-- graph route
-- recovery plan
-- skill run
-- error
-
-这意味着以后你可以把一次运行当成一个“可回放事件序列”来看，而不是只看最终答案。
-
-## 六、到现在为止，你已经真正建立起来的能力
-
-不是“写了很多文件”，而是这些能力：
-
-1. 能搭一个最小 Agent 闭环
-2. 能给 Agent 加工具
-3. 能让 Agent 分步骤工作
-4. 能让 Agent 接 RAG、MCP、Skills、Subagent
-5. 能把真实 LLM 接进来
-6. 能用 LangGraph 组织执行链
-7. 能对失败做结构化恢复
-8. 能用 tests 和 eval 保证回归
-9. 能用 trace 解释 Agent 为什么这么做
-10. 能把学习过程变成可恢复的项目状态
-
-## 七、现在最容易犯的理解误区
-
-### 误区 1：以为加框架就是进步
-
-不是。
-
-如果没有清晰的输入、输出、状态和验证，加框架只会让系统更难看懂。
-
-### 误区 2：以为 trace 只是调试日志
-
-不是。
-
-trace 是后续评估、恢复、回放、复盘的基础材料。
-
-### 误区 3：以为失败只需要打印错误
-
-不是。
-
-失败最好是结构化数据，不然你只能“看见报错”，看不见“失败类型、来源和下一步动作”。
-
-### 误区 4：以为学习 Agent 就是学 prompt
-
-不是。
-
-真正的 Agent 学习包括：
-
-- 路由
-- 工具
-- 状态
-- 工作流
-- RAG
-- 协议
-- skills
-- 协作
-- eval
-- trace
-- recovery
-
-## 八、你接下来复盘时应该怎么读
-
-建议顺序：
-
-1. 先读这份总复盘
-2. 再读 `docs/current-learning-state.md`
-3. 再看 `versions/` 里每个阶段的版本文档
-4. 最后回到代码和练习题
-
-这样你会从“功能片段”重新拼回“整条主线”。
-
-## 九、下一步怎么学
-
-如果你要继续往下学，我建议下一阶段重点看：
-
-- checkpoint / persistence
-- runtime replay
-- 更专业的 MCP / Skills 体系
-- LangGraph 默认执行器化
-
-因为到 v25 为止，你已经有了：
-
-- 事件
-- 恢复
-- trace
-- eval
-- 真实 LLM
-- tool loop
-- graph
-
-下一步最自然的升级，就是把这些运行信息真正持久化并可恢复。
+下一阶段真正要做的，不是推翻当前结构，而是在现有结构上继续把多 Agent、长期任务和治理体系做实。

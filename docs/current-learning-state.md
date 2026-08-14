@@ -8,23 +8,23 @@
 
 ## Last Updated
 
-2026-08-11
+2026-08-14
 
 ## 当前阶段
 
-Week 6：真实 LLM 驱动的专业 Agent 开发。
+专业级工业 Agent 主干阶段：v50 收口完成，进入下一轮规划前复盘。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已提交并推送；v50 multi-agent delegation hardening 已开始实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已提交并推送；v50 multi-agent delegation hardening 已提交并推送。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：完成 v50 multi-agent delegation hardening 后，进入下一轮新的专业级规划阶段，继续扩展多 Agent、长期任务和交付能力。
+下一阶段建议：基于 `v50` 的委派协议收口结果，进入下一轮专业级规划阶段，优先扩展真实多 Agent runtime、长期任务连续性、审批治理和交付体系。
 
 ## 当前教师判断
 
-项目已经从“手写规则 Agent 学习”进入“真实 LLM 驱动的专业 Agent 工程”阶段。
+项目已经从“最小 Agent 学习样例”进入“专业级工业 Agent 工程主干阶段”。
 
 已具备：
 
@@ -146,11 +146,12 @@ v29 功能基线提交：
 - Runtime events 已经能随 checkpoint 一起落盘，并已支持 report-level replay、跨 run diff 与 checkpoint-guided resume，但还没有做真正的恢复分叉和 continue execution。
 - checkpoint 已可浏览、可回放、可比较，并已支持基于 checkpoint route hints 的 branch resume。
 - 发布门禁已开始搭建，但还没有接入远程 CI 平台。
-- LangGraph route 已有 DeepSeek planner 和 deterministic fallback，但还没有成为默认主执行器。
+- LangGraph route 已有 DeepSeek planner 和 deterministic fallback，并已经成为默认主执行器。
+- Subagent 已具备 delegation / handoff / execution / return / recovery 的正式协议，但目前仍是 deterministic execution，不是真实异步多 Agent runtime。
 
 ## 当前总目标
 
-围绕 DeepSeek 真实 LLM 调用链路，逐步接入专业级 RAG、MCP、Skills 和 LangGraph。
+围绕真实 LLM 调用链路，持续推进专业级工业 Agent 的运行时、能力层、恢复层和交付层。
 
 后续迭代必须参考：
 
@@ -161,17 +162,17 @@ v29 功能基线提交：
 当前专业 Agent 迭代链路：
 
 ```text
-DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangGraph orchestration
+LLM / Planner -> LangGraph Runtime -> RAG / MCP / Skills / Subagent -> Trace / Replay / Recovery -> Release Gate / Evals
 ```
 
 ## 当前具体任务
 
 下一步建议：
 
-1. 复盘 v50 multi-agent delegation hardening：`versions/v50_multi-agent-delegation-hardening.md`。
-2. 查看对应练习：`docs/v50_multi-agent-delegation-hardening-exercises.md`。
-3. 运行验证：`python -m unittest tests.test_collaboration tests.test_events tests.test_replay -v`、`python -m unittest discover -s tests -q` 和 `python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents`。
-4. 下一阶段进入新的工业级迭代规划阶段。
+1. 复盘当前整体状态：`docs/reviews/project-overall-retrospective.md`。
+2. 复盘 `v50`：`versions/v50_multi-agent-delegation-hardening.md`。
+3. 查看对应练习：`docs/v50_multi-agent-delegation-hardening-exercises.md`。
+4. 进入下一阶段规划，围绕真实多 Agent runtime、长期任务和治理体系继续拆分版本。
 
 ## 当前学习重点
 
@@ -207,6 +208,7 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 专业 RAG 不只是“能搜到文本”，还需要 index rebuild、chunk metadata、source citation、可测试检索行为和可替换的 embedding 层。
 - 发布门禁必须同时覆盖 tests、eval、matrix 和 failure bench，才能接近可交付标准。
 - 恢复后的运行必须成为正式的 branch run，而不是没有来源关系的匿名重跑。
+- 多 Agent 的真正难点不在“多几个角色名”，而在执行协议、失败回退、上下文隔离和长期协作状态。
 
 ## 已完成
 
@@ -244,20 +246,31 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 - 完成 v32：默认 LangGraph 主执行器。
 - 完成 v33：workflow 并入默认 LangGraph orchestration。
 - 完成 v34：tool_call 并入默认 LangGraph orchestration。
-- 完成 v35：tool_loop 并入默认 LangGraph orchestration（本地未提交）。
+- 完成 v35：tool_loop 并入默认 LangGraph orchestration。
 - 开始 v36：Runtime Event Replay。
 - 完成 v36：Runtime Event Replay。
 - 完成 v37：Run Replay Diff and Comparative Analysis。
 - 完成 v38：Checkpoint-Guided Recovery and Resume。
 - 完成 v39：LLM-First Direct Answer and Intent Entry。
 - 完成 v40：Standardized MCP Execution Boundary。
-- 完成 v41：Skill Permissions, Versioning and Runtime Policy（本地未提交）。
+- 完成 v41：Skill Permissions, Versioning and Runtime Policy。
+- 完成 v42：Multi-Agent Task Delegation and Subagent Contract。
+- 完成 v43：Long-Horizon Memory and Session Continuity。
+- 完成 v44：Industrial Evaluation Matrix and Failure Bench。
+- 完成 v45：Release Gate and CI Readiness。
+- 完成 v46：Checkpoint Branch Resume。
+- 完成 v47：Standardized MCP Governance。
+- 完成 v48：Skills Governance and Versioning。
+- 完成 v49：Production RAG Backend Hardening。
+- 完成 v50：Multi-Agent Delegation Hardening。
 
 ## 未完成
 
 - 标准化 MCP server/client。
 - 基于统一 LangGraph 主执行器，继续增强恢复分叉和可观测性。
 - MCP / Skills 标准化执行协议。
+- 真实异步多 Agent runtime。
+- 长期任务生命周期与人工审批治理。
 - Skills 外部 registry 与权限模型。
 - Runtime events replay 已进入 report-level、comparative diff 与 checkpoint-guided resume 版本。
 - checkpoint 已支持 guided resume，但还没有真正的分叉恢复与状态级 continue execution。
