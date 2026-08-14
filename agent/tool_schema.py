@@ -113,4 +113,9 @@ def build_workspace_tool_specs() -> list[ToolSpec]:
             description="Plan subagent collaboration for a task.",
             arguments=(ToolArgumentSpec("task", "string", "Task description."),),
         ),
+        ToolSpec(
+            name="execute_subagents",
+            description="Execute the deterministic subagent collaboration protocol and return structured delegation evidence.",
+            arguments=(ToolArgumentSpec("task", "string", "Task description."),),
+        ),
     ]

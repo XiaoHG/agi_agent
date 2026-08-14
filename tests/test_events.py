@@ -62,6 +62,23 @@ class RuntimeEventTests(unittest.TestCase):
         self.assertIn("skill", event_types)
         self.assertIn("error", event_types)
 
+    def test_build_runtime_events_includes_delegation_execution(self) -> None:
+        events = build_runtime_events(
+            [AgentStep("Run graph", "route=execute_subagents")],
+            {
+                "subagent_delegation": {
+                    "status": "completed",
+                    "delegations": [{"role": {"name": "teacher_agent"}}, {"role": {"name": "coding_agent"}}],
+                    "executions": [{"role_name": "teacher_agent"}, {"role_name": "coding_agent"}],
+                },
+            },
+        )
+
+        event_types = [event.event_type for event in events]
+
+        self.assertIn("delegation", event_types)
+        self.assertIn("delegation_execution", event_types)
+
 
 if __name__ == "__main__":
     unittest.main()

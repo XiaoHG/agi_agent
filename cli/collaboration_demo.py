@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from skills import SkillRuntimePolicy, describe_skills, execute_skill, select_skill
-from subagent import build_collaboration_plan, describe_subagents
+from subagent import build_collaboration_plan, describe_subagents, execute_collaboration_plan
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -15,6 +15,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Skills and subagent collaboration demo")
     parser.add_argument("--list-skills", action="store_true", help="list available skills")
     parser.add_argument("--list-subagents", action="store_true", help="list available subagents")
+    parser.add_argument("--execute-subagents", action="store_true", help="execute the deterministic subagent collaboration protocol")
     parser.add_argument("--execute-skill", action="store_true", help="execute the selected skill for --task")
     parser.add_argument("--tool-backed", action="store_true", help="execute skill steps with workspace tools")
     parser.add_argument("--skill", help="explicit skill name to inspect or execute")
@@ -47,6 +48,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.task:
+        if args.execute_subagents:
+            print(execute_collaboration_plan(args.task).to_text())
+            return 0
+
         if args.execute_skill:
             if args.tool_backed:
                 from agent import run_skill_with_workspace

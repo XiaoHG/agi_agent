@@ -107,6 +107,17 @@ def build_runtime_events(
                     payload=delegation,
                 )
             )
+            executions = delegation.get("executions", [])
+            if isinstance(executions, list) and executions:
+                events.append(
+                    RuntimeEvent(
+                        index=len(events) + 1,
+                        event_type="delegation_execution",
+                        name="subagent_execution",
+                        detail=f"executions={len(executions)} status={delegation.get('status', 'unknown')}",
+                        payload={"executions": executions, "status": delegation.get("status", "unknown")},
+                    )
+                )
 
     if tool_error:
         events.append(

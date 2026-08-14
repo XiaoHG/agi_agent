@@ -333,6 +333,14 @@ def _looks_like_subagent_request(text: str) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+def _looks_like_subagent_execution_request(text: str) -> bool:
+    """Return True when the user is asking to execute subagent collaboration."""
+
+    lowered = text.lower()
+    keywords = ["execute subagent", "run subagent", "execute collaboration", "run collaboration", "execute multi-agent"]
+    return any(keyword in lowered for keyword in keywords)
+
+
 def route_intent(user_input: str) -> ToolRoute:
     """Choose the simplest safe action for the current input.
 
@@ -433,6 +441,9 @@ def route_intent(user_input: str) -> ToolRoute:
         if "list" in text.lower() or "available" in text.lower():
             tool_name = "list_subagents"
             reason = "The user is asking to list available subagents."
+        elif _looks_like_subagent_execution_request(text):
+            tool_name = "execute_subagents"
+            reason = "The user is asking to execute the subagent collaboration protocol."
         return ToolRoute(
             action="use_tool",
             tool_name=tool_name,

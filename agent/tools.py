@@ -19,7 +19,7 @@ from skills import (
     evaluate_skill_runtime_policy,
     select_skill,
 )
-from subagent import build_collaboration_plan, describe_subagents
+from subagent import build_collaboration_plan, describe_subagents, execute_collaboration_plan
 
 from .llm import LLMError
 
@@ -271,6 +271,21 @@ def plan_subagent_collaboration(task: str) -> ToolResult:
 
     plan = build_collaboration_plan(task)
     return ToolResult("plan_subagents", plan.to_text(), {"subagent_delegation": plan.to_dict()})
+
+
+def execute_subagent_collaboration(task: str) -> ToolResult:
+    """Execute the deterministic subagent collaboration protocol."""
+
+    plan = execute_collaboration_plan(task)
+    metadata = {"subagent_delegation": plan.to_dict()}
+    if plan.status == "failed":
+        metadata["recovery_plan"] = {
+            "status": "failed",
+            "failure_type": "delegation_blocked",
+            "reason": "Subagent collaboration failed before all delegated tasks completed.",
+            "next_safe_action": plan.recovery_handoff,
+        }
+    return ToolResult("execute_subagents", plan.to_text(), metadata)
 
 
 def _extract_skill_name(task: str) -> str | None:

@@ -20,11 +20,11 @@
 
 ## 当前实现
 
-当前阶段实现 deterministic collaboration planner + subagent contract，不做真实多 Agent 对话执行。
+当前阶段已经实现 deterministic collaboration planner + delegation contract + handoff / return / execution trace。
 
 ```text
 subagent/
-  team.py        # SubagentSpec, SubagentTaskContract, CollaborationPlan
+  team.py        # SubagentSpec, delegation contract, handoff / return / execution trace
 ```
 
 运行：
@@ -32,6 +32,7 @@ subagent/
 ```bash
 python -m cli.collaboration_demo --list-subagents
 python -m cli.collaboration_demo --task "Review this code and add tests."
+python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents
 python -m cli.main --input "Plan subagent collaboration for a code review." --trace
 
 当前协作计划会同时输出：
@@ -41,4 +42,7 @@ python -m cli.main --input "Plan subagent collaboration for a code review." --tr
 - 输出边界
 - 子任务契约
 - delegation record
+- handoff record
+- return record
+- execution record
 ```

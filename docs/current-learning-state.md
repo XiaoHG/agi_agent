@@ -14,13 +14,13 @@
 
 Week 6：真实 LLM 驱动的专业 Agent 开发。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已开始实现，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已提交并推送；v50 multi-agent delegation hardening 已开始实现，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：完成 v49 production RAG backend hardening 后，进入 v50 multi-agent delegation hardening，收口专业 Agent 的多角色协作协议。
+下一阶段建议：完成 v50 multi-agent delegation hardening 后，进入下一轮新的专业级规划阶段，继续扩展多 Agent、长期任务和交付能力。
 
 ## 当前教师判断
 
@@ -168,10 +168,10 @@ DeepSeek LLM -> LLM-grounded RAG -> LLM tool use -> MCP tools -> Skills -> LangG
 
 下一步建议：
 
-1. 复盘 v49 production RAG backend hardening：`versions/v49_production-rag-backend-hardening.md`。
-2. 查看对应练习：`docs/v49_production-rag-backend-hardening-exercises.md`。
-3. 运行验证：`python -m unittest tests.test_rag tests.test_rag_llm -v`、`python -m unittest discover -s tests -q` 和 `python -m cli.rag_index_demo --question "agent workflow" --incremental`。
-4. 下一阶段进入 v50 multi-agent delegation hardening。
+1. 复盘 v50 multi-agent delegation hardening：`versions/v50_multi-agent-delegation-hardening.md`。
+2. 查看对应练习：`docs/v50_multi-agent-delegation-hardening-exercises.md`。
+3. 运行验证：`python -m unittest tests.test_collaboration tests.test_events tests.test_replay -v`、`python -m unittest discover -s tests -q` 和 `python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents`。
+4. 下一阶段进入新的工业级迭代规划阶段。
 
 ## 当前学习重点
 

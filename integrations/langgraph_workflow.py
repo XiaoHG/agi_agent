@@ -29,6 +29,7 @@ from agent.tools import (
     ToolResult,
     answer_docs_with_llm,
     count_lines,
+    execute_subagent_collaboration,
     list_agent_skills,
     list_dir,
     list_mcp_server_tools,
@@ -1065,6 +1066,7 @@ def _build_graph_tool_registry(root: Path, skill_policy: Any | None = None) -> d
         "plan_workspace_skill": lambda payload: plan_skill(root, payload.get("question", ""), policy=skill_policy),
         "list_workspace_subagents": lambda payload: list_project_subagents(),
         "plan_workspace_subagents": lambda payload: plan_subagent_collaboration(payload.get("question", "")),
+        "execute_workspace_subagents": lambda payload: execute_subagent_collaboration(payload.get("question", "")),
     }
 
 
@@ -1165,6 +1167,11 @@ def _build_route_hint_state(
             "selected_tool": "plan_workspace_subagents",
             "tool_input": {"question": tool_input},
         },
+        "execute_subagents": {
+            "route": "execute_subagents",
+            "selected_tool": "execute_workspace_subagents",
+            "tool_input": {"question": tool_input},
+        },
     }
 
     if tool_name == "execute_skill":
@@ -1211,6 +1218,7 @@ def _map_agent_tool_to_graph_tool(tool_name: str) -> str:
         "plan_skill": "plan_workspace_skill",
         "list_subagents": "list_workspace_subagents",
         "plan_subagents": "plan_workspace_subagents",
+        "execute_subagents": "execute_workspace_subagents",
         "execute_skill": "execute_workspace_skill",
     }
     return mapping.get(tool_name, tool_name)
@@ -1228,6 +1236,8 @@ def _build_tool_payload_from_selection(selection: ToolCallSelection) -> dict[str
         return {}
     if selection.tool_name == "mcp_write_project_file":
         return {"task": tool_input}
+    if selection.tool_name == "execute_subagents":
+        return {"question": tool_input}
     return {"question": tool_input}
 
 

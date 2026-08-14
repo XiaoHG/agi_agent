@@ -1,9 +1,9 @@
 """Core orchestration for the workspace agent."""
-from __future__ import annotations  # 支持类型注解的前向引用
-from dataclasses import dataclass, field  # 数据类，简化数据结构定义{insert\_element\_0\_}
-from pathlib import Path  # 路径处理，跨平台
-from typing import Any  # 结构化 trace 字典值类型
-from uuid import uuid4  # 生成唯一运行ID
+from __future__ import annotations          # 支持类型注解的前向引用
+from dataclasses import dataclass, field    # 数据类，简化数据结构定义{insert\_element\_0\_}
+from pathlib import Path                    # 路径处理，跨平台
+from typing import Any                      # 结构化 trace 字典值类型
+from uuid import uuid4                      # 生成唯一运行ID
 
 # 内部模块依赖（需配套实现）
 from .prompts import (  # 加载提示词
@@ -29,17 +29,18 @@ from .replay import (
     format_replay_diff_report,
     format_replay_report,
 )  # checkpoint 回放 / 对比 / 恢复
-from .router import ToolRoute, route_intent  # 意图路由（核心决策模块）
-from .tool_calling import ToolCallSelection, select_tool_call  # 结构化工具调用选择
-from .tool_loop import ToolLoopResult, ToolLoopStep  # 多步工具循环记录
-from .tool_synthesis import synthesize_tool_loop_answer  # 工具循环最终综合
-from .tool_schema import build_workspace_tool_specs  # 工具 schema 目录
+from .router import ToolRoute, route_intent                     # 意图路由（核心决策模块）
+from .tool_calling import ToolCallSelection, select_tool_call   # 结构化工具调用选择
+from .tool_loop import ToolLoopResult, ToolLoopStep             # 多步工具循环记录
+from .tool_synthesis import synthesize_tool_loop_answer         # 工具循环最终综合
+from .tool_schema import build_workspace_tool_specs             # 工具 schema 目录
 from skills import SkillRuntimePolicy, build_default_skill_runtime_policy
 from .tools import (  # 工具定义与异常
     ToolError,
     ToolResult,
     answer_docs_with_llm,
     count_lines,
+    execute_subagent_collaboration,
     list_dir,
     list_mcp_server_tools,
     list_agent_skills,
@@ -91,21 +92,21 @@ class WorkspaceAgent:
         use_graph_runtime: bool = True,
         skill_policy: SkillRuntimePolicy | None = None,
     ) -> None:
-        self.workspace_root = Path(workspace_root).resolve()  # 解析为绝对路径
-        self.system_prompt = load_system_prompt()            # 加载系统提示词
-        self.direct_answer_prompt = load_direct_answer_prompt()  # 加载直接回答提示词
-        self.tool_router_prompt = load_tool_router_prompt()  # 加载工具路由提示词
-        self.tool_calling_prompt = load_tool_calling_prompt()  # 加载结构化工具调用提示词
+        self.workspace_root = Path(workspace_root).resolve()        # 解析为绝对路径
+        self.system_prompt = load_system_prompt()                   # 加载系统提示词
+        self.direct_answer_prompt = load_direct_answer_prompt()     # 加载直接回答提示词
+        self.tool_router_prompt = load_tool_router_prompt()         # 加载工具路由提示词
+        self.tool_calling_prompt = load_tool_calling_prompt()       # 加载结构化工具调用提示词
         self.tool_loop_synthesis_prompt = load_tool_loop_synthesis_prompt()  # 加载工具循环最终综合提示词
         self.tool_specs = build_workspace_tool_specs()  # 工具 schema 目录
-        self._llm_client = llm_client  # 测试可注入 fake client；生产环境延迟创建真实 client
-        self._use_graph_runtime = use_graph_runtime  # 默认主执行器：LangGraph；可显式退回 classic runtime
+        self._llm_client = llm_client                   # 测试可注入 fake client；生产环境延迟创建真实 client
+        self._use_graph_runtime = use_graph_runtime     # 默认主执行器：LangGraph；可显式退回 classic runtime
         self._skill_policy = skill_policy or build_default_skill_runtime_policy()  # Skills runtime policy
         checkpoint_root = history_dir if history_dir is not None else self.workspace_root / "logs" / "agent-runs"
         self._history_store = RunCheckpointStore(Path(checkpoint_root))  # 本地 checkpoint 存储
         memory_root = memory_dir if memory_dir is not None else self.workspace_root / "logs" / "agent-memory"
-        self._memory_store = AgentMemoryStore(Path(memory_root))  # 本地长程记忆存储
-        self._session_id = session_id.strip() or "default"  # 默认会话 ID
+        self._memory_store = AgentMemoryStore(Path(memory_root))    # 本地长程记忆存储
+        self._session_id = session_id.strip() or "default"          # 默认会话 ID
         self._task_id = task_id.strip() if isinstance(task_id, str) and task_id.strip() else None  # 默认任务 ID
 
     def run(
@@ -962,6 +963,8 @@ class WorkspaceAgent:
             return list_project_subagents()
         if route.tool_name == "plan_subagents":
             return plan_subagent_collaboration(route.tool_input or "")
+        if route.tool_name == "execute_subagents":
+            return execute_subagent_collaboration(route.tool_input or "")
         # 未知工具，抛出异常
         raise ToolError(f"Unknown tool: {route.tool_name}")
 

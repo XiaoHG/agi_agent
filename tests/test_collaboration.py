@@ -20,7 +20,7 @@ from skills import (
     select_skill,
     validate_skill_governance,
 )
-from subagent import build_collaboration_plan, build_subagent_task_contract, describe_subagents
+from subagent import build_collaboration_plan, build_subagent_task_contract, describe_subagents, execute_collaboration_plan
 
 
 class CollaborationTests(unittest.TestCase):
@@ -215,6 +215,24 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("Delegations:", plan.to_text())
         self.assertEqual(len(plan.to_dict()["delegations"]), 2)
 
+    def test_execute_collaboration_plan_returns_handoffs_and_returns(self) -> None:
+        plan = execute_collaboration_plan("Implement a bug fix and test it.")
+
+        self.assertEqual(plan.status, "completed")
+        self.assertEqual(len(plan.handoffs), 1)
+        self.assertEqual(len(plan.executions), 2)
+        self.assertEqual(len(plan.returns), 2)
+        self.assertEqual(plan.handoffs[0].from_role, "teacher_agent")
+        self.assertEqual(plan.handoffs[0].to_role, "coding_agent")
+        self.assertIn("Returns:", plan.to_text())
+
+    def test_execute_collaboration_plan_can_fail_and_keep_recovery_handoff(self) -> None:
+        plan = execute_collaboration_plan("Implement an underspecified ambiguous code change.")
+
+        self.assertEqual(plan.status, "failed")
+        self.assertEqual(plan.executions[-1].status, "failed")
+        self.assertIn("teacher_agent", plan.recovery_handoff)
+
     def test_build_collaboration_plan_for_teacher_task(self) -> None:
         plan = build_collaboration_plan("Explain RAG architecture.")
 
@@ -240,6 +258,12 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "plan_subagents")
 
+    def test_route_to_execute_subagents(self) -> None:
+        route = route_intent("Execute subagent collaboration for a code review.")
+
+        self.assertEqual(route.action, "use_tool")
+        self.assertEqual(route.tool_name, "execute_subagents")
+
     def test_agent_lists_skills(self) -> None:
         agent = WorkspaceAgent(Path("."))
 
@@ -257,6 +281,27 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(run.route.tool_name, "plan_subagents")
         self.assertIn("Collaboration objective", run.answer)
         self.assertIn("Contracts:", run.answer)
+
+    def test_agent_executes_subagent_collaboration(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+
+        run = agent.run("Execute subagent collaboration for a code review.")
+        trace = agent.to_trace_dict(run)
+
+        self.assertEqual(run.route.tool_name, "execute_subagents")
+        self.assertIn("Executions:", run.answer)
+        self.assertIn("Returns:", run.answer)
+        self.assertEqual(trace["subagent_delegation"]["status"], "completed")
+
+    def test_agent_executes_subagent_collaboration_failure_exports_recovery(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+
+        run = agent.run("Execute subagent collaboration for an ambiguous underspecified code task.")
+        trace = agent.to_trace_dict(run)
+
+        self.assertEqual(run.route.tool_name, "execute_subagents")
+        self.assertEqual(trace["subagent_delegation"]["status"], "failed")
+        self.assertEqual(trace["tool_result"]["metadata"]["recovery_plan"]["failure_type"], "delegation_blocked")
 
     def test_agent_trace_dict_contains_subagent_delegation(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -378,7 +423,25 @@ class CollaborationTests(unittest.TestCase):
         )
 
         self.assertIn("Skill run: professional-code-review", result.stdout)
-        self.assertIn("Status: completed", result.stdout)
+
+    def test_collaboration_demo_executes_subagents(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "cli.collaboration_demo",
+                "--task",
+                "Implement a bug fix and test it.",
+                "--execute-subagents",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertIn("Executions:", result.stdout)
+        self.assertIn("Returns:", result.stdout)
+        self.assertIn("Plan status: completed", result.stdout)
 
 
 if __name__ == "__main__":
