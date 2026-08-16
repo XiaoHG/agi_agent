@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from skills import SkillRuntimePolicy, describe_skills, execute_skill, select_skill
@@ -16,6 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list-skills", action="store_true", help="list available skills")
     parser.add_argument("--list-subagents", action="store_true", help="list available subagents")
     parser.add_argument("--execute-subagents", action="store_true", help="execute the deterministic subagent collaboration protocol")
+    parser.add_argument("--runtime-json", action="store_true", help="print the subagent runtime session as JSON after execution")
     parser.add_argument("--execute-skill", action="store_true", help="execute the selected skill for --task")
     parser.add_argument("--tool-backed", action="store_true", help="execute skill steps with workspace tools")
     parser.add_argument("--skill", help="explicit skill name to inspect or execute")
@@ -49,7 +51,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.task:
         if args.execute_subagents:
-            print(execute_collaboration_plan(args.task).to_text())
+            plan = execute_collaboration_plan(args.task)
+            print(plan.to_text())
+            if args.runtime_json and plan.runtime_session is not None:
+                print()
+                print(json.dumps(plan.runtime_session.to_dict(), ensure_ascii=False, indent=2))
             return 0
 
         if args.execute_skill:

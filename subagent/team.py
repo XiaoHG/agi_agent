@@ -180,6 +180,124 @@ class SubagentExecutionRecord:
 
 
 @dataclass(frozen=True)
+class SubagentMessageEnvelope:
+    """Structured message exchanged inside one subagent runtime session."""
+
+    message_id: str                     # 本次消息的唯一标识
+    session_id: str                     # 所属 runtime session
+    from_role: str                      # 消息发送方
+    to_role: str                        # 消息接收方
+    message_type: str                   # delegation / handoff / return / recovery
+    summary: str                        # 消息摘要
+    referenced_records: tuple[str, ...] # 关联的 delegation / handoff / return 记录
+    status: str                         # emitted / consumed / blocked
+    order: int                          # 在 session 中的顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the message envelope as JSON-ready data."""
+
+        return {
+            "message_id": self.message_id,
+            "session_id": self.session_id,
+            "from_role": self.from_role,
+            "to_role": self.to_role,
+            "message_type": self.message_type,
+            "summary": self.summary,
+            "referenced_records": list(self.referenced_records),
+            "status": self.status,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
+class SubagentContextBoundary:
+    """Runtime context boundary for the active delegated scope."""
+
+    session_id: str                     # 所属 runtime session
+    parent_role: str                    # 上层父角色
+    active_role: str                    # 当前激活的子角色
+    objective: str                      # 当前会话目标
+    allowed_inputs: tuple[str, ...]     # 允许进入该上下文的输入
+    blocked_inputs: tuple[str, ...]     # 明确不允许进入该上下文的信息
+    expected_outputs: tuple[str, ...]   # 该上下文预期产出
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the context boundary as JSON-ready data."""
+
+        return {
+            "session_id": self.session_id,
+            "parent_role": self.parent_role,
+            "active_role": self.active_role,
+            "objective": self.objective,
+            "allowed_inputs": list(self.allowed_inputs),
+            "blocked_inputs": list(self.blocked_inputs),
+            "expected_outputs": list(self.expected_outputs),
+        }
+
+
+@dataclass(frozen=True)
+class SubagentStateTransition:
+    """One runtime state transition inside a subagent session."""
+
+    transition_id: str                  # 状态迁移 ID
+    session_id: str                     # 所属 runtime session
+    from_state: str                     # 迁移前状态
+    to_state: str                       # 迁移后状态
+    actor: str                          # 触发本次状态变化的角色
+    reason: str                         # 状态变化原因
+    order: int                          # 在 session 中的顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the state transition as JSON-ready data."""
+
+        return {
+            "transition_id": self.transition_id,
+            "session_id": self.session_id,
+            "from_state": self.from_state,
+            "to_state": self.to_state,
+            "actor": self.actor,
+            "reason": self.reason,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
+class SubagentRuntimeSession:
+    """Execution-layer runtime session for one collaboration flow."""
+
+    session_id: str                                  # runtime session 唯一标识
+    objective: str                                   # 本次会话的总目标
+    parent_role: str                                 # 发起该会话的父角色
+    child_roles: tuple[str, ...]                     # 本次会话涉及的子角色
+    active_role: str                                 # 当前活跃角色
+    current_delegation_id: str                       # 当前处理的 delegation
+    execution_mode: str                              # deterministic / async-ready
+    status: str                                      # created / running / completed / failed
+    terminal_reason: str                             # 结束原因
+    context_boundary: SubagentContextBoundary        # 当前上下文边界
+    messages: tuple[SubagentMessageEnvelope, ...]    # 会话中的消息封装
+    transitions: tuple[SubagentStateTransition, ...] # 会话状态迁移
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the runtime session as JSON-ready data."""
+
+        return {
+            "session_id": self.session_id,
+            "objective": self.objective,
+            "parent_role": self.parent_role,
+            "child_roles": list(self.child_roles),
+            "active_role": self.active_role,
+            "current_delegation_id": self.current_delegation_id,
+            "execution_mode": self.execution_mode,
+            "status": self.status,
+            "terminal_reason": self.terminal_reason,
+            "context_boundary": self.context_boundary.to_dict(),
+            "messages": [message.to_dict() for message in self.messages],
+            "transitions": [transition.to_dict() for transition in self.transitions],
+        }
+
+
+@dataclass(frozen=True)
 class CollaborationPlan:
     """A small ordered plan that assigns work to subagents."""
 
@@ -193,6 +311,7 @@ class CollaborationPlan:
     executions: tuple[SubagentExecutionRecord, ...] = ()    # 子任务执行轨迹
     status: str = "planned"                                 # planned / completed / failed
     recovery_handoff: str = ""                              # 整体失败时的恢复动作
+    runtime_session: SubagentRuntimeSession | None = None   # v51 多 Agent runtime session
 
     def to_dict(self) -> dict[str, Any]:
         """Render the collaboration plan as JSON-ready data."""
@@ -208,6 +327,7 @@ class CollaborationPlan:
             "executions": [execution.to_dict() for execution in self.executions],
             "status": self.status,
             "recovery_handoff": self.recovery_handoff,
+            "runtime_session": None if self.runtime_session is None else self.runtime_session.to_dict(),
         }
 
     def to_text(self) -> str:
@@ -242,6 +362,18 @@ class CollaborationPlan:
                 lines.append(
                     f"- {item.return_id} [{item.status}] {item.role_name}: {item.summary} -> next {item.next_handoff}"
                 )
+        if self.runtime_session is not None:
+            lines.append("Runtime session:")
+            lines.append(
+                f"- {self.runtime_session.session_id} [{self.runtime_session.status}] "
+                f"mode={self.runtime_session.execution_mode} active={self.runtime_session.active_role}"
+            )
+            lines.append(
+                f"  Context: {self.runtime_session.context_boundary.parent_role} -> "
+                f"{self.runtime_session.context_boundary.active_role}"
+            )
+            lines.append(f"  Messages: {len(self.runtime_session.messages)}")
+            lines.append(f"  Transitions: {len(self.runtime_session.transitions)}")
         lines.append("Workflow:")
         for index, step in enumerate(self.steps, start=1):
             lines.append(f"{index}. {step}")
@@ -376,6 +508,248 @@ def build_execution_record(
     )
 
 
+def build_message_envelope(
+    *,
+    session_id: str,
+    from_role: str,
+    to_role: str,
+    message_type: str,
+    summary: str,
+    referenced_records: tuple[str, ...],
+    status: str,
+    order: int,
+) -> SubagentMessageEnvelope:
+    """Build a deterministic runtime message envelope."""
+
+    return SubagentMessageEnvelope(
+        message_id=f"message-{order:02d}",
+        session_id=session_id,
+        from_role=from_role,
+        to_role=to_role,
+        message_type=message_type,
+        summary=summary,
+        referenced_records=referenced_records,
+        status=status,
+        order=order,
+    )
+
+
+def build_context_boundary(
+    *,
+    session_id: str,
+    parent_role: str,
+    active_role: str,
+    objective: str,
+    required_inputs: tuple[str, ...],
+    expected_outputs: tuple[str, ...],
+) -> SubagentContextBoundary:
+    """Build a deterministic parent/child context boundary."""
+
+    return SubagentContextBoundary(
+        session_id=session_id,
+        parent_role=parent_role,
+        active_role=active_role,
+        objective=objective,
+        allowed_inputs=required_inputs,
+        blocked_inputs=(
+            "unbounded workspace mutation",
+            "implicit role reassignment",
+            "outputs outside the delegated contract",
+        ),
+        expected_outputs=expected_outputs,
+    )
+
+
+def build_state_transition(
+    *,
+    session_id: str,
+    from_state: str,
+    to_state: str,
+    actor: str,
+    reason: str,
+    order: int,
+) -> SubagentStateTransition:
+    """Build a deterministic runtime state transition."""
+
+    return SubagentStateTransition(
+        transition_id=f"transition-{order:02d}",
+        session_id=session_id,
+        from_state=from_state,
+        to_state=to_state,
+        actor=actor,
+        reason=reason,
+        order=order,
+    )
+
+
+def build_runtime_session(
+    *,
+    plan: CollaborationPlan,
+    handoffs: tuple[SubagentHandoffRecord, ...],
+    returns: tuple[SubagentReturnRecord, ...],
+    executions: tuple[SubagentExecutionRecord, ...],
+    status: str,
+    recovery_handoff: str,
+) -> SubagentRuntimeSession:
+    """Build the v51 runtime session from collaboration execution evidence."""
+
+    session_id = f"subagent-session-{len(plan.delegations):02d}"
+    messages: list[SubagentMessageEnvelope] = []
+    transitions: list[SubagentStateTransition] = []
+    current_state = "created"
+    message_order = 1
+    transition_order = 1
+    last_role = plan.assigned_roles[0].name if plan.assigned_roles else "parent_agent"
+    current_delegation_id = plan.delegations[-1].delegation_id if plan.delegations else "none"
+
+    transitions.append(
+        build_state_transition(
+            session_id=session_id,
+            from_state=current_state,
+            to_state="planned",
+            actor="parent_agent",
+            reason="Initialized the runtime session from the collaboration plan.",
+            order=transition_order,
+        )
+    )
+    current_state = "planned"
+    transition_order += 1
+
+    for delegation, execution, returned in zip(plan.delegations, executions, returns, strict=True):
+        transitions.append(
+            build_state_transition(
+                session_id=session_id,
+                from_state=current_state,
+                to_state=f"running_{delegation.role.name}",
+                actor=delegation.role.name,
+                reason=f"Delegation {delegation.delegation_id} entered execution.",
+                order=transition_order,
+            )
+        )
+        current_state = f"running_{delegation.role.name}"
+        transition_order += 1
+        last_role = delegation.role.name
+
+        messages.append(
+            build_message_envelope(
+                session_id=session_id,
+                from_role="parent_agent" if delegation.order == 1 else plan.delegations[delegation.order - 2].role.name,
+                to_role=delegation.role.name,
+                message_type="delegation" if delegation.order == 1 else "handoff",
+                summary=delegation.child_task,
+                referenced_records=(delegation.delegation_id,),
+                status="consumed",
+                order=message_order,
+            )
+        )
+        message_order += 1
+
+        if execution.status == "failed":
+            messages.append(
+                build_message_envelope(
+                    session_id=session_id,
+                    from_role=delegation.role.name,
+                    to_role="parent_agent",
+                    message_type="recovery",
+                    summary=recovery_handoff,
+                    referenced_records=(delegation.delegation_id, returned.return_id),
+                    status="emitted",
+                    order=message_order,
+                )
+            )
+            message_order += 1
+            transitions.append(
+                build_state_transition(
+                    session_id=session_id,
+                    from_state=current_state,
+                    to_state="failed",
+                    actor=delegation.role.name,
+                    reason=execution.verification_note,
+                    order=transition_order,
+                )
+            )
+            current_state = "failed"
+            break
+
+        transitions.append(
+            build_state_transition(
+                session_id=session_id,
+                from_state=current_state,
+                to_state=f"returned_{delegation.role.name}",
+                actor=delegation.role.name,
+                reason=returned.summary,
+                order=transition_order,
+            )
+        )
+        current_state = f"returned_{delegation.role.name}"
+        transition_order += 1
+
+        messages.append(
+            build_message_envelope(
+                session_id=session_id,
+                from_role=delegation.role.name,
+                to_role=returned.next_handoff,
+                message_type="return",
+                summary=returned.summary,
+                referenced_records=(returned.return_id,),
+                status="emitted",
+                order=message_order,
+            )
+        )
+        message_order += 1
+
+    if status == "completed":
+        transitions.append(
+            build_state_transition(
+                session_id=session_id,
+                from_state=current_state,
+                to_state="completed",
+                actor="parent_agent",
+                reason="All delegated roles returned bounded outputs to the parent flow.",
+                order=transition_order,
+            )
+        )
+        current_state = "completed"
+
+    context_source = plan.contracts[-1] if status == "failed" and plan.contracts else (plan.contracts[-1] if plan.contracts else None)
+    if status == "completed" and plan.contracts:
+        context_source = plan.contracts[-1]
+    active_role = last_role if status == "failed" else "parent_agent"
+    if context_source is None:
+        context_boundary = build_context_boundary(
+            session_id=session_id,
+            parent_role="parent_agent",
+            active_role=active_role,
+            objective=plan.objective,
+            required_inputs=(),
+            expected_outputs=(),
+        )
+    else:
+        context_boundary = build_context_boundary(
+            session_id=session_id,
+            parent_role="parent_agent",
+            active_role=active_role,
+            objective=context_source.objective,
+            required_inputs=context_source.required_inputs,
+            expected_outputs=context_source.expected_outputs,
+        )
+
+    return SubagentRuntimeSession(
+        session_id=session_id,
+        objective=plan.objective,
+        parent_role="parent_agent",
+        child_roles=tuple(role.name for role in plan.assigned_roles),
+        active_role=active_role,
+        current_delegation_id=current_delegation_id,
+        execution_mode="deterministic-runtime-foundation",
+        status=status,
+        terminal_reason="All delegated tasks completed." if status == "completed" else recovery_handoff,
+        context_boundary=context_boundary,
+        messages=tuple(messages),
+        transitions=tuple(transitions),
+    )
+
+
 def describe_subagents() -> str:
     """Render available subagents."""
 
@@ -481,6 +855,14 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
                 )
             )
         if status == "failed":
+            runtime_session = build_runtime_session(
+                plan=plan,
+                handoffs=tuple(handoffs),
+                returns=tuple(returns),
+                executions=tuple(executions),
+                status="failed",
+                recovery_handoff=recovery,
+            )
             return CollaborationPlan(
                 objective=plan.objective,
                 assigned_roles=plan.assigned_roles,
@@ -492,8 +874,17 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
                 executions=tuple(executions),
                 status="failed",
                 recovery_handoff=recovery,
+                runtime_session=runtime_session,
             )
 
+    runtime_session = build_runtime_session(
+        plan=plan,
+        handoffs=tuple(handoffs),
+        returns=tuple(returns),
+        executions=tuple(executions),
+        status="completed",
+        recovery_handoff="none",
+    )
     return CollaborationPlan(
         objective=plan.objective,
         assigned_roles=plan.assigned_roles,
@@ -505,4 +896,5 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
         executions=tuple(executions),
         status="completed",
         recovery_handoff="none",
+        runtime_session=runtime_session,
     )

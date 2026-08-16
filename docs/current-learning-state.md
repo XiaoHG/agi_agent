@@ -12,15 +12,15 @@
 
 ## 当前阶段
 
-专业级工业 Agent 主干阶段：v50 收口完成，进入下一轮规划前复盘。
+专业级工业 Agent 新阶段：v51 real multi-agent runtime foundation 已完成，本地未提交。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已提交并推送；v50 multi-agent delegation hardening 已提交并推送。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已提交并推送；v50 multi-agent delegation hardening 已提交并推送；v51 real multi-agent runtime foundation 已完成，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：基于 `v50` 的委派协议收口结果，进入下一轮专业级规划阶段，优先扩展真实多 Agent runtime、长期任务连续性、审批治理和交付体系。
+下一阶段建议：在 `v51` runtime foundation 的基础上，进入 `v52`，优先扩展 async delegation queue、agent inbox / outbox 和任务认领状态。
 
 ## 当前教师判断
 
@@ -148,6 +148,7 @@ v29 功能基线提交：
 - 发布门禁已开始搭建，但还没有接入远程 CI 平台。
 - LangGraph route 已有 DeepSeek planner 和 deterministic fallback，并已经成为默认主执行器。
 - Subagent 已具备 delegation / handoff / execution / return / recovery 的正式协议，但目前仍是 deterministic execution，不是真实异步多 Agent runtime。
+- Subagent 现在已经具备 runtime session、message envelope、state transition 和 context boundary 的基础层，但仍未进入 async queue 和长期任务调度。
 
 ## 当前总目标
 
@@ -169,10 +170,10 @@ LLM / Planner -> LangGraph Runtime -> RAG / MCP / Skills / Subagent -> Trace / R
 
 下一步建议：
 
-1. 复盘当前整体状态：`docs/reviews/project-overall-retrospective.md`。
-2. 复盘 `v50`：`versions/v50_multi-agent-delegation-hardening.md`。
-3. 查看对应练习：`docs/v50_multi-agent-delegation-hardening-exercises.md`。
-4. 进入下一阶段规划，围绕真实多 Agent runtime、长期任务和治理体系继续拆分版本。
+1. 复盘 `v51`：`versions/v51_real-multi-agent-runtime-foundation.md`。
+2. 查看对应练习：`docs/v51_real-multi-agent-runtime-foundation-exercises.md`。
+3. 运行验证：`python -m unittest tests.test_collaboration tests.test_events tests.test_langgraph_workflow -v`、`python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents --runtime-json` 和 `python -m cli.main --input "Execute subagent collaboration for a code review." --trace`。
+4. 进入 `v52` 规划，围绕 async delegation queue 和 agent inbox 继续推进。
 
 ## 当前学习重点
 
@@ -209,6 +210,7 @@ LLM / Planner -> LangGraph Runtime -> RAG / MCP / Skills / Subagent -> Trace / R
 - 发布门禁必须同时覆盖 tests、eval、matrix 和 failure bench，才能接近可交付标准。
 - 恢复后的运行必须成为正式的 branch run，而不是没有来源关系的匿名重跑。
 - 多 Agent 的真正难点不在“多几个角色名”，而在执行协议、失败回退、上下文隔离和长期协作状态。
+- 多 Agent runtime 的第一层不是并发，而是 session、message、state 和 context 这些基础对象。
 
 ## 已完成
 
@@ -263,6 +265,7 @@ LLM / Planner -> LangGraph Runtime -> RAG / MCP / Skills / Subagent -> Trace / R
 - 完成 v48：Skills Governance and Versioning。
 - 完成 v49：Production RAG Backend Hardening。
 - 完成 v50：Multi-Agent Delegation Hardening。
+- 完成 v51：Real Multi-Agent Runtime Foundation（本地未提交）。
 
 ## 未完成
 

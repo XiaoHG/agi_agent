@@ -330,6 +330,26 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertEqual(result["steps"], ["route", "call_skill", "finalize"])
             self.assertIn("Skill run: code_review", result["answer"])
 
+    def test_rag_graph_executes_subagent_runtime_and_keeps_session(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "README.md").write_text("agent workflow", encoding="utf-8")
+
+            result = run_rag_graph(
+                root,
+                "Execute subagent collaboration for a code review.",
+                route_hint_action="use_tool",
+                route_hint_tool_name="execute_subagents",
+                route_hint_tool_input="Execute subagent collaboration for a code review.",
+            )
+
+            self.assertEqual(result["route"], "execute_subagents")
+            self.assertEqual(result["selected_tool"], "execute_workspace_subagents")
+            self.assertEqual(result["tool_status"], "completed")
+            self.assertEqual(result["subagent_runtime"]["status"], "completed")
+            self.assertIn("session_id", result["subagent_runtime"])
+            self.assertGreaterEqual(len(result["subagent_runtime"]["transitions"]), 1)
+
     def test_rag_graph_keeps_skill_run_trace(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

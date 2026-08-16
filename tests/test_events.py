@@ -79,6 +79,24 @@ class RuntimeEventTests(unittest.TestCase):
         self.assertIn("delegation", event_types)
         self.assertIn("delegation_execution", event_types)
 
+    def test_build_runtime_events_includes_delegation_runtime(self) -> None:
+        events = build_runtime_events(
+            [AgentStep("Run graph", "route=execute_subagents")],
+            {
+                "subagent_runtime": {
+                    "session_id": "subagent-session-02",
+                    "status": "completed",
+                    "messages": [{"message_id": "message-01"}],
+                    "transitions": [{"transition_id": "transition-01"}],
+                },
+            },
+        )
+
+        runtime_events = [event for event in events if event.event_type == "delegation_runtime"]
+
+        self.assertEqual(len(runtime_events), 1)
+        self.assertIn("messages=1", runtime_events[0].detail)
+
 
 if __name__ == "__main__":
     unittest.main()

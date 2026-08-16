@@ -277,7 +277,11 @@ def execute_subagent_collaboration(task: str) -> ToolResult:
     """Execute the deterministic subagent collaboration protocol."""
 
     plan = execute_collaboration_plan(task)
-    metadata = {"subagent_delegation": plan.to_dict()}
+    runtime_session = None if plan.runtime_session is None else plan.runtime_session.to_dict()
+    metadata = {
+        "subagent_delegation": plan.to_dict(),
+        "subagent_runtime": runtime_session,
+    }
     if plan.status == "failed":
         metadata["recovery_plan"] = {
             "status": "failed",

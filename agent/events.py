@@ -118,6 +118,23 @@ def build_runtime_events(
                         payload={"executions": executions, "status": delegation.get("status", "unknown")},
                     )
                 )
+        subagent_runtime = tool_result_metadata.get("subagent_runtime")
+        if isinstance(subagent_runtime, dict):
+            messages = subagent_runtime.get("messages", [])
+            transitions = subagent_runtime.get("transitions", [])
+            events.append(
+                RuntimeEvent(
+                    index=len(events) + 1,
+                    event_type="delegation_runtime",
+                    name=subagent_runtime.get("session_id", "subagent_runtime"),
+                    detail=(
+                        f"messages={len(messages) if isinstance(messages, list) else 0} "
+                        f"transitions={len(transitions) if isinstance(transitions, list) else 0} "
+                        f"status={subagent_runtime.get('status', 'unknown')}"
+                    ),
+                    payload=subagent_runtime,
+                )
+            )
 
     if tool_error:
         events.append(

@@ -1160,6 +1160,9 @@ class WorkspaceAgent:
             "subagent_delegation": None
             if tool_metadata is None
             else tool_metadata.get("subagent_delegation"),
+            "subagent_runtime": None
+            if tool_metadata is None
+            else tool_metadata.get("subagent_runtime"),
             "memory": None if run.memory_snapshot is None else run.memory_snapshot.to_dict(),
             "resume": run.resume_source,
             "tool_error": run.tool_error,

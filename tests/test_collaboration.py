@@ -222,8 +222,17 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(len(plan.handoffs), 1)
         self.assertEqual(len(plan.executions), 2)
         self.assertEqual(len(plan.returns), 2)
+        self.assertIsNotNone(plan.runtime_session)
+        assert plan.runtime_session is not None
+        self.assertEqual(plan.runtime_session.status, "completed")
+        self.assertEqual(plan.runtime_session.parent_role, "parent_agent")
+        self.assertEqual(plan.runtime_session.child_roles, ("teacher_agent", "coding_agent"))
+        self.assertEqual(plan.runtime_session.context_boundary.active_role, "parent_agent")
+        self.assertGreaterEqual(len(plan.runtime_session.messages), 4)
+        self.assertGreaterEqual(len(plan.runtime_session.transitions), 5)
         self.assertEqual(plan.handoffs[0].from_role, "teacher_agent")
         self.assertEqual(plan.handoffs[0].to_role, "coding_agent")
+        self.assertIn("Runtime session:", plan.to_text())
         self.assertIn("Returns:", plan.to_text())
 
     def test_execute_collaboration_plan_can_fail_and_keep_recovery_handoff(self) -> None:
@@ -231,6 +240,11 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertEqual(plan.status, "failed")
         self.assertEqual(plan.executions[-1].status, "failed")
+        self.assertIsNotNone(plan.runtime_session)
+        assert plan.runtime_session is not None
+        self.assertEqual(plan.runtime_session.status, "failed")
+        self.assertEqual(plan.runtime_session.active_role, "coding_agent")
+        self.assertEqual(plan.runtime_session.transitions[-1].to_state, "failed")
         self.assertIn("teacher_agent", plan.recovery_handoff)
 
     def test_build_collaboration_plan_for_teacher_task(self) -> None:
@@ -291,6 +305,8 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(run.route.tool_name, "execute_subagents")
         self.assertIn("Executions:", run.answer)
         self.assertIn("Returns:", run.answer)
+        self.assertIsNotNone(trace["subagent_runtime"])
+        self.assertEqual(trace["subagent_runtime"]["status"], "completed")
         self.assertEqual(trace["subagent_delegation"]["status"], "completed")
 
     def test_agent_executes_subagent_collaboration_failure_exports_recovery(self) -> None:
@@ -311,6 +327,15 @@ class CollaborationTests(unittest.TestCase):
         self.assertIsNotNone(trace["subagent_delegation"])
         self.assertEqual(trace["subagent_delegation"]["delegations"][0]["role"]["name"], "teacher_agent")
         self.assertIn("delegation", [event["event_type"] for event in trace["runtime_events"]])
+
+    def test_agent_trace_dict_contains_subagent_runtime(self) -> None:
+        agent = WorkspaceAgent(Path("."))
+
+        trace = agent.to_trace_dict(agent.run("Execute subagent collaboration for a code review."))
+
+        self.assertIsNotNone(trace["subagent_runtime"])
+        self.assertEqual(trace["subagent_runtime"]["execution_mode"], "deterministic-runtime-foundation")
+        self.assertIn("transitions", trace["subagent_runtime"])
 
     def test_agent_executes_skill(self) -> None:
         agent = WorkspaceAgent(Path("."))
@@ -441,7 +466,28 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertIn("Executions:", result.stdout)
         self.assertIn("Returns:", result.stdout)
+        self.assertIn("Runtime session:", result.stdout)
         self.assertIn("Plan status: completed", result.stdout)
+
+    def test_collaboration_demo_prints_runtime_json(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "cli.collaboration_demo",
+                "--task",
+                "Implement a bug fix and test it.",
+                "--execute-subagents",
+                "--runtime-json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertIn("\"session_id\":", result.stdout)
+        self.assertIn("\"messages\":", result.stdout)
+        self.assertIn("\"transitions\":", result.stdout)
 
 
 if __name__ == "__main__":

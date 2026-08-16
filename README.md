@@ -11,6 +11,7 @@
 - checkpoint / replay / recovery
 - release gate / evaluation matrix
 - skill governance / MCP governance / RAG backend hardening
+- subagent runtime foundation / delegation runtime events
 
 本文档不是短周期冲刺计划，而是一个需要持续投入、持续复盘、持续迭代的工业级 Agent 学习与开发说明。这个项目不适合用“几天学完”或“固定周期速成”的方式看待，更适合在真实工程推进中逐步理解架构、边界、验证和取舍。
 
@@ -50,6 +51,7 @@ LLM / Planner
 - 建立运行期证据体系，包括 trace、runtime events、checkpoint、replay、recovery
 - 建立交付期质量体系，包括 tests、evals、release gate 和版本文档
 - 建立长期可演化的工程结构，支持后续继续增加治理、记忆、委派、审批和发布能力
+- 建立从委派协议走向真实多 Agent runtime 的演进基础
 
 ## 当前已包含内容
 
@@ -59,7 +61,7 @@ LLM / Planner
 - `rag/`：本地 RAG、vector index、grounded RAG、backend hardening、citation validation
 - `mcp/`：本地 MCP learning layer、request/response boundary、permission policy、governance audit
 - `skills/`：builtin/project skill registry、runtime policy、governance、structured skill run
-- `subagent/`：Teacher Agent / Coding Agent 基础协作和委派实验
+- `subagent/`：Teacher Agent / Coding Agent 协作、委派协议、runtime session 基础层
 - `integrations/`：LangChain、LangGraph 等框架接入层
 - `cli/`：项目主要运行入口、调试入口、专项 demo
 - `tests/`：单元测试、回归测试、链路验证
@@ -71,7 +73,7 @@ LLM / Planner
 
 后续会继续围绕专业级工业 Agent 能力扩展，重点可能包括：
 
-- 多 Agent / Subagent 的正式委派协议和回收协议
+- 多 Agent / Subagent 的真实 runtime、异步委派和人工审批链路
 - 更强的长期记忆、任务连续性和长时任务恢复
 - 更接近生产化的 RAG backend、检索评估和引用校验
 - 更标准化的 MCP client/server 治理与外部能力接入

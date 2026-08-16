@@ -74,6 +74,7 @@ class RAGGraphState(TypedDict, total=False):
     logical_tool_name: str  # graph 内部执行的逻辑工具名，对应 Agent tool 层
     skill_run: dict[str, Any]  # skill 执行的结构化 trace
     skill_status: str  # skill 执行状态，用于 graph 条件边判断
+    subagent_runtime: dict[str, Any]  # subagent runtime session 的结构化 trace
     recovery_plan: dict[str, Any]  # 失败后的结构化恢复计划
     tool_call_selection: dict[str, Any]  # tool calling 结构化选择结果
     tool_call_status: str  # tool calling 执行状态
@@ -215,6 +216,7 @@ def build_rag_graph(
                 **state,
                 "tool_output": result.output,
                 "tool_metadata": result.metadata or {},
+                "subagent_runtime": (result.metadata or {}).get("subagent_runtime"),
                 "tool_status": "completed",
                 "steps": steps,
             }
