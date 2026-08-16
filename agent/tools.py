@@ -1,4 +1,16 @@
-"""Local tools available to the workspace agent."""
+"""Local tools available to the workspace agent.
+
+This module is the capability boundary between the runtime and project
+resources. The agent does not read files, query local RAG, call MCP tools, or
+run skills directly; it comes through these wrappers so the outputs can be
+standardized into ``ToolResult`` objects.
+
+That standardization is important for three later stages of the project:
+
+- runtime events
+- checkpoint persistence
+- replay / diff / recovery analysis
+"""
 
 from __future__ import annotations
 
@@ -41,7 +53,7 @@ class ToolResult:
     """Standard tool output wrapper."""
 
     tool_name: str  # 工具名
-    output: str  # 工具输出
+    output: str     # 工具输出
     metadata: dict[str, Any] | None = None  # 附加元数据
 
 
@@ -58,7 +70,11 @@ def _resolve_within_root(root: Path, raw_path: str) -> Path:
 
 
 def read_file(root: Path, raw_path: str) -> ToolResult:
-    """Read a text file from the workspace root."""
+    """Read a small text file from the workspace root.
+
+    The path is normalized through ``_resolve_within_root`` first so callers
+    cannot escape the configured workspace boundary.
+    """
 
     path = _resolve_within_root(root, raw_path)
     if not path.exists():
@@ -75,7 +91,7 @@ def read_file(root: Path, raw_path: str) -> ToolResult:
 
 
 def list_dir(root: Path, raw_path: str = ".") -> ToolResult:
-    """List a directory inside the workspace root."""
+    """List one directory inside the workspace root in a stable order."""
 
     path = _resolve_within_root(root, raw_path)
     if not path.exists():
@@ -130,7 +146,11 @@ def search_vector_docs(root: Path, question: str) -> ToolResult:
 
 
 def answer_docs_with_llm(root: Path, question: str) -> ToolResult:
-    """Answer from local project documents with DeepSeek-grounded RAG."""
+    """Answer from local project documents with grounded LLM-backed RAG.
+
+    The returned metadata keeps source and citation-validation evidence so later
+    trace and replay steps can reason about where the answer came from.
+    """
 
     try:
         answer = answer_question_with_llm(root, question)
@@ -240,6 +260,7 @@ def _build_skill_tool_runner(root: Path):
     """Build the small tool runner used by tool-backed skill steps."""
 
     def runner(request: SkillToolRequest) -> SkillToolResponse:
+        """Execute one requested tool call and normalize the result for the caller."""
         try:
             if request.tool_name == "list_dir":
                 result = list_dir(root, request.tool_input or ".")

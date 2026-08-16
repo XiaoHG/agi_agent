@@ -34,6 +34,7 @@ class LocalEmbeddingModel:
     """Small hashing-based embedding model for offline vector retrieval."""
 
     def __init__(self, dimensions: int = 64) -> None:
+        """Initialize the instance state needed by this object."""
         if dimensions <= 0:
             raise ValueError("dimensions must be greater than zero")
         self.dimensions = dimensions

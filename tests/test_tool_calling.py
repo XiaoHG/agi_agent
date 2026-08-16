@@ -13,9 +13,11 @@ class FakeToolCallingClient:
     """Minimal fake LLM client that returns a fixed structured response."""
 
     def __init__(self, content: str) -> None:
+        """Initialize the instance state needed by this object."""
         self.content = content
 
     def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        """Return a deterministic chat response used by the surrounding test or fake client."""
         return LLMResponse(model="fake", content=self.content, raw={"messages": len(messages)})
 
 
@@ -23,6 +25,7 @@ class ToolCallingTests(unittest.TestCase):
     """Verify structured tool selection and agent execution."""
 
     def test_parse_tool_call_selection(self) -> None:
+        """Verify that parse tool call selection."""
         selection = parse_tool_call_selection(
             '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Inspect the project README."}'
         )
@@ -33,6 +36,7 @@ class ToolCallingTests(unittest.TestCase):
         self.assertIn("README", selection.reason)
 
     def test_select_tool_call_uses_tool_schema(self) -> None:
+        """Verify that select tool call uses tool schema."""
         client = FakeToolCallingClient(
             '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"The task asks to inspect the README."}'
         )
@@ -48,24 +52,28 @@ class ToolCallingTests(unittest.TestCase):
         self.assertEqual(selection.tool_input, "README.md")
 
     def test_tool_schema_exposes_mcp_file_reader(self) -> None:
+        """Verify that tool schema exposes mcp file reader."""
         specs = build_workspace_tool_specs()
         names = {spec.name for spec in specs}
 
         self.assertIn("mcp_read_project_file", names)
 
     def test_tool_schema_exposes_mcp_write_tool(self) -> None:
+        """Verify that tool schema exposes mcp write tool."""
         specs = build_workspace_tool_specs()
         names = {spec.name for spec in specs}
 
         self.assertIn("mcp_write_project_file", names)
 
     def test_tool_schema_exposes_skill_execution(self) -> None:
+        """Verify that tool schema exposes skill execution."""
         specs = build_workspace_tool_specs()
         names = {spec.name for spec in specs}
 
         self.assertIn("execute_skill", names)
 
     def test_select_tool_call_normalizes_mcp_file_path(self) -> None:
+        """Verify that select tool call normalizes mcp file path."""
         client = FakeToolCallingClient(
             '{"action":"use_tool","tool_name":"mcp_read_project_file","tool_input":"Use MCP to read README.md","reason":"The task asks MCP to read a file."}'
         )
@@ -81,6 +89,7 @@ class ToolCallingTests(unittest.TestCase):
         self.assertEqual(selection.tool_input, "README.md")
 
     def test_select_tool_call_removes_input_for_no_argument_mcp_tool(self) -> None:
+        """Verify that select tool call removes input for no argument mcp tool."""
         client = FakeToolCallingClient(
             '{"action":"use_tool","tool_name":"mcp_workspace_summary","tool_input":"Use MCP workspace summary.","reason":"The task asks for the MCP workspace summary."}'
         )
@@ -96,6 +105,7 @@ class ToolCallingTests(unittest.TestCase):
         self.assertIsNone(selection.tool_input)
 
     def test_workspace_agent_runs_tool_calling_read_file(self) -> None:
+        """Verify that workspace agent runs tool calling read file."""
         client = FakeToolCallingClient(
             '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"The task asks to inspect the README."}'
         )
@@ -110,6 +120,7 @@ class ToolCallingTests(unittest.TestCase):
         self.assertIn("Run tool-call graph", agent.format_trace(run))
 
     def test_workspace_agent_runs_tool_calling_direct_answer(self) -> None:
+        """Verify that workspace agent runs tool calling direct answer."""
         client = FakeToolCallingClient(
             '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"The question can be answered directly."}'
         )
@@ -123,6 +134,7 @@ class ToolCallingTests(unittest.TestCase):
         self.assertIn("main difference", run.answer)
 
     def test_workspace_agent_tool_calling_can_opt_out_of_graph_runtime(self) -> None:
+        """Verify that workspace agent tool calling can opt out of graph runtime."""
         client = FakeToolCallingClient(
             '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"The task asks to inspect the README."}'
         )

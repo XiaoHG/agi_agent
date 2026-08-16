@@ -1,4 +1,17 @@
-"""Release gate orchestration for CI readiness."""
+"""Release gate orchestration for CI readiness.
+
+This module models a local, deterministic release gate. The project does not
+yet assume a hosted CI platform, but it already defines the set of checks that
+must pass before a version is considered release-ready:
+
+- unit tests
+- regression eval
+- industrial evaluation matrix
+- failure bench
+
+That makes this file the bridge between learning code and production-style
+delivery discipline.
+"""
 
 from __future__ import annotations
 
@@ -50,7 +63,7 @@ class ReleaseGateReport:
 
 
 def build_default_release_gate_specs(_root: Path) -> tuple[ReleaseCheckSpec, ...]:
-    """Build the default CI-ready release gate spec set."""
+    """Build the default release checks that approximate a CI gate."""
 
     python = sys.executable
     return (
@@ -86,7 +99,11 @@ def run_release_gate(
     specs: Sequence[ReleaseCheckSpec] | None = None,
     executor: Callable[[Path, ReleaseCheckSpec], ReleaseCheckResult] | None = None,
 ) -> ReleaseGateReport:
-    """Run the release gate checks and aggregate the results."""
+    """Run all configured checks and aggregate the release decision.
+
+    The caller may inject a custom executor during tests so the orchestration
+    can be validated without launching real subprocesses.
+    """
 
     selected_specs = tuple(specs or build_default_release_gate_specs(root))
     run_executor = executor or execute_release_check

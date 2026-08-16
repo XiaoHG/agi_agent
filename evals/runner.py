@@ -1,4 +1,13 @@
-"""Regression and benchmark eval runner for the workspace agent."""
+"""Regression and benchmark eval runner for the workspace agent.
+
+This module provides the deterministic evaluation harness used by the project.
+It is intentionally simple: load JSON cases, execute them through supported
+entrypoints, then compare route/tool/answer expectations.
+
+The goal is not to imitate a full benchmark platform. The goal is to give the
+project a stable, scriptable behavioral baseline that can feed into release
+gates and version iteration reviews.
+"""
 
 from __future__ import annotations
 

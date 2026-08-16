@@ -15,6 +15,7 @@ class RecoveryPlanTests(unittest.TestCase):
     """Verify recovery plans stay stable across tool and skill failures."""
 
     def test_tool_recovery_plan_exports_dict_and_text(self) -> None:
+        """Verify that tool recovery plan exports dict and text."""
         plan = build_tool_recovery_plan(
             "read_workspace_file",
             {"path": "missing.md"},
@@ -30,6 +31,7 @@ class RecoveryPlanTests(unittest.TestCase):
         self.assertIn("Tool recovery plan", plan.to_text())
 
     def test_skill_recovery_plan_exports_failed_step_context(self) -> None:
+        """Verify that skill recovery plan exports failed step context."""
         skill_run = {
             "skill": {"name": "learning_explanation"},
             "status": "failed",
@@ -59,6 +61,7 @@ class RecoveryPlanTests(unittest.TestCase):
         self.assertIn("Skill recovery plan", plan.to_text())
 
     def test_exception_recovery_plan_uses_exception_source(self) -> None:
+        """Verify that exception recovery plan uses exception source."""
         plan = build_exception_recovery_plan("Network connection failed.", "answer_docs_with_llm")
 
         self.assertEqual(plan.source_type, "exception")
@@ -67,6 +70,7 @@ class RecoveryPlanTests(unittest.TestCase):
         self.assertIn("Tool recovery plan", plan.to_text())
 
     def test_classify_failure_maps_common_cases(self) -> None:
+        """Verify that classify failure maps common cases."""
         self.assertEqual(classify_failure("File does not exist: README.md"), "missing_resource")
         self.assertEqual(classify_failure("Path escapes workspace root"), "unsafe_or_denied_access")
         self.assertEqual(classify_failure("Missing API key"), "external_dependency")
@@ -74,6 +78,7 @@ class RecoveryPlanTests(unittest.TestCase):
         self.assertEqual(classify_failure("Unexpected failure"), "execution_error")
 
     def test_recovery_plan_allows_optional_context(self) -> None:
+        """Verify that recovery plan allows optional context."""
         plan = RecoveryPlan(
             status="failed",
             failure_type="execution_error",

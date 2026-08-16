@@ -11,6 +11,7 @@ class LocalMCPServer:
     """Expose a small set of workspace tools through an MCP-like interface."""
 
     def __init__(self, workspace_root: Path | str = ".") -> None:
+        """Initialize the instance state needed by this object."""
         self.workspace_root = Path(workspace_root).resolve()  # 固定服务端工作区
 
     def list_tools(self) -> list[MCPToolSpec]:

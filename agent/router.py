@@ -1,4 +1,17 @@
-"""Rule-based routing for the minimal workspace agent."""
+"""Rule-based routing for the workspace agent.
+
+This module is the project's first decision boundary. It converts raw user
+language into a normalized ``ToolRoute`` that the runtime can execute.
+
+The router is intentionally deterministic at this stage of the project:
+
+- it is easy to inspect while learning
+- it provides a stable baseline for evals and tests
+- it can later be compared against model-based routing
+
+When studying the project, read ``route_intent`` from top to bottom. The order
+of the checks explains the product-level priority of capabilities.
+"""
 
 from __future__ import annotations
 
@@ -344,8 +357,13 @@ def _looks_like_subagent_execution_request(text: str) -> bool:
 def route_intent(user_input: str) -> ToolRoute:
     """Choose the simplest safe action for the current input.
 
-    The router is intentionally rule-based for the first iteration so that the
-    workflow is easy to inspect and later replace with model-based routing.
+    The router is intentionally rule-based so the decision path stays visible
+    and easy to verify in tests, traces, and replay artifacts.
+
+    Example:
+        >>> route = route_intent("Read README.md")
+        >>> route.action, route.tool_name
+        ('use_tool', 'read_file')
     """
 
     text = user_input.strip()

@@ -1,4 +1,20 @@
-"""LangGraph workflows for the workspace agent project."""
+"""LangGraph workflows for the workspace agent project.
+
+This module hosts the default runtime executor used by :class:`WorkspaceAgent`.
+It is no longer a small RAG-only demo. The graph state already carries:
+
+- direct-answer decisions
+- normal tool execution
+- skill execution and recovery
+- tool calling selection
+- bounded tool loop state
+- workflow plan execution
+- subagent runtime evidence
+
+Read this file as the graph-runtime counterpart of ``agent/core.py``. The core
+runtime decides *when* to enter the graph; this module decides *how* the graph
+transitions between route, execution, recovery, and final answer states.
+"""
 
 from __future__ import annotations
 
@@ -107,7 +123,18 @@ def build_rag_graph(
     planner_prompt: str | None = None,
     skill_policy: Any | None = None,
 ):
-    """Build a LangGraph workflow with simple conditional tool routing."""
+    """Build the project's default LangGraph runtime graph.
+
+    Despite the historical function name, the graph is broader than RAG. It is
+    the central runtime used for direct answers, tool execution, workflow
+    requests, tool calling, and tool-loop orchestration.
+
+    Args:
+        workspace_root: Root directory exposed to file/document tools.
+        planner_client: Optional LLM planner client used for graph planning.
+        planner_prompt: Optional prompt override for the graph planner.
+        skill_policy: Optional runtime skill policy passed into skill nodes.
+    """
 
     root = Path(workspace_root).resolve()  # 固定 graph 工作区根目录
     tool_specs = build_workspace_tool_specs()

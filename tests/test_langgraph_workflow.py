@@ -14,9 +14,11 @@ class FakePlannerClient:
     """Test double that returns a fixed planner response."""
 
     def __init__(self, content: str) -> None:
+        """Initialize the instance state needed by this object."""
         self.content = content
 
     def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        """Return a deterministic chat response used by the surrounding test or fake client."""
         return LLMResponse(model="fake", content=self.content, raw={"messages": len(messages)})
 
 
@@ -24,9 +26,11 @@ class FakeToolCallingClient:
     """Test double that returns a fixed tool-calling response."""
 
     def __init__(self, content: str) -> None:
+        """Initialize the instance state needed by this object."""
         self.content = content
 
     def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        """Return a deterministic chat response used by the surrounding test or fake client."""
         return LLMResponse(model="fake", content=self.content, raw={"messages": len(messages)})
 
 
@@ -34,10 +38,12 @@ class SequenceToolLoopClient:
     """Test double that returns one tool-loop response per call."""
 
     def __init__(self, responses: list[str]) -> None:
+        """Initialize the instance state needed by this object."""
         self.responses = responses
         self.calls = 0
 
     def chat(self, messages):  # noqa: ANN001 - test double keeps the signature loose
+        """Return a deterministic chat response used by the surrounding test or fake client."""
         response = self.responses[min(self.calls, len(self.responses) - 1)]
         self.calls += 1
         return LLMResponse(model="fake", content=response, raw={"messages": len(messages)})
@@ -47,11 +53,13 @@ class LangGraphWorkflowTests(unittest.TestCase):
     """Verify the minimal LangGraph workflow runs through expected graph nodes."""
 
     def test_build_rag_graph_returns_invokable_graph(self) -> None:
+        """Verify that build rag graph returns invokable graph."""
         graph = build_rag_graph(Path("."))
 
         self.assertTrue(hasattr(graph, "invoke"))
 
     def test_rag_graph_handles_no_context_without_network(self) -> None:
+        """Verify that rag graph handles no context without network."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -65,6 +73,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertNotIn("error", result)
 
     def test_rag_graph_routes_to_search_docs(self) -> None:
+        """Verify that rag graph routes to search docs."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -76,6 +85,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("relevant local context", result["answer"])
 
     def test_rag_graph_routes_to_read_file(self) -> None:
+        """Verify that rag graph routes to read file."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -87,6 +97,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("[read_file] README.md", result["answer"])
 
     def test_rag_graph_route_hint_direct_answer_uses_llm_when_available(self) -> None:
+        """Verify that rag graph route hint direct answer uses llm when available."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             client = FakePlannerClient("LLM answer: agents can plan and use tools.")
@@ -105,6 +116,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("LLM answer:", result["answer"])
 
     def test_rag_graph_recovers_failed_tool_call(self) -> None:
+        """Verify that rag graph recovers failed tool call."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
 
@@ -120,6 +132,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("Tool recovery plan", result["answer"])
 
     def test_rag_graph_executes_workflow_steps_inside_graph(self) -> None:
+        """Verify that rag graph executes workflow steps inside graph."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\nrag retrieval\n", encoding="utf-8")
@@ -143,6 +156,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("count_lines", result["answer"])
 
     def test_rag_graph_workflow_failure_stops_remaining_steps(self) -> None:
+        """Verify that rag graph workflow failure stops remaining steps."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
 
@@ -164,6 +178,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("workflow failed", result["answer"])
 
     def test_rag_graph_runs_tool_call_selection_then_tool(self) -> None:
+        """Verify that rag graph runs tool call selection then tool."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -181,6 +196,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("[read_file] README.md", result["answer"])
 
     def test_rag_graph_runs_tool_call_direct_answer(self) -> None:
+        """Verify that rag graph runs tool call direct answer."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             client = FakeToolCallingClient(
@@ -201,6 +217,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("main difference", result["answer"])
 
     def test_rag_graph_runs_tool_call_clarification(self) -> None:
+        """Verify that rag graph runs tool call clarification."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             client = FakeToolCallingClient(
@@ -221,6 +238,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("needs more information", result["answer"])
 
     def test_rag_graph_runs_tool_loop_inside_graph(self) -> None:
+        """Verify that rag graph runs tool loop inside graph."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -258,6 +276,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("The README was read successfully", result["answer"])
 
     def test_rag_graph_tool_loop_stops_on_repeated_tool_call(self) -> None:
+        """Verify that rag graph tool loop stops on repeated tool call."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -283,6 +302,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("repeated the same read_file call", result["answer"])
 
     def test_rag_graph_tool_loop_keeps_deterministic_fallback_when_synthesis_fails(self) -> None:
+        """Verify that rag graph tool loop keeps deterministic fallback when synthesis fails."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -307,6 +327,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("Final synthesis fallback reason", result["answer"])
 
     def test_rag_graph_tool_status_controls_next_edge(self) -> None:
+        """Verify that rag graph tool status controls next edge."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -318,6 +339,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertNotIn("recovery_plan", result)
 
     def test_rag_graph_routes_to_skill_execution(self) -> None:
+        """Verify that rag graph routes to skill execution."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -331,6 +353,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("Skill run: code_review", result["answer"])
 
     def test_rag_graph_executes_subagent_runtime_and_keeps_session(self) -> None:
+        """Verify that rag graph executes subagent runtime and keeps session."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -351,6 +374,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertGreaterEqual(len(result["subagent_runtime"]["transitions"]), 1)
 
     def test_rag_graph_keeps_skill_run_trace(self) -> None:
+        """Verify that rag graph keeps skill run trace."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -364,6 +388,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertGreaterEqual(skill_run["step_count"], 1)
 
     def test_rag_graph_skill_status_controls_next_edge(self) -> None:
+        """Verify that rag graph skill status controls next edge."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -375,6 +400,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertNotIn("error", result)
 
     def test_rag_graph_recovers_failed_skill_run(self) -> None:
+        """Verify that rag graph recovers failed skill run."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -390,6 +416,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("Skill recovery plan", result["answer"])
 
     def test_rag_graph_records_route_reason(self) -> None:
+        """Verify that rag graph records route reason."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -400,6 +427,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("local context", result["route_reason"])
 
     def test_parse_graph_plan_validates_llm_json(self) -> None:
+        """Verify that parse graph plan validates llm json."""
         plan = parse_graph_plan(
             '{"route":"read_file","selected_tool":"read_workspace_file","tool_input":{"path":"README.md"},"reason":"Read the requested file."}'
         )
@@ -409,6 +437,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
         self.assertEqual(plan.tool_input["path"], "README.md")
 
     def test_plan_graph_route_uses_tool_catalog(self) -> None:
+        """Verify that plan graph route uses tool catalog."""
         client = FakePlannerClient(
             '{"route":"search_docs","selected_tool":"search_workspace_docs","tool_input":{"question":"agent workflow"},"reason":"Search local docs."}'
         )
@@ -424,6 +453,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
         self.assertEqual(plan.status, "llm_planned")
 
     def test_rag_graph_uses_llm_planner_when_available(self) -> None:
+        """Verify that rag graph uses llm planner when available."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -439,6 +469,7 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertIn("[read_file] README.md", result["answer"])
 
     def test_rag_graph_falls_back_when_llm_planner_fails(self) -> None:
+        """Verify that rag graph falls back when llm planner fails."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")

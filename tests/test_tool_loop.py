@@ -11,10 +11,12 @@ class SequenceToolLoopClient:
     """Fake LLM client that returns one structured response per call."""
 
     def __init__(self, responses: list[str]) -> None:
+        """Initialize the instance state needed by this object."""
         self.responses = responses
         self.calls = 0
 
     def chat(self, messages):  # noqa: ANN001 - test double keeps the signature flexible
+        """Return a deterministic chat response used by the surrounding test or fake client."""
         response = self.responses[min(self.calls, len(self.responses) - 1)]
         self.calls += 1
         return LLMResponse(model="fake", content=response, raw={"messages": len(messages)})
@@ -24,6 +26,7 @@ class ToolLoopTests(unittest.TestCase):
     """Verify multi-step tool loop behavior."""
 
     def test_workspace_agent_runs_two_step_tool_loop(self) -> None:
+        """Verify that workspace agent runs two step tool loop."""
         client = SequenceToolLoopClient(
             [
                 '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the file first."}',
@@ -45,6 +48,7 @@ class ToolLoopTests(unittest.TestCase):
         self.assertIn("Run tool-loop graph", agent.format_trace(run))
 
     def test_tool_loop_stops_on_repeated_tool_call(self) -> None:
+        """Verify that tool loop stops on repeated tool call."""
         client = SequenceToolLoopClient(
             [
                 '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the file."}',
@@ -61,6 +65,7 @@ class ToolLoopTests(unittest.TestCase):
         self.assertIn("repeated the same read_file call", run.answer)
 
     def test_tool_loop_trace_dict_contains_steps(self) -> None:
+        """Verify that tool loop trace dict contains steps."""
         client = SequenceToolLoopClient(
             [
                 '{"action":"use_tool","tool_name":"count_lines","tool_input":"README.md","reason":"Count the README lines."}',
@@ -78,6 +83,7 @@ class ToolLoopTests(unittest.TestCase):
         self.assertEqual(trace["tool_loop"]["final_answer_source"], "llm")
 
     def test_tool_loop_keeps_deterministic_fallback_when_synthesis_fails(self) -> None:
+        """Verify that tool loop keeps deterministic fallback when synthesis fails."""
         client = SequenceToolLoopClient(
             [
                 '{"action":"use_tool","tool_name":"count_lines","tool_input":"README.md","reason":"Count the README lines."}',
@@ -97,6 +103,7 @@ class ToolLoopTests(unittest.TestCase):
         self.assertIn("Final synthesis fallback reason", run.answer)
 
     def test_tool_loop_can_use_mcp_and_skills_as_capabilities(self) -> None:
+        """Verify that tool loop can use mcp and skills as capabilities."""
         client = SequenceToolLoopClient(
             [
                 '{"action":"use_tool","tool_name":"mcp_workspace_summary","tool_input":"Use MCP workspace summary.","reason":"Inspect the workspace through MCP."}',
@@ -117,6 +124,7 @@ class ToolLoopTests(unittest.TestCase):
         self.assertIn("workspace through MCP", run.answer)
 
     def test_tool_loop_can_opt_out_of_graph_runtime(self) -> None:
+        """Verify that tool loop can opt out of graph runtime."""
         client = SequenceToolLoopClient(
             [
                 '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the file first."}',

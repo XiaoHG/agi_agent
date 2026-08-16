@@ -1,4 +1,19 @@
-"""Command-line entrypoint for the workspace agent."""
+"""Command-line entrypoint for the workspace agent.
+
+This CLI is the easiest way to exercise the runtime end to end. It exposes:
+
+- normal single-turn runs
+- interactive mode
+- checkpoint listing / inspection
+- replay / compare / resume operations
+- memory inspection
+- runtime policy toggles such as classic-vs-graph execution
+
+Example:
+    python -m cli.main --input "Read README.md and summarize the project goals."
+    python -m cli.main --list-runs
+    python -m cli.main --resume-last-run
+"""
 
 from __future__ import annotations
 
@@ -10,7 +25,7 @@ from skills import SkillRuntimePolicy
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the CLI parser for the agent."""
+    """Build the CLI parser for the primary runtime entrypoint."""
 
     parser = argparse.ArgumentParser(description="Minimal workspace agent")
     parser.add_argument("--root", default=".", help="workspace root")
@@ -74,7 +89,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_once(agent: WorkspaceAgent, user_input: str, show_trace: bool) -> None:
-    """Run one input through the agent and print the result."""
+    """Run one request and print either the answer or the full trace."""
 
     run = agent.run(user_input)
     print(agent.format_trace(run) if show_trace else run.answer)

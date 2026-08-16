@@ -12,17 +12,20 @@ class WorkspaceAgentTests(unittest.TestCase):
     """Verify routing, tools, and user-facing behaviors."""
 
     def test_route_to_read_file(self) -> None:
+        """Verify that route to read file."""
         route = route_intent("Read README.md and summarize the project learning goals.")
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "read_file")
         self.assertEqual(route.tool_input, "README.md")
 
     def test_route_to_list_dir(self) -> None:
+        """Verify that route to list dir."""
         route = route_intent("List the main project directories and explain what they are responsible for.")
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "list_dir")
 
     def test_route_to_file_count_lines(self) -> None:
+        """Verify that route to file count lines."""
         text = "Count lines in README.md."
         route = route_intent(text)
         self.assertEqual(route.action, "use_tool")
@@ -30,11 +33,13 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(route.tool_input, "README.md")
 
     def test_route_to_workflow(self) -> None:
+        """Verify that route to workflow."""
         text = "Read README.md and then count lines."
         route = route_intent(text)
         self.assertEqual(route.action, "workflow")
 
     def test_route_to_langgraph(self) -> None:
+        """Verify that route to langgraph."""
         route = route_intent("Use LangGraph to search docs for MCP.")
 
         self.assertEqual(route.action, "graph")
@@ -42,6 +47,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(route.tool_input, "search docs for MCP")
 
     def test_route_to_tool_calling(self) -> None:
+        """Verify that route to tool calling."""
         route = route_intent("Use tool calling to read README.md.")
 
         self.assertEqual(route.action, "tool_call")
@@ -49,6 +55,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(route.tool_input, "read README.md")
 
     def test_route_to_tool_loop(self) -> None:
+        """Verify that route to tool loop."""
         route = route_intent("Use tool loop to read README.md and then answer.")
 
         self.assertEqual(route.action, "tool_loop")
@@ -56,6 +63,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(route.tool_input, "read README.md and then answer")
 
     def test_workflow_run(self) -> None:
+        """Verify that workflow run."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Read README.md and then count lines.")
         self.assertIn("workflow completed", run.answer)
@@ -63,6 +71,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertTrue(any(step.title == "Run workflow graph" for step in run.steps))
 
     def test_workflow_lists_directories_then_reads_readme(self) -> None:
+        """Verify that workflow lists directories then reads readme."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List directories and then read README.md.")
         self.assertIn("workflow completed", run.answer)
@@ -72,6 +81,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "workflow_execution")
 
     def test_workflow_stops_after_missing_file_error(self) -> None:
+        """Verify that workflow stops after missing file error."""
         agent = WorkspaceAgent(Path("."))
         text = "Read not-exist.md and then count lines."
         route = route_intent(text)
@@ -84,6 +94,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual((run.tool_result.metadata or {}).get("tool_status") if run.tool_result else None, "failed")
 
     def test_workflow_can_opt_out_of_graph_runtime(self) -> None:
+        """Verify that workflow can opt out of graph runtime."""
         agent = WorkspaceAgent(Path("."), use_graph_runtime=False)
 
         run = agent.run("Read README.md and then count lines.")
@@ -93,6 +104,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertTrue(any(step.title == "Build workflow" for step in run.steps))
 
     def test_read_file(self) -> None:
+        """Verify that read file."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "demo.txt").write_text("hello\nworld\n", encoding="utf-8")
@@ -101,6 +113,7 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertIn("hello", result.output)
 
     def test_list_dir(self) -> None:
+        """Verify that list dir."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "a.txt").write_text("x", encoding="utf-8")
@@ -110,8 +123,10 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertIn("- dir/", result.output)
 
     def test_agent_direct_answer(self) -> None:
+        """Verify that agent direct answer."""
         class FailingDirectAnswerClient:
             def chat(self, messages):  # noqa: ANN001
+                """Return a deterministic chat response used by the surrounding test or fake client."""
                 raise LLMError("Direct answer model unavailable.")
 
         agent = WorkspaceAgent(Path("."), llm_client=FailingDirectAnswerClient())
@@ -121,8 +136,10 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertTrue(any(step.title == "Run graph runtime" for step in run.steps))
 
     def test_agent_direct_answer_uses_llm_when_available(self) -> None:
+        """Verify that agent direct answer uses llm when available."""
         class FakeDirectAnswerClient:
             def chat(self, messages):  # noqa: ANN001
+                """Return a deterministic chat response used by the surrounding test or fake client."""
                 return LLMResponse(
                     model="fake",
                     content="LLM answer: an agent can plan, call tools, and keep execution state.",
@@ -140,8 +157,10 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(trace["direct_answer"]["status"], "completed")
 
     def test_agent_direct_answer_keeps_deterministic_fallback_when_llm_fails(self) -> None:
+        """Verify that agent direct answer keeps deterministic fallback when llm fails."""
         class FailingDirectAnswerClient:
             def chat(self, messages):  # noqa: ANN001
+                """Return a deterministic chat response used by the surrounding test or fake client."""
                 raise LLMError("Direct answer model unavailable.")
 
         agent = WorkspaceAgent(Path("."), llm_client=FailingDirectAnswerClient())
@@ -155,12 +174,14 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("unavailable", trace["direct_answer"]["error"])
 
     def test_agent_handles_missing_file(self) -> None:
+        """Verify that agent handles missing file."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Read not-exist.md.")
         self.assertIn("tool call failed", run.answer)
         self.assertIn("File does not exist", run.tool_error or "")
 
     def test_agent_summarizes_readme_learning_goals(self) -> None:
+        """Verify that agent summarizes readme learning goals."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Read README.md and summarize the project learning goals.")
         self.assertIn("Result: read README.md", run.answer)
@@ -169,6 +190,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "read_file")
 
     def test_agent_can_opt_out_of_default_graph_runtime(self) -> None:
+        """Verify that agent can opt out of default graph runtime."""
         agent = WorkspaceAgent(Path("."), use_graph_runtime=False)
 
         run = agent.run("Read README.md and summarize the project learning goals.")
@@ -177,8 +199,10 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertFalse(any(step.title == "Run graph runtime" for step in run.steps))
 
     def test_agent_tool_call_runs_through_default_graph_runtime(self) -> None:
+        """Verify that agent tool call runs through default graph runtime."""
         class FakeToolCallingClient:
             def chat(self, messages):  # noqa: ANN001
+                """Return a deterministic chat response used by the surrounding test or fake client."""
                 return LLMResponse(
                     model="fake",
                     content='{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Inspect the README."}',
@@ -194,11 +218,14 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual((run.tool_result.metadata or {}).get("graph_route") if run.tool_result else None, "tool_call_execution")
 
     def test_agent_tool_loop_runs_through_default_graph_runtime(self) -> None:
+        """Verify that agent tool loop runs through default graph runtime."""
         class FakeToolLoopClient:
             def __init__(self) -> None:
+                """Initialize the instance state needed by this object."""
                 self.calls = 0
 
             def chat(self, messages):  # noqa: ANN001
+                """Return a deterministic chat response used by the surrounding test or fake client."""
                 responses = [
                     '{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Read the README first."}',
                     '{"action":"answer_directly","tool_name":null,"tool_input":null,"reason":"The README observation is enough."}',
@@ -217,12 +244,14 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertEqual(run.tool_loop_result.final_answer_source if run.tool_loop_result else "", "llm")
 
     def test_agent_describes_project_dirs(self) -> None:
+        """Verify that agent describes project dirs."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List the main project directories and explain what they are responsible for.")
         self.assertIn("Responsibilities", run.answer)
         self.assertIn("`agent/`", run.answer)
 
     def test_agent_runs_langgraph_search(self) -> None:
+        """Verify that agent runs langgraph search."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Use LangGraph to search docs for MCP.")
 
@@ -234,6 +263,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("relevant local context", run.answer)
 
     def test_agent_runs_langgraph_read_file(self) -> None:
+        """Verify that agent runs langgraph read file."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Use LangGraph to read README.md.")
 
@@ -242,6 +272,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("[read_file] README.md", run.answer)
 
     def test_agent_runs_langgraph_no_context_without_network(self) -> None:
+        """Verify that agent runs langgraph no context without network."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Use LangGraph to answer: the and of")
 
@@ -250,6 +281,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("insufficient", run.answer)
 
     def test_agent_records_langgraph_trace_step(self) -> None:
+        """Verify that agent records langgraph trace step."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Use LangGraph to search docs for MCP.")
 
@@ -259,6 +291,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("[Runtime Events]", trace_text)
 
     def test_agent_langgraph_skill_trace_dict_contains_skill_run(self) -> None:
+        """Verify that agent langgraph skill trace dict contains skill run."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("Use LangGraph to execute skill for code review.")
 
@@ -271,6 +304,7 @@ class WorkspaceAgentTests(unittest.TestCase):
         self.assertIn("Skill status: completed", run.answer)
 
     def test_agent_langgraph_metadata_contains_recovery_plan(self) -> None:
+        """Verify that agent langgraph metadata contains recovery plan."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -286,6 +320,7 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertIn("Skill recovery plan", run.answer)
 
     def test_agent_langgraph_metadata_contains_tool_recovery_plan(self) -> None:
+        """Verify that agent langgraph metadata contains tool recovery plan."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             agent = WorkspaceAgent(root)
@@ -303,6 +338,7 @@ class WorkspaceAgentTests(unittest.TestCase):
             self.assertIn("Tool recovery plan", run.answer)
 
     def test_agent_exports_structured_trace(self) -> None:
+        """Verify that agent exports structured trace."""
         agent = WorkspaceAgent(Path("."))
         run = agent.run("List available skills.")
 

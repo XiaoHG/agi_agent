@@ -13,6 +13,7 @@ class ProjectLearningAssistantTests(unittest.TestCase):
     """Verify the project-level assistant coordinates existing capabilities."""
 
     def test_project_assistant_runs_capability_chain(self) -> None:
+        """Verify that project assistant runs capability chain."""
         assistant = ProjectLearningAssistant(Path("."))
 
         report = assistant.run("Verify the project learning assistant.")
@@ -25,6 +26,7 @@ class ProjectLearningAssistantTests(unittest.TestCase):
         self.assertIn("Collaboration objective", report.collaboration_plan)
 
     def test_project_report_renders_summary(self) -> None:
+        """Verify that project report renders summary."""
         assistant = ProjectLearningAssistant(Path("."))
 
         text = assistant.run().to_text()
@@ -34,6 +36,7 @@ class ProjectLearningAssistantTests(unittest.TestCase):
         self.assertIn("Failed: 0", text)
 
     def test_project_demo_cli(self) -> None:
+        """Verify that project demo cli."""
         output = io.StringIO()
 
         with redirect_stdout(output):

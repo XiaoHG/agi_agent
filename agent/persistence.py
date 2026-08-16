@@ -16,6 +16,7 @@ class RunCheckpointStore:
     history_dir: Path  # checkpoint 存储目录
 
     def __post_init__(self) -> None:
+        """Normalize derived fields immediately after dataclass initialization."""
         object.__setattr__(self, "history_dir", self.history_dir.resolve())
 
     def save(self, record: dict[str, Any]) -> Path:

@@ -19,6 +19,7 @@ class ReleaseGateTests(unittest.TestCase):
     """Verify release gate orchestration and CLI wiring."""
 
     def test_default_release_gate_specs_cover_ci_checks(self) -> None:
+        """Verify that default release gate specs cover ci checks."""
         from evals.release_gate import build_default_release_gate_specs
 
         specs = build_default_release_gate_specs(Path("."))
@@ -28,12 +29,14 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertEqual(specs[-1].id, "failure-bench")
 
     def test_release_gate_report_summarizes_checks(self) -> None:
+        """Verify that release gate report summarizes checks."""
         specs = (
             ReleaseCheckSpec(id="ok", title="OK", command=("ok",)),
             ReleaseCheckSpec(id="bad", title="Bad", command=("bad",)),
         )
 
         def fake_executor(root: Path, spec: ReleaseCheckSpec) -> ReleaseCheckResult:
+            """Verify that fake executor."""
             return ReleaseCheckResult(
                 id=spec.id,
                 title=spec.title,
@@ -54,6 +57,7 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertIn("bad", rendered)
 
     def test_release_gate_cli_uses_report(self) -> None:
+        """Verify that release gate cli uses report."""
         output = io.StringIO()
         original = cli_release_gate.run_release_gate
         try:

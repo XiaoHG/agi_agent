@@ -10,17 +10,17 @@ from typing import Any
 class RecoveryPlan:
     """Standard recovery record shared by tool and skill failure paths."""
 
-    status: str  # 恢复计划状态，当前失败恢复路径通常为 failed
-    failure_type: str  # 标准失败分类，用于后续选择不同恢复策略
-    source_type: str  # 失败来源类型，例如 tool / skill / exception
-    source_name: str  # 失败来源名称，例如 read_workspace_file / learning_explanation
-    reason: str  # 失败原因，优先保留底层工具或 Skill step 的错误
-    next_safe_action: str  # 下一步安全操作建议，不自动执行有风险修复
-    tool_name: str | None = None  # 普通工具失败或 Skill step 工具失败时的工具名
-    tool_input: dict[str, Any] | None = None  # 工具输入参数
-    skill_name: str | None = None  # Skill 失败时的 skill 名称
-    failed_step: dict[str, Any] | None = None  # Skill 失败时的步骤信息
-    completed_steps: int | None = None  # Skill 失败前已完成步骤数
+    status: str             # 恢复计划状态，当前失败恢复路径通常为 failed
+    failure_type: str       # 标准失败分类，用于后续选择不同恢复策略
+    source_type: str        # 失败来源类型，例如 tool / skill / exception
+    source_name: str        # 失败来源名称，例如 read_workspace_file / learning_explanation
+    reason: str             # 失败原因，优先保留底层工具或 Skill step 的错误
+    next_safe_action: str   # 下一步安全操作建议，不自动执行有风险修复
+    tool_name: str | None = None                            # 普通工具失败或 Skill step 工具失败时的工具名
+    tool_input: dict[str, Any] | None = None                # 工具输入参数
+    skill_name: str | None = None                           # Skill 失败时的 skill 名称
+    failed_step: dict[str, Any] | None = None               # Skill 失败时的步骤信息
+    completed_steps: int | None = None                      # Skill 失败前已完成步骤数
     metadata: dict[str, Any] = field(default_factory=dict)  # 扩展字段，避免频繁改模型
 
     def to_dict(self) -> dict[str, Any]:

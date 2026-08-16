@@ -51,6 +51,7 @@ class ProjectLearningAssistant:
     """Small product prototype that coordinates existing project capabilities."""
 
     def __init__(self, workspace_root: Path | str = ".") -> None:
+        """Initialize the instance state needed by this object."""
         self.workspace_root = Path(workspace_root).resolve()  # 统一使用绝对路径，避免 CLI 和测试路径不一致
         self.agent = WorkspaceAgent(self.workspace_root)  # 复用已有 Agent 主循环，不重复实现路由和工具调用
 

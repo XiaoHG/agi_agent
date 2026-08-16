@@ -10,6 +10,7 @@ class LocalMCPClient:
     """Client-side wrapper around the local MCP server boundary."""
 
     def __init__(self, server: LocalMCPServer) -> None:
+        """Initialize the instance state needed by this object."""
         self.server = server  # 当前阶段用进程内 server 模拟协议边界
 
     def list_tools(self) -> list[MCPToolSpec]:

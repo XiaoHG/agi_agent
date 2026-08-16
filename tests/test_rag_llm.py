@@ -14,6 +14,7 @@ class StubLLMClient:
     """Small local stub that records messages without making network calls."""
 
     def __init__(self) -> None:
+        """Initialize the instance state needed by this object."""
         self.messages = []
 
     def chat(self, messages):
@@ -27,6 +28,7 @@ class GroundedRAGTests(unittest.TestCase):
     """Verify prompt construction and grounded answer boundaries."""
 
     def test_build_grounded_rag_prompt_includes_sources(self) -> None:
+        """Verify that build grounded rag prompt includes sources."""
         document = Document(source="README.md", text="agent tools")
         chunk = chunk_document(document, max_lines=1, overlap=0)[0]
         result = SearchResult(chunk=chunk, score=2, matched_terms=("agent", "tools"))
@@ -39,6 +41,7 @@ class GroundedRAGTests(unittest.TestCase):
         self.assertIn("using only the local context", prompt)
 
     def test_answer_question_with_llm_returns_no_context_without_results(self) -> None:
+        """Verify that answer question with llm returns no context without results."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -50,6 +53,7 @@ class GroundedRAGTests(unittest.TestCase):
             self.assertTrue(answer.citation_validation.valid if answer.citation_validation else False)
 
     def test_answer_question_with_llm_preserves_sources(self) -> None:
+        """Verify that answer question with llm preserves sources."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent tools need context", encoding="utf-8")
@@ -64,6 +68,7 @@ class GroundedRAGTests(unittest.TestCase):
             self.assertEqual(client.messages[1].role, "user")
 
     def test_answer_question_with_llm_uses_vector_index_sources(self) -> None:
+        """Verify that answer question with llm uses vector index sources."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("professional rag workflow", encoding="utf-8")

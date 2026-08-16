@@ -25,6 +25,7 @@ class PersistenceTests(unittest.TestCase):
     """Verify run checkpoints can be saved, loaded, and displayed."""
 
     def test_checkpoint_store_saves_and_loads_latest(self) -> None:
+        """Verify that checkpoint store saves and loads latest."""
         with tempfile.TemporaryDirectory() as tmp:
             history_dir = Path(tmp) / "runs"
             store = RunCheckpointStore(history_dir)
@@ -48,6 +49,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(load_checkpoint(saved_path)["run_kind"], "graph")
 
     def test_workspace_agent_persists_graph_run(self) -> None:
+        """Verify that workspace agent persists graph run."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -65,6 +67,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("[Runtime Events]", latest["trace_text"])
 
     def test_workspace_agent_persists_workflow_run(self) -> None:
+        """Verify that workspace agent persists workflow run."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -80,6 +83,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(latest["trace"]["route"]["action"], "workflow")
 
     def test_cli_main_can_show_last_run(self) -> None:
+        """Verify that cli main can show last run."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -105,6 +109,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Route:", output.getvalue())
 
     def test_cli_main_can_list_runs(self) -> None:
+        """Verify that cli main can list runs."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -130,6 +135,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("graph", output.getvalue())
 
     def test_cli_main_can_show_run_by_id(self) -> None:
+        """Verify that cli main can show run by id."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -155,6 +161,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Run kind:", output.getvalue())
 
     def test_langgraph_demo_persists_graph_checkpoint(self) -> None:
+        """Verify that langgraph demo persists graph checkpoint."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -182,6 +189,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(latest["trace"]["selected_tool"], "read_workspace_file")
 
     def test_replay_report_rebuilds_runtime_events(self) -> None:
+        """Verify that replay report rebuilds runtime events."""
         record = {
             "run_id": "abc12345",
             "run_kind": "graph",
@@ -218,6 +226,7 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("Graph route", rendered)
 
     def test_workspace_agent_replays_latest_checkpoint(self) -> None:
+        """Verify that workspace agent replays latest checkpoint."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -232,6 +241,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Answer:", replay_text)
 
     def test_replay_diff_report_compares_two_runs(self) -> None:
+        """Verify that replay diff report compares two runs."""
         older = {
             "run_id": "run-old",
             "run_kind": "graph",
@@ -300,6 +310,7 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("Skills added:", rendered)
 
     def test_workspace_agent_compares_latest_two_checkpoints(self) -> None:
+        """Verify that workspace agent compares latest two checkpoints."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -316,6 +327,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Differences:", diff_text)
 
     def test_checkpoint_resume_report_uses_resume_plan(self) -> None:
+        """Verify that checkpoint resume report uses resume plan."""
         record = {
             "run_id": "run-resume",
             "run_kind": "graph",
@@ -352,6 +364,7 @@ class PersistenceTests(unittest.TestCase):
         self.assertIn("Resume mode:", rendered)
 
     def test_workspace_agent_can_resume_latest_checkpoint(self) -> None:
+        """Verify that workspace agent can resume latest checkpoint."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -380,6 +393,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(resumed["trace"]["resume"]["source_run_id"], source_run.run_id)
 
     def test_resume_branch_increments_depth_for_nested_resume(self) -> None:
+        """Verify that resume branch increments depth for nested resume."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -401,6 +415,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(second_branch["resume"]["source_run_id"], first_branch["run_id"])
 
     def test_cli_main_can_show_session_memory(self) -> None:
+        """Verify that cli main can show session memory."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -436,6 +451,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("cli-session", output.getvalue())
 
     def test_cli_main_can_show_task_memory(self) -> None:
+        """Verify that cli main can show task memory."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -471,6 +487,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("cli-task", output.getvalue())
 
     def test_cli_main_can_resume_last_run(self) -> None:
+        """Verify that cli main can resume last run."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -496,6 +513,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Branch depth:", output.getvalue())
 
     def test_cli_main_can_resume_run_by_id(self) -> None:
+        """Verify that cli main can resume run by id."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -522,6 +540,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Branch depth:", output.getvalue())
 
     def test_cli_main_can_replay_last_run(self) -> None:
+        """Verify that cli main can replay last run."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -546,6 +565,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Rebuilt runtime events:", output.getvalue())
 
     def test_cli_main_can_replay_run_by_id(self) -> None:
+        """Verify that cli main can replay run by id."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -571,6 +591,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Graph route:", output.getvalue())
 
     def test_cli_main_can_compare_last_two_runs(self) -> None:
+        """Verify that cli main can compare last two runs."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -596,6 +617,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertIn("Step count delta:", output.getvalue())
 
     def test_cli_main_can_compare_runs_by_id(self) -> None:
+        """Verify that cli main can compare runs by id."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")

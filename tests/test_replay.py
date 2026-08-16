@@ -9,6 +9,7 @@ class ReplayTests(unittest.TestCase):
     """Verify replay reports keep delegation metadata stable."""
 
     def test_replay_summary_collects_delegation_names(self) -> None:
+        """Verify that replay summary collects delegation names."""
         record = {
             "run_id": "demo",
             "run_kind": "tool",
@@ -40,6 +41,7 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(summary.delegation_names, ("coding_agent", "teacher_agent"))
 
     def test_replay_diff_reports_delegation_changes(self) -> None:
+        """Verify that replay diff reports delegation changes."""
         older = {
             "run_id": "old",
             "run_kind": "tool",
@@ -94,6 +96,7 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(report.delegation_names_added, ("coding_agent",))
 
     def test_replay_summary_keeps_delegation_execution_metadata(self) -> None:
+        """Verify that replay summary keeps delegation execution metadata."""
         record = {
             "run_id": "demo",
             "run_kind": "tool",

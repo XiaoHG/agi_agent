@@ -73,6 +73,7 @@ class DeepSeekLLMClient:
     """Small real DeepSeek chat client using the OpenAI-compatible HTTP API."""
 
     def __init__(self, config: DeepSeekConfig | None = None) -> None:
+        """Initialize the instance state needed by this object."""
         self.config = config or DeepSeekConfig.from_env()  # 默认从环境变量读取真实配置
 
     def chat(self, messages: list[LLMMessage]) -> LLMResponse:

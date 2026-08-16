@@ -16,6 +16,7 @@ class FakeToolCallingClient:
     """Minimal fake LLM client for eval tests."""
 
     def chat(self, messages):  # noqa: ANN001 - keep the test double flexible
+        """Return a deterministic chat response used by the surrounding test or fake client."""
         return LLMResponse(
             model="fake",
             content='{"action":"use_tool","tool_name":"read_file","tool_input":"README.md","reason":"Inspect the README."}',
@@ -27,12 +28,14 @@ class EvalRunnerTests(unittest.TestCase):
     """Verify regression eval loading and execution."""
 
     def test_load_eval_cases(self) -> None:
+        """Verify that load eval cases."""
         cases = load_eval_cases(Path("evals/regression_cases.json"))
 
         self.assertGreaterEqual(len(cases), 5)
         self.assertEqual(cases[0].id, "direct-agent-difference")
 
     def test_run_eval_cases(self) -> None:
+        """Verify that run eval cases."""
         cases = load_eval_cases(Path("evals/regression_cases.json"))
         results = run_eval_cases(WorkspaceAgent(Path(".")), cases)
         report = build_eval_report(results)
@@ -48,6 +51,7 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertIn("by_operation", report)
 
     def test_eval_runner_reports_failed_case(self) -> None:
+        """Verify that eval runner reports failed case."""
         cases = [
             EvalCase(
                 id="bad-route",
@@ -65,6 +69,7 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertIn("Expected tool", ", ".join(results[0].failures))
 
     def test_eval_runner_checks_selected_tool(self) -> None:
+        """Verify that eval runner checks selected tool."""
         case = EvalCase(
             id="tool-call-readme",
             input="Use tool calling to read README.md.",
@@ -81,6 +86,7 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertEqual(results[0].selected_tool_name, "read_file")
 
     def test_load_eval_matrix(self) -> None:
+        """Verify that load eval matrix."""
         matrix = load_eval_matrix(Path("evals/industrial_eval_matrix.json"))
 
         self.assertEqual(matrix.name, "industrial-eval-matrix")
@@ -88,6 +94,7 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertEqual(matrix.suites[0].id, "route")
 
     def test_run_eval_matrix(self) -> None:
+        """Verify that run eval matrix."""
         matrix = load_eval_matrix(Path("evals/industrial_eval_matrix.json"))
         report = run_eval_matrix(Path("."), matrix)
         rendered = format_eval_matrix_report(report)
@@ -99,6 +106,7 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertIn("Suite breakdown:", rendered)
 
     def test_run_failure_bench(self) -> None:
+        """Verify that run failure bench."""
         matrix = load_eval_matrix(Path("evals/industrial_failure_bench.json"))
         report = run_eval_matrix(Path("."), matrix)
 
@@ -107,6 +115,7 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertGreaterEqual(report.total_cases, 5)
 
     def test_cli_eval_runner_can_run_matrix(self) -> None:
+        """Verify that cli eval runner can run matrix."""
         output = io.StringIO()
         with redirect_stdout(output):
             exit_code = cli_eval_runner.main(["--matrix", "evals/industrial_eval_matrix.json"])
@@ -115,6 +124,7 @@ class EvalRunnerTests(unittest.TestCase):
         self.assertIn("Industrial eval matrix report", output.getvalue())
 
     def test_cli_eval_runner_can_run_failure_bench(self) -> None:
+        """Verify that cli eval runner can run failure bench."""
         output = io.StringIO()
         with redirect_stdout(output):
             exit_code = cli_eval_runner.main(["--failure-bench", "evals/industrial_failure_bench.json"])

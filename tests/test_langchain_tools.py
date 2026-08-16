@@ -13,12 +13,14 @@ class LangChainToolAdapterTests(unittest.TestCase):
     """Verify local tools are exposed as real LangChain StructuredTool objects."""
 
     def test_build_langchain_tools_returns_structured_tools(self) -> None:
+        """Verify that build langchain tools returns structured tools."""
         tools = build_langchain_tools(Path("."))
 
         self.assertTrue(tools)
         self.assertTrue(all(isinstance(tool, StructuredTool) for tool in tools))
 
     def test_tool_specs_include_expected_tools(self) -> None:
+        """Verify that tool specs include expected tools."""
         tools = build_langchain_tools(Path("."))
         names = {tool.name for tool in tools}
 
@@ -28,6 +30,7 @@ class LangChainToolAdapterTests(unittest.TestCase):
         self.assertIn("plan_workspace_subagents", names)
 
     def test_read_file_tool_invokes_core_tool(self) -> None:
+        """Verify that read file tool invokes core tool."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent tools", encoding="utf-8")
@@ -39,6 +42,7 @@ class LangChainToolAdapterTests(unittest.TestCase):
             self.assertIn("agent tools", output)
 
     def test_llm_rag_tool_marks_network_dependency(self) -> None:
+        """Verify that llm rag tool marks network dependency."""
         tools = {tool.name: tool for tool in build_langchain_tools(Path("."))}
 
         metadata = tools["answer_workspace_docs_with_llm"].metadata
@@ -47,6 +51,7 @@ class LangChainToolAdapterTests(unittest.TestCase):
         self.assertEqual(metadata["requires_api_key"], "DEEPSEEK_API_KEY")
 
     def test_no_argument_tool_invokes_without_arguments(self) -> None:
+        """Verify that no argument tool invokes without arguments."""
         tools = {tool.name: tool for tool in build_langchain_tools(Path("."))}
 
         output = tools["list_workspace_skills"].invoke({})

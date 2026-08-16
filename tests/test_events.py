@@ -9,12 +9,14 @@ class RuntimeEventTests(unittest.TestCase):
     """Verify runtime events are exported as stable structured trace data."""
 
     def test_runtime_event_exports_dict_and_text(self) -> None:
+        """Verify that runtime event exports dict and text."""
         event = RuntimeEvent(1, "step", "Route request", "graph / langgraph_workflow")
 
         self.assertEqual(event.to_dict()["event_type"], "step")
         self.assertIn("[step]", event.to_text())
 
     def test_build_runtime_events_from_steps(self) -> None:
+        """Verify that build runtime events from steps."""
         events = build_runtime_events(
             [
                 AgentStep("Receive input", "Read README.md."),
@@ -27,6 +29,7 @@ class RuntimeEventTests(unittest.TestCase):
         self.assertEqual(events[1].name, "Route request")
 
     def test_build_runtime_events_includes_graph_and_recovery(self) -> None:
+        """Verify that build runtime events includes graph and recovery."""
         events = build_runtime_events(
             [AgentStep("Run graph", "route=read_file")],
             {
@@ -46,6 +49,7 @@ class RuntimeEventTests(unittest.TestCase):
         self.assertIn("recovery", event_types)
 
     def test_build_runtime_events_includes_skill_and_error(self) -> None:
+        """Verify that build runtime events includes skill and error."""
         events = build_runtime_events(
             [AgentStep("Run graph", "route=skill_execution")],
             {
@@ -63,6 +67,7 @@ class RuntimeEventTests(unittest.TestCase):
         self.assertIn("error", event_types)
 
     def test_build_runtime_events_includes_delegation_execution(self) -> None:
+        """Verify that build runtime events includes delegation execution."""
         events = build_runtime_events(
             [AgentStep("Run graph", "route=execute_subagents")],
             {
@@ -80,6 +85,7 @@ class RuntimeEventTests(unittest.TestCase):
         self.assertIn("delegation_execution", event_types)
 
     def test_build_runtime_events_includes_delegation_runtime(self) -> None:
+        """Verify that build runtime events includes delegation runtime."""
         events = build_runtime_events(
             [AgentStep("Run graph", "route=execute_subagents")],
             {

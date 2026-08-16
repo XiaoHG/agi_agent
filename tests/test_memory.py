@@ -11,6 +11,7 @@ class MemoryTests(unittest.TestCase):
     """Verify session/task memory stays stable across persisted runs."""
 
     def test_memory_store_updates_session_and_task_from_trace(self) -> None:
+        """Verify that memory store updates session and task from trace."""
         with tempfile.TemporaryDirectory() as tmp:
             store = AgentMemoryStore(Path(tmp))
             snapshot = store.update_from_trace(
@@ -39,6 +40,7 @@ class MemoryTests(unittest.TestCase):
             self.assertIn("Route: use_tool / read_file", session.key_facts)
 
     def test_workspace_agent_persists_memory_snapshot(self) -> None:
+        """Verify that workspace agent persists memory snapshot."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")
@@ -63,6 +65,7 @@ class MemoryTests(unittest.TestCase):
             self.assertIn("Session ID: session-42", agent.format_trace(run))
 
     def test_workspace_agent_formats_session_and_task_memory(self) -> None:
+        """Verify that workspace agent formats session and task memory."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\n", encoding="utf-8")

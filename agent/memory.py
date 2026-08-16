@@ -193,6 +193,7 @@ class AgentMemoryStore:
     memory_dir: Path  # 记忆存储根目录
 
     def __post_init__(self) -> None:
+        """Normalize derived fields immediately after dataclass initialization."""
         object.__setattr__(self, "memory_dir", self.memory_dir.resolve())
 
     def update_from_trace(self, session_id: str, task_id: str, trace: dict[str, Any]) -> MemorySnapshot:

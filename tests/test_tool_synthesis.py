@@ -12,6 +12,7 @@ class FakeSynthesisClient:
     """Minimal fake client for final synthesis tests."""
 
     def chat(self, messages):  # noqa: ANN001 - test double keeps the signature flexible
+        """Return a deterministic chat response used by the surrounding test or fake client."""
         return LLMResponse(model="fake", content="Final answer from observations.", raw={"messages": len(messages)})
 
 
@@ -19,6 +20,7 @@ class ToolSynthesisTests(unittest.TestCase):
     """Verify final synthesis prompt construction and execution."""
 
     def test_build_tool_loop_synthesis_messages_includes_observations(self) -> None:
+        """Verify that build tool loop synthesis messages includes observations."""
         result = _build_sample_loop_result()
 
         messages = build_tool_loop_synthesis_messages(result, "Synthesis prompt")
@@ -30,6 +32,7 @@ class ToolSynthesisTests(unittest.TestCase):
         self.assertIn("model_answered_directly", messages[1].content)
 
     def test_synthesize_tool_loop_answer_returns_llm_content(self) -> None:
+        """Verify that synthesize tool loop answer returns llm content."""
         answer = synthesize_tool_loop_answer(
             FakeSynthesisClient(),  # type: ignore[arg-type]
             _build_sample_loop_result(),

@@ -10,10 +10,10 @@ from typing import Any
 class RuntimeEvent:
     """One normalized event emitted during an Agent run."""
 
-    index: int  # 事件序号，从 1 开始，保持稳定排序
-    event_type: str  # 事件类型，例如 step / tool_result / error / recovery
-    name: str  # 事件名称
-    detail: str = ""  # 人类可读详情
+    index: int          # 事件序号，从 1 开始，保持稳定排序
+    event_type: str     # 事件类型，例如 step / tool_result / error / recovery
+    name: str           # 事件名称
+    detail: str = ""    # 人类可读详情
     payload: dict[str, Any] = field(default_factory=dict)  # JSON-ready 结构化数据
 
     def to_dict(self) -> dict[str, Any]:

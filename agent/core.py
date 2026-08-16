@@ -1,4 +1,24 @@
-"""Core orchestration for the workspace agent."""
+"""Core orchestration for the workspace agent.
+
+This module is the runtime heart of the project. It connects four layers that
+you will repeatedly trace while learning the codebase:
+
+1. CLI or eval entrypoints call :class:`WorkspaceAgent`.
+2. The router turns raw user input into a structured :class:`ToolRoute`.
+3. The agent chooses the default LangGraph runtime or a classic fallback path.
+4. The final run is normalized into trace, memory, checkpoint, replay, and
+   resume artifacts.
+
+When reading the project for the first time, start with ``WorkspaceAgent.run``,
+then follow ``_run_langgraph`` and ``_persist_run``. Those three methods explain
+most of the industrial-agent shape of this repository.
+
+Example:
+    >>> agent = WorkspaceAgent('.')
+    >>> run = agent.run('Read README.md and summarize the project goals.')
+    >>> isinstance(run.answer, str)
+    True
+"""
 from __future__ import annotations          # 支持类型注解的前向引用
 from dataclasses import dataclass, field    # 数据类，简化数据结构定义{insert\_element\_0\_}
 from pathlib import Path                    # 路径处理，跨平台
@@ -79,7 +99,16 @@ class AgentRun:
 
 
 class WorkspaceAgent:
-    """Minimal agent that can answer directly or call local tools."""
+    """Main orchestration surface used by CLI, tests, and eval runners.
+
+    The class deliberately exposes one stable high-level operation, ``run()``,
+    while keeping the branch-specific execution details in private helpers.
+    This makes it easy to compare:
+
+    - direct answers vs. tool execution
+    - classic runtime vs. LangGraph runtime
+    - normal runs vs. replay / resume / diff flows
+    """
 
     def __init__(
         self,
@@ -92,6 +121,18 @@ class WorkspaceAgent:
         use_graph_runtime: bool = True,
         skill_policy: SkillRuntimePolicy | None = None,
     ) -> None:
+        """Initialize the runtime dependencies used by one agent instance.
+
+        Args:
+            workspace_root: Project root used for file tools, logs, and docs.
+            llm_client: Optional injected LLM client; tests often pass a fake.
+            history_dir: Optional checkpoint directory override.
+            memory_dir: Optional long-horizon memory directory override.
+            session_id: Default session identifier for memory continuity.
+            task_id: Optional default task identifier.
+            use_graph_runtime: Whether LangGraph should be the default executor.
+            skill_policy: Runtime policy controlling skill visibility/execution.
+        """
         self.workspace_root = Path(workspace_root).resolve()        # 解析为绝对路径
         self.system_prompt = load_system_prompt()                   # 加载系统提示词
         self.direct_answer_prompt = load_direct_answer_prompt()     # 加载直接回答提示词
@@ -117,7 +158,27 @@ class WorkspaceAgent:
         task_id: str | None = None,
         resume_source: dict[str, Any] | None = None,
     ) -> AgentRun:
-        """Execute one turn and return a structured run record."""
+        """Execute one user turn and return a structured run record.
+
+        This is the most important function in the project. It receives raw user
+        input, resolves routing, chooses the execution path, maps the result back
+        into a unified ``AgentRun`` object, and finally persists the run.
+
+        The function intentionally keeps the branch ordering explicit so the
+        learning path stays readable:
+
+        - workflow
+        - graph
+        - tool loop
+        - tool call
+        - normal tool/direct-answer path
+
+        Example:
+            >>> agent = WorkspaceAgent('.')
+            >>> run = agent.run('List the main project directories.')
+            >>> run.route.action in {'use_tool', 'direct_answer', 'workflow'}
+            True
+        """
         resolved_route = route_override or route_intent(user_input)
         resolved_session_id = (session_id or self._session_id).strip() or "default"
         resolved_task_id = self._resolve_task_id(user_input, resolved_route, task_id)
@@ -278,7 +339,12 @@ class WorkspaceAgent:
         route_hint_tool_name: str | None = None,
         route_hint_tool_input: str | None = None,
     ) -> dict[str, Any]:
-        """Run the LangGraph workflow and return its final state."""
+        """Run the default LangGraph executor and return its final state.
+
+        The returned dictionary is still graph-centric. The caller must pass it
+        through ``_apply_graph_runtime_result`` to map graph state back into the
+        project-wide ``AgentRun`` surface.
+        """
 
         # 延迟导入，避免 integrations -> agent -> core 的循环导入
         from integrations.langgraph_workflow import run_rag_graph
@@ -299,7 +365,13 @@ class WorkspaceAgent:
             raise ToolError(f"LangGraph workflow failed: {error}") from error
 
     def _run_classic_route(self, run: AgentRun) -> None:
-        """Run the pre-graph classic branch logic as an explicit fallback."""
+        """Run the classic non-graph branch as a readable fallback executor.
+
+        This path is intentionally kept for two reasons:
+
+        - learning comparison against the LangGraph runtime
+        - deterministic fallback when the graph path fails or is disabled
+        """
 
         if run.route.action == "use_tool":
             try:
@@ -384,7 +456,12 @@ class WorkspaceAgent:
             run.answer = self._compose_tool_error_answer(run)
 
     def _apply_graph_runtime_result(self, run: AgentRun, graph_state: dict[str, Any]) -> None:
-        """Map graph runtime state back into the classic AgentRun surface."""
+        """Map graph runtime state back into the unified ``AgentRun`` shape.
+
+        LangGraph nodes work with a graph-specific state dictionary. The rest of
+        the project, however, expects ``AgentRun`` plus ``ToolResult`` style
+        surfaces. This adapter is the seam between those two representations.
+        """
 
         tool_call_selection = graph_state.get("tool_call_selection")
         if isinstance(tool_call_selection, dict):
@@ -713,7 +790,11 @@ class WorkspaceAgent:
         return metadata
 
     def _persist_run(self, run: AgentRun) -> AgentRun:
-        """Persist the structured run as a local checkpoint."""
+        """Persist trace, memory snapshot, and checkpoint artifacts for a run.
+
+        Persistence is not an afterthought here. A run is considered complete
+        only after its observable evidence has been exported and saved.
+        """
 
         if self._history_store is None:
             return run
@@ -1064,7 +1145,12 @@ class WorkspaceAgent:
         return "\n".join(result) if result else "- No known project directories were found in the listing."
 
     def format_trace(self, run: AgentRun) -> str:
-        """Render the run as a human-readable execution trace."""
+        """Render one run as a readable trace for study, debugging, and replay.
+
+        The text output is intentionally redundant: it shows route, steps,
+        tool/runtime artifacts, memory, runtime events, and the final answer in
+        one block so you can inspect a run without opening the JSON checkpoint.
+        """
         parts: list[str] = [f"Run ID: {run.run_id}"]
         parts.append(f"Session ID: {run.session_id}")
         parts.append(f"Task ID: {run.task_id}")

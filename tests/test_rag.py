@@ -28,6 +28,7 @@ class LocalRAGTests(unittest.TestCase):
     """Verify local document loading, chunking, retrieval, and agent routing."""
 
     def test_load_text_documents(self) -> None:
+        """Verify that load text documents."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "docs").mkdir()
@@ -40,6 +41,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertEqual(sources, {"README.md", "docs/note.md"})
 
     def test_chunk_document(self) -> None:
+        """Verify that chunk document."""
         document = Document(source="demo.md", text="one\ntwo\nthree\nfour")
 
         chunks = chunk_document(document, max_lines=2, overlap=1)
@@ -49,6 +51,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertEqual(chunks[1].text, "two\nthree")
 
     def test_retrieve_returns_ranked_context(self) -> None:
+        """Verify that retrieve returns ranked context."""
         document = Document(source="demo.md", text="agent workflow\nrag retrieval\nagent state")
         chunks = chunk_document(document, max_lines=1, overlap=0)
 
@@ -58,6 +61,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertGreaterEqual(results[0].score, results[1].score)
 
     def test_vector_index_saves_chunk_metadata(self) -> None:
+        """Verify that vector index saves chunk metadata."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\nrag retrieval", encoding="utf-8")
@@ -71,6 +75,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertIn("README.md", index.document_fingerprints)
 
     def test_vector_index_round_trips_json(self) -> None:
+        """Verify that vector index round trips json."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -83,6 +88,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertEqual(loaded.records[0].chunk.source_label(), "README.md:1-1")
 
     def test_search_vector_index_returns_citations(self) -> None:
+        """Verify that search vector index returns citations."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow\nrag retrieval", encoding="utf-8")
@@ -93,6 +99,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertEqual(results[0].citation(), "README.md:1-1")
 
     def test_build_document_fingerprints_stays_stable(self) -> None:
+        """Verify that build document fingerprints stays stable."""
         documents = [Document(source="README.md", text="agent workflow")]
 
         left = build_document_fingerprints(documents)
@@ -102,6 +109,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertIn("README.md", left)
 
     def test_plan_vector_index_update_marks_changed_sources(self) -> None:
+        """Verify that plan vector index update marks changed sources."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -116,6 +124,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertEqual(plan.removed_sources, ())
 
     def test_update_vector_index_rebuilds_only_changed_sources(self) -> None:
+        """Verify that update vector index rebuilds only changed sources."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -138,6 +147,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertTrue(any("updated" in record.chunk.text for record in updated.records if record.chunk.source == "README.md"))
 
     def test_search_docs_tool(self) -> None:
+        """Verify that search docs tool."""
         result = search_docs(Path("."), "search docs workflow")
 
         self.assertEqual(result.tool_name, "search_docs")
@@ -145,6 +155,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertIn("workflow", result.output.lower())
 
     def test_search_vector_docs_tool(self) -> None:
+        """Verify that search vector docs tool."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("professional rag workflow", encoding="utf-8")
@@ -157,18 +168,21 @@ class LocalRAGTests(unittest.TestCase):
             self.assertEqual(result.metadata["backend"]["name"], "local_hash_embedding")
 
     def test_route_to_search_docs(self) -> None:
+        """Verify that route to search docs."""
         route = route_intent("Search docs for workflow.")
 
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "search_docs")
 
     def test_route_to_search_vector_docs(self) -> None:
+        """Verify that route to search vector docs."""
         route = route_intent("Use professional RAG to search docs for workflow.")
 
         self.assertEqual(route.action, "use_tool")
         self.assertEqual(route.tool_name, "search_vector_docs")
 
     def test_route_to_answer_docs_with_llm(self) -> None:
+        """Verify that route to answer docs with llm."""
         route = route_intent("Answer with local docs and DeepSeek RAG: What does workflow mean?")
 
         self.assertEqual(route.action, "use_tool")
@@ -176,6 +190,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertEqual(route.tool_input, "What does workflow mean?")
 
     def test_agent_searches_local_docs(self) -> None:
+        """Verify that agent searches local docs."""
         agent = WorkspaceAgent(Path("."))
 
         run = agent.run("Search docs for workflow.")
@@ -184,6 +199,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertIn("relevant local context", run.answer)
 
     def test_agent_searches_vector_docs(self) -> None:
+        """Verify that agent searches vector docs."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("professional rag workflow", encoding="utf-8")
@@ -195,6 +211,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertIn("vector context", run.answer)
 
     def test_rag_index_demo_rebuilds_index(self) -> None:
+        """Verify that rag index demo rebuilds index."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -205,6 +222,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertTrue((root / "data" / "rag-index.json").exists())
 
     def test_answer_docs_with_llm_tool_handles_no_context(self) -> None:
+        """Verify that answer docs with llm tool handles no context."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -216,6 +234,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertTrue(result.metadata["citation_validation"]["valid"])
 
     def test_agent_answers_docs_with_llm_without_context(self) -> None:
+        """Verify that agent answers docs with llm without context."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -227,6 +246,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertIn("insufficient", run.answer)
 
     def test_agent_searches_mcp(self) -> None:
+        """Verify that agent searches mcp."""
         agent = WorkspaceAgent(Path("."))
 
         run = agent.run("Search docs for MCP.")
@@ -235,6 +255,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertIn("relevant local context", run.answer)
 
     def test_rag_returns_empty_result_for_unknown_keyword(self) -> None:
+        """Verify that rag returns empty result for unknown keyword."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "README.md").write_text("agent workflow", encoding="utf-8")
@@ -245,6 +266,7 @@ class LocalRAGTests(unittest.TestCase):
             self.assertIn("no local context", answer.to_text())
 
     def test_validate_answer_citations_accepts_supported_sources(self) -> None:
+        """Verify that validate answer citations accepts supported sources."""
         result = validate_answer_citations(
             "Use README.md:1-1 for the answer.",
             ["README.md:1-1"],
@@ -254,6 +276,7 @@ class LocalRAGTests(unittest.TestCase):
         self.assertEqual(result.cited_sources, ("README.md:1-1",))
 
     def test_validate_answer_citations_rejects_unsupported_sources(self) -> None:
+        """Verify that validate answer citations rejects unsupported sources."""
         result = validate_answer_citations(
             "Use README.md:1-1 and docs/plan.md:2-4 for the answer.",
             ["README.md:1-1"],
