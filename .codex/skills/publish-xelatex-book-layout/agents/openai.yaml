@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish XeLaTeX Book Layout"
+  short_description: "Render publish chapters as print-style PDFs"
+  default_prompt: "Use $publish-xelatex-book-layout to export the target publish chapter as a polished XeLaTeX PDF and verify the preview pages."

@@ -1,5 +1,25 @@
 # 推荐 Skills
 
+## 已落地
+
+### publish-xelatex-book-layout
+
+位置：
+
+- `.codex/skills/publish-xelatex-book-layout/`
+
+用途：
+
+- 将 `publish/drafts/` 下的章节渲染为接近正式印刷样张的 XeLaTeX PDF
+- 用章节目录内已准备好的 `.png` 图替代 Mermaid
+- 统一章节页尺寸、字体、页眉、图注、代码块和页码样式
+
+典型用法：
+
+```bash
+python .codex/skills/publish-xelatex-book-layout/scripts/build_chapter_pdf.py publish/drafts/ch01
+```
+
 ## 1. book-outline skill
 
 用途：

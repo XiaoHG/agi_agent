@@ -16,9 +16,11 @@ Use this skill to turn the project learning process into a structured book-writi
 2. Identify the book chapter being updated.
 3. Extract factual material from version notes, docs, tests, evals, and traces.
 4. Draft or revise the chapter in `publish/drafts/`.
-5. Record open questions and citation gaps in `publish/research/`.
-6. Log revision notes in `publish/revisions/`.
-7. Keep the schedule aligned with project iteration cadence.
+5. If the task includes PDF sample output, print-quality layout adjustment, or chapter figure replacement, switch to `publish-xelatex-book-layout` after the markdown draft is stable.
+6. Render the chapter-local PDF and preview pages, then use the preview result as the layout QA baseline.
+7. Record open questions and citation gaps in `publish/research/`.
+8. Log revision notes in `publish/revisions/`.
+9. Keep the schedule aligned with project iteration cadence.
 
 ## Rules
 
@@ -27,6 +29,9 @@ Use this skill to turn the project learning process into a structured book-writi
 - Keep chapter structure stable across iterations.
 - Separate research, draft, revision, and release materials.
 - Use concise, professional language suitable for publication.
+- Treat markdown draft and PDF sample as two linked deliverables: content first, layout second.
+- When chapter images already exist, prefer static `.png` figures over inline Mermaid in the printable draft.
+- Do not claim a chapter has reached print-quality layout until the XeLaTeX PDF and preview pages have been checked.
 
 ## Output expectations
 
@@ -35,3 +40,13 @@ Use this skill to turn the project learning process into a structured book-writi
 - citation checklist
 - revision notes
 - next writing action
+- optional chapter-local PDF sample and preview images
+
+## Skill handoff
+
+Use `publish-xelatex-book-layout` when any of the following is true:
+
+- the user asks to export or regenerate a chapter PDF
+- the chapter needs professional Chinese book typography rather than plain markdown export
+- Mermaid content has already been replaced with prepared chapter images
+- the writing task has reached a "content stable, layout review" stage

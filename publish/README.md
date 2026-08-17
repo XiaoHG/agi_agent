@@ -29,9 +29,21 @@
 - 先结构，后正文。
 - 先研究，后下笔。
 - 先章节骨架，后段落扩写。
+- 先内容定稿，再进入章节级 XeLaTeX 排版与样张检查。
 - 所有书稿变更都要可追溯到项目版本和证据来源。
 - 写作节奏要和项目迭代同步，避免内容脱节。
 - 后续新会话必须先按连续性机制恢复，再继续正文写作。
+
+## 固定排版规范
+
+- 章节正文默认维护在 `publish/drafts/chNN/README.md`。
+- 当章节进入样张输出、专业排版、图示替换或打印质量检查阶段时，固定使用 `publish-xelatex-book-layout` skill。
+- 默认命令：
+  - `python .codex/skills/publish-xelatex-book-layout/scripts/build_chapter_pdf.py publish/drafts/chNN`
+- 需要预览页检查时：
+  - `python .codex/skills/publish-xelatex-book-layout/scripts/build_chapter_pdf.py publish/drafts/chNN --preview-dir /tmp/chNN_preview`
+- 章节目录中的 `.png` 配图优先级高于可打印稿中的 Mermaid。
+- 未完成 PDF 与预览页检查前，不应宣称章节已达到出版级排版质量。
 
 ## 当前主稿入口
 

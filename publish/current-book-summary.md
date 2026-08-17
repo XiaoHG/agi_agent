@@ -110,6 +110,22 @@
    - `publish/book-continuity-protocol.md`
    - `publish/chapter-map.md`
    - `publish/version-index.md`
+5. 当章节进入打印稿或样张阶段时，固定使用 `.codex/skills/publish-xelatex-book-layout/` 进行 PDF 构建与预览检查。
+
+## 已固定的排版技能接入
+
+书稿工作流已正式接入 `publish-xelatex-book-layout` skill，用于章节级 PDF 样张输出。
+
+固定规则如下：
+
+1. 正文内容先在 `publish/drafts/chNN/README.md` 完成撰写与修订。
+2. 当正文内容相对稳定后，再进入 XeLaTeX 样张阶段。
+3. 样张阶段默认使用：
+   - `python .codex/skills/publish-xelatex-book-layout/scripts/build_chapter_pdf.py publish/drafts/chNN`
+4. 如需页面检查，追加：
+   - `--preview-dir /tmp/chNN_preview`
+5. 章节目录内已经准备好的 `.png` 图，优先替代 Mermaid 进入打印稿。
+6. 后续任何新章节，只要进入打印稿阶段，都默认遵守这套流程，不再单独约定。
 
 ## 恢复工作顺序
 
