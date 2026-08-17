@@ -1,4 +1,86 @@
-"""Deterministic subagent planning for learning multi-agent boundaries."""
+"""Deterministic subagent planning for learning multi-agent boundaries.
+
+This module is the project's subagent runtime design notebook in code form.
+It does not try to be a full autonomous multi-agent system yet. Instead, it
+models the minimum set of entities needed to learn and reason about:
+
+- who the subagents are
+- what each subagent is allowed to do
+- how work is handed off
+- what evidence is produced on return
+- how a collaboration session moves through states
+
+The file is intentionally deterministic so the relationships are easy to read,
+test, and later evolve into a richer async runtime.
+
+Mind map:
+
+```mermaid
+mindmap
+  root((subagent/team.py))
+    SubagentSpec
+      responsibility
+      handoff_rule
+      input_boundary
+      output_boundary
+    SubagentTaskContract
+      objective
+      required_inputs
+      expected_outputs
+      recovery_handoff
+    SubagentDelegationRecord
+      role
+      contract
+      status
+      child_task
+    SubagentHandoffRecord
+      from_role
+      to_role
+      reason
+      payload_summary
+    SubagentReturnRecord
+      returned_outputs
+      summary
+      next_handoff
+    SubagentExecutionRecord
+      produced_outputs
+      verification_note
+      recovery_action
+    SubagentMessageEnvelope
+      message_type
+      referenced_records
+      status
+    SubagentContextBoundary
+      allowed_inputs
+      blocked_inputs
+      expected_outputs
+    SubagentStateTransition
+      from_state
+      to_state
+      actor
+    SubagentRuntimeSession
+      context_boundary
+      messages
+      transitions
+    CollaborationPlan
+      assigned_roles
+      contracts
+      delegations
+      handoffs
+      returns
+      executions
+      runtime_session
+```
+
+Reading order:
+
+1. Start with `SubagentSpec` and `SubagentTaskContract`.
+2. Then read the evidence records: delegation, handoff, return, execution.
+3. Then read `SubagentRuntimeSession` to see how a collaboration flow is
+   captured over time.
+4. Finally read `CollaborationPlan`, `build_collaboration_plan()`, and
+   `execute_collaboration_plan()` to understand the full lifecycle.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +90,12 @@ from typing import Any
 
 @dataclass(frozen=True)
 class SubagentSpec:
-    """Role definition for one project subagent."""
+    """Role definition for one project subagent.
+
+    A ``SubagentSpec`` answers the question "what is this role?".
+    It defines the role identity and the high-level boundary for when the
+    parent flow should hand work to this role.
+    """
 
     name: str               # 子 Agent 的角色名
     responsibility: str     # 该角色负责的核心职责
@@ -17,7 +104,12 @@ class SubagentSpec:
     output_boundary: str    # 它必须产出的输出边界
 
     def to_dict(self) -> dict[str, Any]:
-        """Render the role definition as JSON-ready data."""
+        """Render the role definition as JSON-ready data.
+
+        Returns:
+            A plain dictionary that can be stored in traces, checkpoints, or
+            JSON reports without depending on dataclass serialization.
+        """
 
         return {
             "name": self.name,
@@ -30,7 +122,16 @@ class SubagentSpec:
 
 @dataclass(frozen=True)
 class SubagentTaskContract:
-    """Input/output contract for a delegated subtask."""
+    """Input/output contract for a delegated subtask.
+
+    A ``SubagentTaskContract`` answers the question "what exactly is the child
+    role supposed to consume and produce?".
+
+    This is the strongest boundary in the module because it keeps delegation
+    bounded: the parent gives a contract, the child returns evidence, and the
+    recovery path is explicit when the contract is incomplete or the request is
+    ambiguous.
+    """
 
     role_name: str                      # 该子任务分配给哪个角色
     objective: str                      # 该子任务的明确目标
@@ -41,7 +142,12 @@ class SubagentTaskContract:
     recovery_handoff: str               # 失败或不明确时如何交接恢复
 
     def to_dict(self) -> dict[str, Any]:
-        """Render the contract as JSON-ready data."""
+        """Render the contract as JSON-ready data.
+
+        Returns:
+            A stable dictionary with tuple fields converted to lists so the
+            object remains JSON-friendly.
+        """
 
         return {
             "role_name": self.role_name,
@@ -54,7 +160,11 @@ class SubagentTaskContract:
         }
 
     def to_text(self) -> str:
-        """Render the contract as a compact readable block."""
+        """Render the contract as a compact readable block.
+
+        This form is useful in traces and teaching notes because it puts the
+        role target, constraints, and recovery rule in one screen-sized block.
+        """
 
         lines = [
             f"- Role: {self.role_name}",
@@ -70,7 +180,11 @@ class SubagentTaskContract:
 
 @dataclass(frozen=True)
 class SubagentDelegationRecord:
-    """Structured record for one delegated child task."""
+    """Structured record for one delegated child task.
+
+    A delegation record ties a parent objective to one concrete child task.
+    It is the "work order" that the parent uses when sending work to a role.
+    """
 
     delegation_id: str              # 本次委派记录的唯一标识
     parent_objective: str           # 上层主任务目标
@@ -82,7 +196,12 @@ class SubagentDelegationRecord:
     notes: str                      # 额外说明，通常记录恢复或交接提示
 
     def to_dict(self) -> dict[str, Any]:
-        """Render the delegation record as JSON-ready data."""
+        """Render the delegation record as JSON-ready data.
+
+        Returns:
+            A nested dictionary that includes both the role and the contract
+            used to create the delegation.
+        """
 
         return {
             "delegation_id": self.delegation_id,
@@ -96,7 +215,11 @@ class SubagentDelegationRecord:
         }
 
     def to_text(self) -> str:
-        """Render the delegation record as a compact readable block."""
+        """Render the delegation record as a compact readable block.
+
+        The text version is intentionally short because it is usually embedded
+        inside broader collaboration summaries.
+        """
 
         return (
             f"- Delegation {self.delegation_id} [{self.status}] -> {self.role.name}\n"
@@ -107,7 +230,14 @@ class SubagentDelegationRecord:
 
 @dataclass(frozen=True)
 class SubagentHandoffRecord:
-    """Structured handoff from one role to another."""
+    """Structured handoff from one role to another.
+
+    A handoff record captures the moment work ownership changes from one role
+    to the next. It is different from a delegation:
+
+    - delegation = parent assigns a child task
+    - handoff = one role passes context to the next role
+    """
 
     handoff_id: str                  # 本次交接记录 ID
     from_role: str                   # 从哪个角色交出
@@ -131,7 +261,11 @@ class SubagentHandoffRecord:
 
 @dataclass(frozen=True)
 class SubagentReturnRecord:
-    """Structured return from one subagent back to the parent flow."""
+    """Structured return from one subagent back to the parent flow.
+
+    The return record is where the parent learns whether the child completed
+    its bounded objective and what the next action should be.
+    """
 
     return_id: str                      # 本次返回记录 ID
     role_name: str                      # 返回结果的角色
@@ -155,7 +289,11 @@ class SubagentReturnRecord:
 
 @dataclass(frozen=True)
 class SubagentExecutionRecord:
-    """Execution evidence for one delegated subtask."""
+    """Execution evidence for one delegated subtask.
+
+    This is the proof object for a delegation. It records what the child
+    actually produced and whether that output was considered successful.
+    """
 
     delegation_id: str                  # 对应的委派 ID
     role_name: str                      # 执行角色名
@@ -181,7 +319,11 @@ class SubagentExecutionRecord:
 
 @dataclass(frozen=True)
 class SubagentMessageEnvelope:
-    """Structured message exchanged inside one subagent runtime session."""
+    """Structured message exchanged inside one subagent runtime session.
+
+    This is the message-level counterpart to delegation and return records.
+    It allows the runtime to keep a stable, ordered communication trail.
+    """
 
     message_id: str                     # 本次消息的唯一标识
     session_id: str                     # 所属 runtime session
@@ -211,7 +353,11 @@ class SubagentMessageEnvelope:
 
 @dataclass(frozen=True)
 class SubagentContextBoundary:
-    """Runtime context boundary for the active delegated scope."""
+    """Runtime context boundary for the active delegated scope.
+
+    This record answers: "what can the active child see, what is blocked, and
+    what outputs are expected before control returns to the parent?"
+    """
 
     session_id: str                     # 所属 runtime session
     parent_role: str                    # 上层父角色
@@ -237,15 +383,19 @@ class SubagentContextBoundary:
 
 @dataclass(frozen=True)
 class SubagentStateTransition:
-    """One runtime state transition inside a subagent session."""
+    """One runtime state transition inside a subagent session.
 
-    transition_id: str                  # 状态迁移 ID
-    session_id: str                     # 所属 runtime session
-    from_state: str                     # 迁移前状态
-    to_state: str                       # 迁移后状态
-    actor: str                          # 触发本次状态变化的角色
-    reason: str                         # 状态变化原因
-    order: int                          # 在 session 中的顺序
+    State transitions make the collaboration flow observable. Without them the
+    session would only show static records, not movement across states.
+    """
+
+    transition_id: str    # 状态迁移 ID
+    session_id: str       # 所属 runtime session
+    from_state: str       # 迁移前状态
+    to_state: str         # 迁移后状态
+    actor: str            # 触发本次状态变化的角色
+    reason: str           # 状态变化原因
+    order: int            # 在 session 中的顺序
 
     def to_dict(self) -> dict[str, Any]:
         """Render the state transition as JSON-ready data."""
@@ -263,7 +413,12 @@ class SubagentStateTransition:
 
 @dataclass(frozen=True)
 class SubagentRuntimeSession:
-    """Execution-layer runtime session for one collaboration flow."""
+    """Execution-layer runtime session for one collaboration flow.
+
+    This is the most complete evidence object in the module. It binds together
+    the collaboration plan, context boundary, messages, and state transitions
+    into one executable history record.
+    """
 
     session_id: str                                  # runtime session 唯一标识
     objective: str                                   # 本次会话的总目标
@@ -299,7 +454,17 @@ class SubagentRuntimeSession:
 
 @dataclass(frozen=True)
 class CollaborationPlan:
-    """A small ordered plan that assigns work to subagents."""
+    """A small ordered plan that assigns work to subagents.
+
+    ``CollaborationPlan`` is the parent-facing orchestration object. It says:
+
+    - which roles are involved
+    - what contracts they receive
+    - how the work is delegated
+    - how the roles hand off to each other
+    - what evidence came back
+    - whether the whole flow succeeded or failed
+    """
 
     objective: str                                          # 当前协作要完成的总目标
     assigned_roles: tuple[SubagentSpec, ...]                # 参与本次协作的角色集合
@@ -331,7 +496,11 @@ class CollaborationPlan:
         }
 
     def to_text(self) -> str:
-        """Render the collaboration plan."""
+        """Render the collaboration plan as a readable learning summary.
+
+        The text version is intentionally verbose because it is designed for
+        learners who want to see the full collaboration story in one place.
+        """
 
         lines = [f"Collaboration objective: {self.objective}", "Assigned roles:"]
         for role in self.assigned_roles:
@@ -384,7 +553,13 @@ class CollaborationPlan:
 
 
 def get_default_subagents() -> tuple[SubagentSpec, ...]:
-    """Return the default project subagents."""
+    """Return the default project subagents.
+
+    The current repository intentionally starts with two default roles:
+
+    - ``teacher_agent`` for explanation, planning, and boundary setting
+    - ``coding_agent`` for implementation, verification, and bug fixing
+    """
 
     return (
         SubagentSpec(
@@ -405,7 +580,15 @@ def get_default_subagents() -> tuple[SubagentSpec, ...]:
 
 
 def build_subagent_task_contract(role: SubagentSpec, objective: str) -> SubagentTaskContract:
-    """Build a deterministic contract for one subagent role."""
+    """Build a deterministic contract for one subagent role.
+
+    Args:
+        role: The role that will receive the task.
+        objective: The parent objective to translate into a bounded contract.
+
+    Returns:
+        A role-specific contract that makes the delegation safe and explicit.
+    """
 
     if role.name == "teacher_agent":
         return SubagentTaskContract(
@@ -434,7 +617,11 @@ def build_delegation_record(
     contract: SubagentTaskContract,
     order: int,
 ) -> SubagentDelegationRecord:
-    """Build a deterministic delegation record for a child task."""
+    """Build a deterministic delegation record for a child task.
+
+    The order field is important because it keeps the collaboration flow
+    deterministic and easy to replay in traces.
+    """
 
     return SubagentDelegationRecord(
         delegation_id=f"{role.name}-{order:02d}",
@@ -455,7 +642,11 @@ def build_handoff_record(
     payload_summary: str,
     order: int,
 ) -> SubagentHandoffRecord:
-    """Build a deterministic handoff record between two roles."""
+    """Build a deterministic handoff record between two roles.
+
+    The payload summary should be concise because this record is meant to
+    capture just enough context for the next role to continue.
+    """
 
     return SubagentHandoffRecord(
         handoff_id=f"handoff-{order:02d}",
@@ -475,7 +666,11 @@ def build_return_record(
     next_handoff: str,
     order: int,
 ) -> SubagentReturnRecord:
-    """Build a deterministic return record for one role."""
+    """Build a deterministic return record for one role.
+
+    The return record is the parent's inspection point for the child role's
+    output. It is where we decide whether the next handoff should happen.
+    """
 
     return SubagentReturnRecord(
         return_id=f"return-{order:02d}",
@@ -495,7 +690,11 @@ def build_execution_record(
     verification_note: str,
     recovery_action: str,
 ) -> SubagentExecutionRecord:
-    """Build a deterministic child-task execution record."""
+    """Build a deterministic child-task execution record.
+
+    This record is the proof that a delegated task was actually executed and
+    not merely planned.
+    """
 
     return SubagentExecutionRecord(
         delegation_id=delegation.delegation_id,
@@ -519,7 +718,11 @@ def build_message_envelope(
     status: str,
     order: int,
 ) -> SubagentMessageEnvelope:
-    """Build a deterministic runtime message envelope."""
+    """Build a deterministic runtime message envelope.
+
+    The envelope is intentionally generic so it can represent delegation,
+    handoff, return, and recovery messages using the same structure.
+    """
 
     return SubagentMessageEnvelope(
         message_id=f"message-{order:02d}",
@@ -543,7 +746,12 @@ def build_context_boundary(
     required_inputs: tuple[str, ...],
     expected_outputs: tuple[str, ...],
 ) -> SubagentContextBoundary:
-    """Build a deterministic parent/child context boundary."""
+    """Build a deterministic parent/child context boundary.
+
+    ``blocked_inputs`` is hard-coded here on purpose. It makes the boundary
+    visible and avoids accidentally treating a delegated child as if it had
+    unrestricted access to the workspace or to parent-only authority.
+    """
 
     return SubagentContextBoundary(
         session_id=session_id,
@@ -569,7 +777,11 @@ def build_state_transition(
     reason: str,
     order: int,
 ) -> SubagentStateTransition:
-    """Build a deterministic runtime state transition."""
+    """Build a deterministic runtime state transition.
+
+    Each transition is indexed so the final runtime session can be replayed in
+    the exact order in which the collaboration progressed.
+    """
 
     return SubagentStateTransition(
         transition_id=f"transition-{order:02d}",
@@ -591,7 +803,12 @@ def build_runtime_session(
     status: str,
     recovery_handoff: str,
 ) -> SubagentRuntimeSession:
-    """Build the v51 runtime session from collaboration execution evidence."""
+    """Build the v51 runtime session from collaboration execution evidence.
+
+    This function composes the collaboration plan, execution evidence, and
+    communication trail into one session object. It is the best place to study
+    how the project intends future asynchronous multi-agent runtime to look.
+    """
 
     session_id = f"subagent-session-{len(plan.delegations):02d}"
     messages: list[SubagentMessageEnvelope] = []
@@ -751,7 +968,12 @@ def build_runtime_session(
 
 
 def describe_subagents() -> str:
-    """Render available subagents."""
+    """Render available subagents as a readable text block.
+
+    Returns:
+        A short, human-friendly summary of the built-in roles and their
+        handoff rules.
+    """
 
     lines = ["Available subagents:"]
     for role in get_default_subagents():
@@ -763,7 +985,19 @@ def describe_subagents() -> str:
 
 
 def build_collaboration_plan(user_input: str) -> CollaborationPlan:
-    """Build a simple collaboration plan for a user request."""
+    """Build a simple collaboration plan for a user request.
+
+    The planner is intentionally deterministic. It uses the user request text
+    to choose between:
+
+    - a teaching-only plan for explanation-oriented tasks
+    - a teacher-plus-coding plan for implementation-oriented tasks
+
+    Example:
+        >>> plan = build_collaboration_plan("Explain the agent runtime")
+        >>> plan.assigned_roles[0].name
+        'teacher_agent'
+    """
 
     roles = get_default_subagents()
     lowered = user_input.lower()
@@ -798,7 +1032,12 @@ def build_collaboration_plan(user_input: str) -> CollaborationPlan:
 
 
 def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
-    """Execute the deterministic collaboration plan and return structured evidence."""
+    """Execute the deterministic collaboration plan and return structured evidence.
+
+    The execution is still simulated, but the evidence objects are real. That
+    makes the module useful for learning the shape of a future runtime without
+    requiring a live multi-agent backend yet.
+    """
 
     plan = build_collaboration_plan(user_input)
     handoffs: list[SubagentHandoffRecord] = []
