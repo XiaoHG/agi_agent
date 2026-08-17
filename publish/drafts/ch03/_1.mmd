@@ -1,0 +1,7 @@
+flowchart TD
+    C1[CLI 输入] --> C2[route_intent]
+    C2 --> C3{路由结果}
+    C3 -->|direct_answer| C4[直接回答]
+    C3 -->|use_tool| C5[工具执行]
+    C4 --> C6[统一输出]
+    C5 --> C6

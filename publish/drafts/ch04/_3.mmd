@@ -1,0 +1,8 @@
+flowchart TD
+    W1[用户目标] --> W2[WorkflowPlan]
+    W2 --> W3[步骤 1: tool]
+    W2 --> W4[步骤 2: tool]
+    W2 --> W5[步骤 n: synthesize]
+    W3 --> W6[写回 AgentState]
+    W4 --> W6
+    W5 --> W6

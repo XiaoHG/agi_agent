@@ -1,0 +1,852 @@
+
+
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="UTF-8">
+        <title>about this book · AI Agents in Action, Second Edition</title>
+        <script>
+            (function(){
+                try {
+                    var location = document.location.origin || document.location.href || "";
+                    if((location.indexOf("livebook.manning.com") >= 0
+                    || location.indexOf("livebook-qa.manning.com") >= 0
+                    || location.indexOf("subscription-qa.manning.com") >= 0
+                    || location.indexOf("subscription.manning.com") >= 0)
+                    && location.indexOf("http://") === 0) {
+                        document.location.href = document.location.href.replace("http://", "https://");
+                    }
+                }
+                catch(e){ }
+            })();
+        </script>
+        
+        
+        
+
+        <link rel="icon" type="image/png" href="https://d19npu3b8zepp3.cloudfront.net/assets/images/favicon.png?v=1"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+
+        <link rel="preload" as="image" href="https://d19npu3b8zepp3.cloudfront.net/assets/images/cover.png">
+        <link rel="preload" as="image" href="https://d19npu3b8zepp3.cloudfront.net/assets/images/cover-large.png">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap">
+        
+            <link rel="preload" href="https://d19npu3b8zepp3.cloudfront.net/bin/js/app.js?09e44846-93c9-4eb7-bbc8-137549fc413f" as="script" crossorigin>
+        
+
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:100,100i,300,300i,400,700,i|Merriweather:300,700,i">
+        <meta name="google-site-verification" content="6KdeRcvdngzjs8M0O00EmBV8tsVi-JXzdZEFXJHVz0c"/>
+
+        <style>
+            #header { background: white; min-height: 75px; border-bottom: 1px solid #d0cdcd;}
+            #header .header-mid-container input { font-weight: 300; }
+            .header-nav-bar { max-height: 75px; overflow: hidden; display: flex;}
+
+            #footer { position: fixed; right: 0; bottom: 0; left:0; }
+            #footer .footer-content-wrapper { height: 31px;}
+
+            body { background:#FFF; color:#3C3C3C; padding:0; margin:0; line-height:1.5; padding-top: 75px; font-family: Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji;}
+            .fixed { width:100%; left:0; position:fixed; top:0; z-index:101 }
+            .sitemap-container { opacity: 0.01; }
+
+            .header-item-container {display: inline-block; }
+            .hidden { display: none; }
+
+            #pointing-info-box, .slide-in-menu.closed, .reveal-modal { display: none; }
+            .row { width:100%; max-width:62.5rem; margin:0 auto; }
+            .row:after,.row:before{content:" "; display:table }
+            .row:after {clear:both}
+
+            .column, .columns{ position:relative; padding-left:.9375rem; padding-right:.9375rem; width:100%; float:left}
+            @media only screen and (min-width: 40.063em){  h1, h2, h3, h4, h5, h6 { line-height: 1.4; } }
+
+            img { max-width: 100%; height: auto; }
+
+            h1, h2, h3, h4, h5, h6 { margin-top: .2rem; margin-bottom: .5rem; }
+            ul, ol, dl { font-size: 1rem; line-height: 1.6; margin-bottom: 1.25rem; list-style-position: outside; font-family: inherit; margin-top: 0; }
+
+            .readable-text .num-string { margin-right: 0.5em; }
+            .placeholder { background-color: #eee; display: flex; margin: 5px 0; line-height: 16px;}
+            .book-element-head-commands .placeholder { line-height: 28px; flex: 1; margin: 0;}
+            @keyframes placeHolderShimmer { 0% { background-position: 100% 0 } 100% { background-position: -100% 0}}
+            .placeholder-animated-background { width: 100%;  animation-duration: 1.25s;  animation-fill-mode: forwards;  animation-iteration-count: infinite;  animation-name: placeHolderShimmer;  animation-timing-function: linear;  background: darkgray;  background: linear-gradient(to right, #eeeeee 10%, #dddddd 18%, #eeeeee 33%);  background-size: 1100px 104px;  position: relative;  }
+            .introduction-summary li i, .readable-text i { font-family: Lora, "serif"; font-style: italic; }
+
+            #book-main-content-container {
+                display: block;
+                position: relative;
+                padding: 18px 2% 2% 2%;
+                max-width: 750px;
+                margin: 0 auto 2rem auto;
+
+                .readable-text {
+                    padding: 0 8%;
+                    word-wrap: break-word;
+                }
+
+                .readable-text.print-book-callout { padding-left: 10%; }
+
+                ul, ol { margin-left: 0; padding: 0 8% 0 12%;}
+            }
+
+            .print-book-callout-head { font-weight: bold; text-transform: uppercase; margin-right: 1em; }
+
+            #book-markup-container .browsable-container { margin-top: 1em; margin-bottom: 1em; padding: 1em; border: 1px solid transparent; }
+            #book-markup-container >.browsable-container { margin: 1em 8%; }
+
+            #book-markup-container .browsable-container.figure-container { display: flex; flex-direction: column-reverse; padding: 0; background-color: transparent; background: transparent; }
+            #book-markup-container .browsable-container.listing-container  { padding: 0; background: transparent; }
+            #book-markup-container .browsable-container.figure-container h5 { margin-top: 1em; }
+            #book-markup-container .browsable-container.figure-container h5,
+            #book-markup-container .browsable-container.listing-container h5 { color: inherit; padding: 5px; }
+            #book-markup-container .browsable-container.figure-container img { background: white; padding: 0.5em; align-self: center; }
+
+            h1, h2, h3, h4, h5 {
+                .num-string {
+                    margin-right: 0.5em;
+                }
+            }
+
+            #book-markup-container {
+                font-family: Lora,"serif";
+                h1, h2, h3, h4, h5, h6 {
+                    font-family: Inter;
+                    font-weight: bold;
+                    line-height: 1.2;
+                }
+
+                h1 .placeholder { line-height: 1.2; }
+            }
+
+            .browsable-container.figure-container img {
+                text-align: center;
+            }
+
+            .browsable-container {
+                background-color: white;
+                position: relative;
+            }
+
+            .readable-text>p, .readable-text>h1, .readable-text>h2, .readable-text>h3, .readable-text>h4, .readable-text>h5 {
+                border-right: 2px solid transparent;
+            }
+
+            .chapter-title-numbering .num-string {
+                font-weight: 300;
+            }
+
+            #book-markup-container h1 { font-size: 1.9rem; }
+            #book-markup-container h2 { font-size: 1.6rem; }
+            #book-markup-container h3 { font-size: 1.2rem; }
+            #book-markup-container h4 { font-size: 1.1rem; }
+            #book-markup-container h5 { font-size: 1rem; }
+
+            #book-markup-container .browsable-container h5 { font-size: 14px; font-weight: 400; line-height: 22px; }
+            #book-markup-container .browsable-container h5 .num-string { font-weight: 600; }
+
+            #book-markup-container p, #book-markup-container ul, #book-markup-container ol, #book-markup-container table { font-size: 16px; line-height: 28px; }
+            #book-markup-container p { padding:5px; }
+
+            @media screen and (min-width: 1100px) {
+                #book-markup-container h1 { font-size: 3rem; }
+                #book-markup-container h2 { font-size: 2rem; }
+                #book-markup-container h3 { font-size: 1.5rem; }
+
+                #book-markup-container p, #book-markup-container ul, #book-markup-container ol, #book-markup-container table { font-size: 16px; line-height: 28px; }
+                #book-markup-container p { padding:5px; }
+            }
+
+            @media screen and (min-width: 1440px) {
+                #book-content-main-row { max-width: 940px; }
+                #book-main-content-container { max-width: initial; }
+            }
+
+            @media screen and (min-width: 1640px) {
+                #book-content-main-row { max-width: 1140px; }
+                #book-main-content-container { max-width: initial; }
+            }
+
+            #book-markup-container {
+                .introduction-summary {
+                    border: 1px solid transparent;
+                    border-top-color: #E0E0E0;
+                    border-bottom-color: #E0E0E0;
+                    padding: 1.5rem;
+                    margin: 1em 8%;
+                    position: relative;
+
+                    h3 { font-size: 1rem; }
+
+                    ul, li,  p, ol {
+                        font-family: Inter;
+                    }
+
+                    ul { margin-left: 0.85rem; margin-bottom: 0; }
+                    ul li { padding-left: 0.2rem; }
+                }
+            }
+
+            @media only screen and (min-width: 360px) {  .introduction-summary ul { padding-left: 1em !important; } }
+            @media only screen and (min-width: 480px) {  .introduction-summary ul { padding-left: 1em !important; } }
+            #book-main-content-container ul .readable-text { padding-top: 0; padding-left: 1em;}
+
+            @media only screen and (min-width: 800px) {
+                .callout-container:not(.interactive-container) { padding: 15px; }
+            }
+
+            #book-main-content-container .callout-container { margin: 0 8%; margin-top: 1em; margin-bottom: 1em; border: 1px solid transparent; }
+
+            .readable-text > p, .readable-text > h2, .readable-text > h3, .readable-text > h4, .readable-text > h5 { padding:5px; border-right: 2px solid transparent;}
+            .readable-text > h1 { border-right: 2px solid transparent; }
+
+            .book-element-head-commands { height: 32px; padding: 20px 0 10px 0; box-sizing: content-box; }
+
+            html.night-mode { background: #282A30; }
+            body.night-mode { background: #282A30; }
+            body.night-mode #book-markup-container {
+                h1, h2, h3, h4, h5, h6 {
+                    color: #D6D7DB;
+                }
+            }
+
+            .my-books-container h1, body.night-mode .my-books-container h2, body.night-mode .my-books-container h3, body.night-mode .my-books-container h4, body.night-mode .my-books-container h5, body.night-mode .my-books-container h6 { color: #D6D7DB; }
+            body.night-mode #book-markup-container .introduction-summary { border-color: transparent;}
+            body.night-mode #book-markup-container .introduction-summary li, body.night-mode #book-markup-container .introduction-summary p, body.night-mode #book-markup-container .introduction-summary h3 { color: #D6D7DB;}
+            body.night-mode #book-markup-container, body.night-mode .my-books-container { color: #D6D7DB;}
+            body.night-mode .placeholder { background: #515556;}
+            body.night-mode .placeholder-animated-background { background: linear-gradient(to right, #9a9898 10%, #7f7f7f 18%, #858585 33%); }
+            body #book-markup-container i, body #book-markup-container .toc-summary-content { font-size: 16px; line-height: 28px; }
+            body.night-mode #header { background-color: #2e2e2e; border-bottom-color: #484848; }
+            .wide-book-cover-hero-image { text-align: center; }
+            .wide-book-cover-hero-image img { height: 400px; width: auto; }
+            .book-element-pre-header { min-height: 20px; margin: 8px 0 20px 0; padding: 0 8%; display: flex; align-items: center; justify-content: space-between; font-family: Inter; font-weight: 500; font-size: 14px; color: #828282; line-height: 20px; }
+            .code-area-container { padding: 10px 0 10px 10px; }
+            .listing-container .code-area { line-height: 17px !important; font-size: 13px; overflow-x: auto; font-optical-sizing: auto; tab-size: 4; }
+            #book-main-content-container .callout-container .readable-text { padding: 0 1em; }
+            #book-main-content-container .callout-container > .readable-text > h5, #book-main-content-container .callout-container > h5 { margin-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-weight: bold;}
+            #book-main-content-container .sidebar-container > .readable-text > h5 { margin-top: 20px; }
+            *, *:before, *:after { box-sizing: border-box; }
+            p { margin-bottom: 1.25rem;}
+
+            @media screen and (max-width: 1036px) {
+                .readable-text h1:has(.num-string), .readable-text h2:has(.num-string), .readable-text h3:has(.num-string),
+                .readable-text h4:has(.num-string), .readable-text h5:has(.num-string) {
+                    display: flex;
+                }
+            }
+            @media screen and (min-width: 1036px) {
+                .readable-text .num-string { position: absolute; transform: translateX(calc(-100% - 20px));}
+            }
+
+            #book-main-content-container .sidebar-container { margin-top: 1.75em; margin-bottom: 1.75em; padding-top: 0; padding-bottom: 0; }
+        </style>
+        
+    
+    <meta name="title" content="about this book · AI Agents in Action, Second Edition"/>
+    <meta property="og:title" content="about this book · AI Agents in Action, Second Edition">
+
+    <meta name="twitter:card" content="summary"/>
+    <meta name="twitter:site" content="liveBook"/>
+    <meta name="twitter:title" content="about this book · AI Agents in Action, Second Edition"/>
+    <meta name="twitter:description" content=""/>
+    <meta name="twitter:image" content="https://drek4537l1klr.cloudfront.net/lanham4/Figures/cover.jpg"/>
+
+    <meta class="meta-description" name="description" content="">
+    <meta class="meta-description" property="og:description" content="">
+    <meta class="meta-description" name="twitter:description" content="">
+
+    <meta class="meta-image" property="og:image" content="https://drek4537l1klr.cloudfront.net/lanham4/Figures/cover.jpg">
+    <meta class="meta-image" name="twitter:image:src" content="https://drek4537l1klr.cloudfront.net/lanham4/Figures/cover.jpg">
+    
+    
+        <script type="application/ld+json" data-key="google-bot-info">{"@context":"https://schema.org","@type":"Chapter","name":"about this book","position":"3","datePublished":"2026-06-15","dateModified":"2026-06-15","author":{"@type":"Person","name":"Micheal Lanham"},"description":"about this book","isAccessibleForFree":false,"hasPart":{"@type":"WebPageElement","isAccessibleForFree":false,"cssSelector":".scrambled, .paywall"},"isPartOf":{"@type":"Book","name":"AI Agents in Action, Second Edition","author":{"@type":"Person","name":"Micheal Lanham"},"isbn":"9781633434530","url":"https://www.manning.com/books/ai-agents-in-action-second-edition","publisher":{"@type":"Organization","name":"Manning Publications Co."}}}</script>
+    
+
+
+    <meta name="layout" content="page"/>
+    <link rel="canonical" href="https://livebook.manning.com/book/ai-agents-in-action-second-edition/about-this-book" />
+
+    <link rel="preload" href="https://d19npu3b8zepp3.cloudfront.net/vendor/highlight.js/default.css" as="style" crossorigin>
+    <link rel="preload" href="https://d19npu3b8zepp3.cloudfront.net/vendor/codemirror/lib/codemirror.css" as="style" crossorigin>
+    <link rel="preload" href="https://livebook.manning.com/assets/highlightJsWorker.js" as="script" crossorigin>
+    <link rel="preload" href="https://livebook.manning.com/assets/highlight.js/highlight.pack.js" as="script" crossorigin>
+    <style>
+        .readable-text .num-string { margin-right: 0.5em; }
+        .placeholder { background-color: #eee; display: flex; margin: 5px 0; line-height: 16px;}
+        .book-element-head-commands .placeholder { line-height: 28px; flex: 1; margin: 0;}
+        @keyframes placeHolderShimmer { 0% { background-position: 100% 0 } 100% { background-position: -100% 0}}
+        .placeholder-animated-background { width: 100%;  animation-duration: 1.25s;  animation-fill-mode: forwards;  animation-iteration-count: infinite;  animation-name: placeHolderShimmer;  animation-timing-function: linear;  background: darkgray;  background: linear-gradient(to right, #eeeeee 10%, #dddddd 18%, #eeeeee 33%);  background-size: 1100px 104px;  position: relative;  }
+        .introduction-summary li i, .readable-text i { font-family: Lora, "serif"; font-style: italic; }
+
+        #book-main-content-container {
+            display: block;
+            position: relative;
+            padding: 2%;
+            max-width: 750px;
+            margin: 0 auto 2rem auto;
+
+            .readable-text {
+                padding: 0 8%;
+                word-wrap: break-word;
+            }
+
+            .readable-text.print-book-callout { padding-left: 10%; }
+
+            ul, ol { margin-left: 0; padding: 0 8% 0 12%;}
+        }
+
+        .print-book-callout-head { font-weight: bold; text-transform: uppercase; margin-right: 1em; }
+
+        #book-markup-container .browsable-container { margin-top: 1em; margin-bottom: 1em; padding: 1em; border: 1px solid transparent; }
+        #book-markup-container >.browsable-container { margin: 1em 8%; }
+        #book-markup-container .browsable-container.figure-container,  #book-markup-container .browsable-container.listing-container { border-radius: 0; border-color: transparent; background: transparent; }
+
+        #book-markup-container .browsable-container.figure-container { display: flex; flex-direction: column-reverse; padding: 0; background: transparent; }
+        #book-markup-container .browsable-container.listing-container  { padding: 0; }
+        #book-markup-container .browsable-container.figure-container h5 { margin-top: 1em; }
+        #book-markup-container .browsable-container.figure-container h5,
+        #book-markup-container .browsable-container.listing-container h5 { color: inherit; padding: 5px; }
+        #book-markup-container .browsable-container.figure-container img { background: white; padding: 0.5em; align-self: center;}
+        #book-main-content-container .sidebar-container { margin-top: 1.75em; margin-bottom: 1.75em; padding-top: 0; padding-bottom: 0; }
+
+        h1, h2, h3, h4, h5 {
+            .num-string {
+                margin-right: 0.5em;
+            }
+        }
+
+        #book-markup-container {
+            font-family: Lora,"serif";
+            h1, h2, h3, h4, h5, h6 {
+                font-family: Inter;
+                font-weight: bold;
+                line-height: 1.2;
+            }
+
+            h1 .placeholder { line-height: 1.2; }
+        }
+
+        .browsable-container.figure-container img {
+            text-align: center;
+        }
+
+        .browsable-container {
+             background-color: white;
+             position: relative;
+        }
+
+        .readable-text>p, .readable-text>h1, .readable-text>h2, .readable-text>h3, .readable-text>h4, .readable-text>h5 {
+            border-right: 2px solid transparent;
+        }
+
+        .chapter-title-numbering .num-string {
+            font-weight: 300;
+        }
+
+        #book-markup-container h1 { font-size: 1.9rem; }
+        #book-markup-container h2 { font-size: 1.6rem; }
+        #book-markup-container h3 { font-size: 1.2rem; }
+        #book-markup-container h4 { font-size: 1.1rem; }
+        #book-markup-container h5 { font-size: 1rem; }
+
+        #book-markup-container .browsable-container h5 { font-size: 14px; font-weight: 400; line-height: 22px; }
+        #book-markup-container .browsable-container h5 .num-string { font-weight: 600; }
+
+        #book-markup-container p, #book-markup-container ul, #book-markup-container ol, #book-markup-container table { font-size: 16px; line-height: 28px; }
+        #book-markup-container p { padding:5px; }
+
+        @media screen and (min-width: 1100px) {
+            #book-markup-container h1 { font-size: 3rem; }
+            #book-markup-container h2 { font-size: 2rem; }
+            #book-markup-container h3 { font-size: 1.5rem; }
+
+            #book-markup-container p, #book-markup-container ul, #book-markup-container ol, #book-markup-container table { font-size: 16px; line-height: 28px; }
+            #book-markup-container p { padding:5px; }
+        }
+
+        @media screen and (min-width: 1440px) {
+            #book-content-main-row { max-width: 940px; }
+            #book-main-content-container { max-width: initial; }
+        }
+
+        @media screen and (min-width: 1640px) {
+            #book-content-main-row { max-width: 1140px; }
+            #book-main-content-container { max-width: initial; }
+        }
+
+        #book-markup-container {
+            .introduction-summary {
+                border: 1px solid transparent;
+                border-top-color: #E0E0E0;
+                border-bottom-color: #E0E0E0;
+                padding: 1.5rem;
+                margin: 1em 8%;
+                position: relative;
+
+                h3 { font-size: 1rem; }
+
+                ul, li,  p, ol {
+                    font-family: Inter;
+                }
+
+                ul { margin-left: 0.85rem; margin-bottom: 0; }
+                ul li { padding-left: 0.2rem; }
+            }
+        }
+
+        @media only screen and (min-width: 360px) {  .introduction-summary ul { padding-left: 1em !important; } }
+        @media only screen and (min-width: 480px) {  .introduction-summary ul { padding-left: 1em !important; } }
+        #book-main-content-container ul .readable-text { padding-top: 0; padding-left: 1em;}
+
+        @media only screen and (min-width: 800px) {
+            .callout-container:not(.interactive-container) { padding: 15px; }
+        }
+
+        #book-main-content-container .callout-container { margin: 0 8%; margin-top: 1em; margin-bottom: 1em; border: 1px solid transparent; }
+
+        .readable-text > p, .readable-text > h2, .readable-text > h3, .readable-text > h4, .readable-text > h5 { padding:5px; border-right: 2px solid transparent;}
+        .readable-text > h1 { border-right: 2px solid transparent; }
+
+        .book-element-head-commands { height: 32px; padding: 20px 0 10px 0; box-sizing: content-box; }
+
+        html.night-mode { background: #282A30; }
+        body.night-mode { background: #282A30; }
+        body.night-mode #book-markup-container {
+            h1, h2, h3, h4, h5, h6 {
+                color: #D6D7DB;
+            }
+        }
+
+        .my-books-container h1, body.night-mode .my-books-container h2, body.night-mode .my-books-container h3, body.night-mode .my-books-container h4, body.night-mode .my-books-container h5, body.night-mode .my-books-container h6 { color: #D6D7DB; }
+        body.night-mode #book-markup-container .introduction-summary { border-color: transparent;}
+        body.night-mode #book-markup-container .introduction-summary li, body.night-mode #book-markup-container .introduction-summary p, body.night-mode #book-markup-container .introduction-summary h3 { color: #D6D7DB;}
+        body.night-mode #book-markup-container, body.night-mode .my-books-container { color: #D6D7DB;}
+        body.night-mode .placeholder { background: #515556;}
+        body.night-mode .placeholder-animated-background { background: linear-gradient(to right, #9a9898 10%, #7f7f7f 18%, #858585 33%); }
+        body #book-markup-container i, body #book-markup-container .toc-summary-content { font-size: 16px; line-height: 28px; }
+        body.night-mode #header { background-color: #2e2e2e; border-bottom-color: #484848; }
+        .wide-book-cover-hero-image { text-align: center; }
+        .wide-book-cover-hero-image img { height: 400px; width: auto; }
+        .book-element-pre-header { min-height: 20px; margin: 8px 0 20px 0; padding: 0 8%; display: flex; align-items: center; justify-content: space-between; font-family: Inter; font-weight: 500; font-size: 14px; color: #828282; line-height: 20px; }
+        .code-area-container { padding: 10px 0 10px 10px; }
+        .listing-container .code-area { line-height: 17px !important; font-size: 13px; overflow-x: auto; font-optical-sizing: auto; tab-size: 4; }
+        #book-main-content-container .callout-container .readable-text { padding: 0 1em; }
+        #book-main-content-container .callout-container > .readable-text > h5, #book-main-content-container .callout-container > h5 { margin-bottom: 4px; margin-top: 8px; text-transform: uppercase; font-weight: bold;}
+        #book-main-content-container .sidebar-container > .readable-text > h5 { margin-top: 20px; }
+        *, *:before, *:after { box-sizing: border-box; }
+        p { margin-bottom: 1.25rem; }
+
+        @media screen and (max-width: 1036px) {
+            .readable-text h1:has(.num-string), .readable-text h2:has(.num-string), .readable-text h3:has(.num-string),
+            .readable-text h4:has(.num-string), .readable-text h5:has(.num-string) {
+                display: flex;
+            }
+        }
+        @media screen and (min-width: 1036px) {
+            .readable-text .num-string { position: absolute; transform: translateX(calc(-100% - 20px));}
+        }
+
+        #book-main-content-container .sidebar-container { margin-top: 1.75em; margin-bottom: 1.75em; padding-top: 0; padding-bottom: 0; }
+    </style>
+
+        <script>
+            try { var eligibleForABTest = false && window.innerWidth >= 1070; } catch (e) {}
+        </script>
+        
+        
+        
+            <!-- Global site tag (gtag.js) - Google Ads: 830923058 -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=AW-830923058"></script>
+            <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-830923058'); </script>
+
+            <!-- Google Tag Manager -->
+            <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+            })(window,document,'script','dataLayer','GTM-PL85NGN');</script>
+            <!-- End Google Tag Manager -->
+
+            <!--<script type="text/javascript">
+                window.heap=window.heap||[],heap.load=function(e,t){window.heap.appid=e,window.heap.config=t=t||{};var r=t.forceSSL||"https:"===document.location.protocol,a=document.createElement("script");a.type="text/javascript",a.async=!0,a.src=(r?"https:":"http:")+"//cdn.heapanalytics.com/js/heap-"+e+".js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(a,n);for(var o=function(e){return function(){heap.push([e].concat(Array.prototype.slice.call(arguments,0)))}},p=["addEventProperties","addUserProperties","clearEventProperties","identify","removeEventProperty","setEventProperties","track","unsetEventProperty"],c=0;c<p.length;c++)heap[p[c]]=o(p[c])};
+                heap.load("2529846252");
+            </script>-->
+
+            <!-- Google tag (gtag.js) GA4-->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=G-JBLEKZBHFG"></script>
+            <script>
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+
+                gtag('config', 'G-JBLEKZBHFG');
+            </script>
+            <script>
+    /* SET YOUR EXPERIMENTS HERE */
+    var runningExperiments = [
+            {name: "ABC-MANNING_button_test", distribution: [50, 50], variants: ["MANNING_button_test-A" /* variant A */, "MANNING_button_test-B" /* variant B */]},
+    ];
+    /* _________________________ */
+</script>
+<script>
+    runningExperiments.forEach(function(experiment) {
+        var cookieName = experiment.name;
+        var cookieValue = getCookie(cookieName);
+
+        if (cookieValue === "") {
+            var random = Math.random() * 100;
+            var sum = 0;
+            var variantIndex = experiment.distribution.findIndex(function(percentage) {
+                sum += percentage;
+                return random < sum;
+            });
+            cookieValue = experiment.variants[variantIndex];
+            setCookie(cookieName, cookieValue, 90); // Set cookie to expire in 90 days
+        }
+
+        window.abcExperiments = window.abcExperiments || {};
+        window.abcExperiments[cookieName] = cookieValue;
+        
+        gtag('event', 'experience_impression', {
+            exp_variant_string: cookieValue
+        });
+    });
+
+    function getCookie(cname) {
+        var name = cname + "=";
+        var decodedCookie = decodeURIComponent(document.cookie);
+        var ca = decodedCookie.split(';');
+        for(var i = 0; i <ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) == ' ') {
+                c = c.substring(1);
+            }
+            if (c.indexOf(name) == 0) {
+                return c.substring(name.length, c.length);
+            }
+        }
+        return "";
+    }
+
+    function setCookie(cname, cvalue, exdays) {
+        var d = new Date();
+        d.setTime(d.getTime() + (exdays*24*60*60*1000));
+        var expires = "expires="+ d.toUTCString();
+        document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+    }
+</script>
+
+        
+        <script>
+            if(window.innerWidth <= 460) {
+                var style = document.createElement("style");
+                style.textContent = "body { font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji !important; } body:not(.has-been-interacted) .introduction-summary li, body:not(.has-been-interacted) .introduction-summary h3, body:not(.has-been-interacted) .readable-text p, body:not(.has-been-interacted) li.readable-text, body:not(.has-been-interacted) .readable-text h1, body:not(.has-been-interacted) .readable-text h2, body:not(.has-been-interacted) .readable-text h3, body:not(.has-been-interacted) .readable-text h4, body:not(.has-been-interacted) .readable-text h5, body:not(.has-been-interacted) .readable-text i, body:not(.has-been-interacted) #book-markup-container .inline-promo-container, .landing-page-heading, #landing-page-content-container h1, #landing-page-content-container h2, #landing-page-content-container h3, #landing-page-content-container h4, #landing-page-content-container h5, #landing-page-content-container h6, #landing-page-content-container { font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji !important; }";
+                document.head.append(style);
+            }
+        </script>
+    </head>
+
+    <body class="theme-1 not-loaded app-code-not-loaded">
+        <div id="g_id_onload"
+             data-client_id="382719849273-8q62q8tqfjr22l55o5t4psfamr89nb34.apps.googleusercontent.com"
+             data-login_uri="https://livebook.manning.com/api/auth/provider"
+             data-nonce=""
+             data-auto_select="true"
+             data-itp_support="true">
+        </div>
+        
+        
+        
+        
+        <!-- Google Tag Manager (noscript) -->
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PL85NGN"
+                          height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+        <!-- End Google Tag Manager (noscript) -->
+
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" media="print" onload="this.media='all'">
+        <noscript>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap">
+        </noscript>
+
+        <div class="fixed" id="header"></div>
+
+        <div id="main-page-content">
+            
+    <script>
+        (function loadOldNightModeSettings(){
+            try {
+                var settingsString = localStorage.getItem("settings");
+                if(!settingsString) {
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        document.body.classList.add("night-mode");
+                        document.documentElement.classList.add("night-mode");
+                    }
+                    return;
+                }
+
+                var settings = JSON.parse(settingsString);
+                if(settings && settings["night-mode"]){
+                    document.body.classList.add("night-mode");
+                    document.documentElement.classList.add("night-mode");
+                }
+            }
+            catch(e){
+                console.log(e);
+            }
+        })();
+    </script>
+    
+        <div class="wide-book-cover-hero-image" style="background: rgb(96, 29, 22);" data-book-short-name="lanham4" data-book-slug="ai-agents-in-action-second-edition">
+            <img src="https://images.manning.com/book/4/4d1c2b8-141d-494a-9f85-c9bd0d570156/DOTD_lanham3.png"  width="1920px" height="1080px">
+        </div>
+    
+    <div class="row backend-main-page-content" id="book-content-main-row">
+        <div class="large-12 columns">
+            <div id="book-main-content-container">
+                <div id="track-point-column" class="hidden">
+                    <div class="track-point-wrapper" id="pointing-start-point">
+                        <i class="fal fa-level-down fa-flip-horizontal" aria-hidden="true"></i>
+                    </div>
+                    <div class="track-point-wrapper" id="pointing-end-point">
+                        <i class="fal fa-level-up fa-flip-horizontal" aria-hidden="true"></i>
+                    </div>
+                    <div class="track-point-wrapper" id="play-point">
+                        <div class="track-point">
+                            <i class="icon-i-play-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="track-point-wrapper" id="current-position-point">
+                        <div class="track-point">
+                            <div class="track-point-play">
+                                <i></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="track-point-wrapper" id="off-screen-position-point">
+                        <div class="track-point">
+                            <div class="off-screen-position-point-arrow-container">
+                                <i class=""></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="track-point-wrapper" id="restart-paragraph-point">
+                        <div class="track-point">
+                            <i class="fa fa-redo"></i>
+                        </div>
+                    </div>
+                </div>
+                <div id="book-markup-container">
+                    
+                        <style>
+                            #book-markup-container .inline-promo-container { padding:22px;font-family:Inter;font-weight:400;display:flex;flex-direction:column;align-items:center;border-radius:5px;margin:2em 8%;position:relative;background-color:#ececec; }
+                            #book-markup-container .inline-promo-container.inline-book-info-container ._wrapper { border-radius: 6px; width: 100%; display: flex; gap: 20px; padding: 28px 38px; color: #fff; }
+                            body.user-owns-book #book-markup-container .inline-promo-container.inline-book-info-container ._welcome span { display: none; } body.user-owns-book #book-markup-container .inline-promo-container.inline-book-info-container ._read-more-container { display: none; } body.user-owns-book #book-markup-container .inline-promo-container.inline-book-info-container ._about-container { display: block; } #book-markup-container .inline-promo-container.inline-book-info-container { padding: 0; border-radius: 6px; background-color: #3979cf; background-image: url("https://lx-common-resources.s3.us-west-2.amazonaws.com/resources/deepBlueGradient.svg"); background-size: cover; position: relative; font-family: Inter; } #book-markup-container .inline-promo-container.inline-book-info-container a { color: inherit; text-decoration: underline; } #book-markup-container .inline-promo-container.inline-book-info-container ._about-container { display: none; } #book-markup-container .inline-promo-container.inline-book-info-container .manning-online-logo-container { position: absolute; top: 4px; right: 15px; } #book-markup-container .inline-promo-container.inline-book-info-container ._wrapper { border-radius: 6px; width: 100%; display: flex; gap: 20px; padding: 28px 38px; color: white; box-sizing: border-box;} #book-markup-container .inline-promo-container.inline-book-info-container ._welcome { font-size: 16px; line-height: 19px; } #book-markup-container .inline-promo-container.inline-book-info-container ._book-title { font-size: 18px; line-height: 1.3; font-weight: bold; margin-bottom: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } #book-markup-container .inline-promo-container.inline-book-info-container ._read-more-container { font-weight: 400; } #book-markup-container .inline-promo-container.inline-book-info-container .inline-book-info-cover-container img { filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25)); border-radius: 2px; max-width: 106px; } #book-markup-container .inline-promo-container.inline-book-info-container ._button-container { display: flex; align-items: center; justify-content: left; gap: 14px; margin-top: 10px; } #book-markup-container .inline-promo-container.inline-book-info-container ._button-container ._label { white-space: nowrap; } #book-markup-container .inline-promo-container.inline-book-info-container ._button-container button { background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%), rgba(255, 255, 255, 0.1); border: 1px solid #F2F2F2; border-radius: 4px; padding: 8px 16px; color: white; white-space: nowrap; cursor: pointer; font-weight: bold; user-select: none; } #book-markup-container .inline-promo-container.inline-book-info-container ._button-container button:hover { background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%), rgba(255, 255, 255, 0.2); } #book-markup-container .inline-promo-container.inline-book-info-container ._button-container button:active { transform: translateY(1px); } @media screen and (max-width: 795px) { #book-markup-container .inline-promo-container.inline-book-info-container .inline-book-info-cover-container img { display: none; } #book-markup-container .inline-promo-container.inline-book-info-container ._wrapper { padding: 30px 14px; } #book-markup-container .inline-promo-container.inline-book-info-container .manning-online-logo-container { top: 2px; right: 15px; } #book-markup-container .inline-promo-container.inline-book-info-container ._book-title { white-space: unset; overflow: unset; text-overflow: unset; margin-top: 5px; } } @media screen and (max-width: 605px) { #book-markup-container .inline-promo-container.inline-book-info-container ._button-container { flex-direction: column; align-items: flex-start; } }
+                        </style>
+                        <div class="inline-promo-container inline-book-info-container">
+                            <div class="manning-online-logo-container">
+                                <a href="https://www.manning.com/subscription" target="_blank">
+                                    <img height="15" width="170" src="https://lx-common-resources.s3.us-west-2.amazonaws.com/resources/manning-online-logo-small.svg" alt="manning online"/>
+                                </a>
+                            </div>
+
+                            <div class="_wrapper">
+                                <a href="https://manning.com/books/ai-agents-in-action-second-edition" target="_blank" class="inline-book-info-cover-container">
+                                    <img src="https://drek4537l1klr.cloudfront.net/lanham4/Figures/cover.jpg" alt="AI Agents in Action, Second Edition cover" width="275" height="345"/>
+                                </a>
+                                <div class="inline-book-info-description-container">
+                                    <div class="_welcome">welcome to <span>this free extract from</span></div>
+                                    <div class="_book-title">
+                                        <a href="https://manning.com/books/ai-agents-in-action-second-edition"><strong>AI Agents in Action, 2nd</strong></a>
+                                    </div>
+
+                                    <div class="_about-container"> an online version of the <a href="https://www.manning.com">Manning</a> book.</div>
+
+                                    <div class="_read-more-container">
+                                        <div>to read more</div>
+                                        <div class="_button-container">
+                                            <button class="_buy-book-button">buy the book</button>
+                                            <span class="_label">or</span>
+                                            <button class="_subscription-button">get a subscription</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    
+                    
+                    <div class="book-element-pre-header"><span>about-this-book</span></div>
+                    <div class="readable-text front-matter-title" refid="1" id="1" data-hash="118b81b6df76814b56be1a9328e764e5" data-text-hash="d26b68f519a2067bba4320e209618eb6"> 
+ <h1>about this book</h1><div class='book-element-head-commands'><div class='placeholder'><span class='placeholder-animated-background'>&nbsp;</span></div></div> 
+</div><div class="readable-text" refid="2" id="2" data-hash="9962b5a1a3944179170daeffef2b6c4e" data-text-hash="a0bc4d3ddcf78a6a0e1ed9aee727ab91"> 
+ <p><em>AI Agents in Action, Second Edition</em>, is about building and working with intelligent agent systems: not just creating autonomous entities, but also developing agents that can effectively tackle and solve real-world problems. The book starts with the basics of working with large language models (LLMs) to build assistants, multi-agent systems, and agentic-behavioral agents. From there, it explores the key components of agentic systems: persona, tools and actions, knowledge and memory, retrieval and augmentation, reasoning and planning, and evaluation and feedback. Through practical examples, the book demonstrates how these components empower agents to perform a wide range of complex tasks.</p> 
+</div><div class="readable-text intended-text" refid="3" id="3" data-hash="47269e13c40e50e01678607529c9ab77" data-text-hash="d13c822177a4c53edcf93fc95cecc8a9"> 
+ <p>This journey isn’t just about technology; it’s about reimagining how we approach problem-solving. I hope this book inspires you to see intelligent agents as partners in innovation, capable of transforming ideas into actions in ways once thought impossible. Together, we’ll explore how AI can augment human potential, enabling us to achieve far more than we can alone.</p> 
+</div><div class="readable-text" refid="4" id="4" data-hash="aafce36360d4d3fa33fce8e23fbbcec9" data-text-hash="a99575ca06291f16afb8d1b2c8fed78a"> 
+ <h2>Who should read this book</h2> 
+</div><div class="readable-text" refid="7" id="7" data-hash="952835c97ac7caf4223725c9f99c9c44" data-text-hash="2b6fc22870a7ff1b6812beff813b19e9"> 
+ <h2>What’s new in the Second Edition</h2> 
+</div><div class="readable-text" refid="13" id="13" data-hash="e9b924b1da5cce7f73c7825a8a83e551" data-text-hash="2d22d1e235bd2653a9af3c157cff169f"> 
+ <h2>How this book is organized: A road map</h2> 
+</div><div class="readable-text" refid="25" id="25" data-hash="29732e134a0e7747391b61f75a876eee" data-text-hash="f98355cfac5fa89d4fb4eb1138d29e57"> 
+ <h2>About the code</h2> 
+</div><div class="readable-text" refid="31" id="31" data-hash="8f3f0b03e91453ca15de99bffb3667ac" data-text-hash="34b50e46e078be2ad3a72c08fa9c2c2b"> 
+ <h2>liveBook discussion forum</h2> 
+</div>
+                    <script>
+                        try {
+                            const element = document.querySelector("#book-markup-container [refid='1'] h1 .chapter-title-numbering");
+                            if(element != null) {
+                                element.style.display = "none";
+                            }
+                            else {
+                                if(document.location.href.indexOf("pdfGenerator=true") == -1) {
+                                    const title = document.querySelector("#book-markup-container [refid='1'] h1");
+                                    if(title != null) {
+                                        title.innerHTML = title.innerHTML.replace(/^(?:(?:Chapter|Part|Appendix)\s+\w+\.?|\d+)\s*/i, '');
+                                    }
+                                }
+                            }
+                        }
+                        catch(e){ console.log(e); }
+                    </script>
+                </div>
+                <div id="right-margin-column"></div>
+                <div id="right-margin-menu-column"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function(){
+            var insertPaywall = false;
+            try {
+                var root = document.querySelector("#book-content-main-row.backend-main-page-content #book-markup-container");
+                if(!root) { return;  }
+
+                var titleElements = root.querySelectorAll("h2, h3");
+                for(var i = 0; i < titleElements.length; i++){
+                    var titleElement = titleElements[i];
+                    var readableTextElement = titleElement.parentElement;
+
+                    if(insertPaywall && readableTextElement
+                    && readableTextElement.textContent
+                    && readableTextElement.textContent.trim() == "Summary"){
+                        readableTextElement.remove()
+                    }
+
+                    if(readableTextElement.nextElementSibling == null
+                    || readableTextElement.nextElementSibling.querySelector("h2, h3") != null){
+                        var newElement = document.createElement("div");
+                        newElement.innerHTML = generateRandomParagraphs();
+                        for(var j = 0; j < newElement.children.length; j++){
+                            insertAfter(newElement.children[j], readableTextElement);
+                        }
+                    }
+                }
+            }
+            catch(e){}
+
+            function insertAfter(newNode, referenceNode) {
+                referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
+            }
+
+            function generateRandomParagraphs(){
+                var count = randomIntFromInterval(1, 6);
+                var possibleMargins = [0, 10, 20, 30, 40, 50, 70, 90];
+                var html = "";
+
+                for(var i = 0; i <= count; i++){
+                    html += '<div class="readable-text"><span class="placeholder" style="margin-right: ' + possibleMargins[randomIntFromInterval(0, possibleMargins.length - 1)] + 'px"><span class="placeholder-animated-background">&nbsp;</span></span> </div>';
+                }
+
+                return html;
+            }
+
+            function randomIntFromInterval(min,max) {
+                return Math.floor(Math.random()*(max-min+1)+min);
+            }
+        })()
+    </script>
+
+    <script src="https://d19npu3b8zepp3.cloudfront.net/print/print.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://d19npu3b8zepp3.cloudfront.net/print/print.css" crossorigin>
+
+        </div>
+
+        <div id="footer"></div>
+
+        <script>
+            //This is necessary because electron defines require
+            //Which means that all libraries will be loaded through it
+            //instead in the global object;
+            if(typeof require !== "undefined"){
+                var oldRequire = require;
+                require = undefined;
+            }
+
+            if(typeof module !== "undefined"){
+                var oldModule = module;
+                module = undefined;
+            }
+
+            //this might be
+            window.originalVTTCue = window.VTTCue;
+        </script>
+        <script src="https://d19npu3b8zepp3.cloudfront.net/vendor/all-mimified/vendor.js"></script>
+        <script>
+            if(oldRequire){ require = oldRequire; }
+            if(oldModule) { module = oldModule; }
+        </script>
+        <script>
+            function fallbackToImageSrcPlaceholder(image){
+                var $image = $(image);
+                var fallbackImage = $image.attr("image-src");
+                if(fallbackImage && $image.attr("src").indexOf("data:image/svg+xml") != -1){
+                    $image.attr("src", fallbackImage);
+                }
+            }
+            $("body").removeClass("not-loaded");
+        </script>
+        <!-- Facebook Pixel Code -->
+        <noscript>
+            <img height="1" width="1" src="https://www.facebook.com/tr?id=1940497162877014&ev=PageView&noscript=1"/>
+        </noscript>
+
+        <script>
+            function reportMainScriptLoadingFailure(){
+                fetch("https://livebook.manning.com/analytics/logUserAction?type=resourceFailure&additionalData=appjs", {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+            }
+        </script>
+
+        
+            <script nomodule type="text/javascript" src="https://d19npu3b8zepp3.cloudfront.net/bin/js/fallback/polyfills.js?09e44846-93c9-4eb7-bbc8-137549fc413f"></script>
+            <script nomodule type="text/javascript"  src="https://d19npu3b8zepp3.cloudfront.net/bin/js/fallback/app.js?09e44846-93c9-4eb7-bbc8-137549fc413f"></script>
+            <script type="module" src="https://d19npu3b8zepp3.cloudfront.net/bin/js/app.js?09e44846-93c9-4eb7-bbc8-137549fc413f" onerror="reportMainScriptLoadingFailure()"></script>
+        
+        <script>
+            $(document).on("bookPageCodeLoaded editorPageCodeLoaded pageAppCodeLoaded landingPageCodeLoaded libraryPageCodeLoaded catalogPageCodeLoaded sitemapPageCodeLoaded", function(){
+                $(document.body).removeClass("app-code-not-loaded");
+            });
+        </script>
+        <noscript>
+            <link rel="stylesheet" href="https://d19npu3b8zepp3.cloudfront.net/vendor/fontawesome-5/css/all.min.css"/>
+            <style>
+                @font-face {
+                    font-family: 'livebook';
+                    src:url('https://d19npu3b8zepp3.cloudfront.net/assets/fonts/livebook.eot?1.9.0');
+                    src:url('https://d19npu3b8zepp3.cloudfront.net/assets/fonts/livebook.eot?1.9.0') format('embedded-opentype'),
+                    url('https://d19npu3b8zepp3.cloudfront.net/assets/fonts/livebook.woff?1.9.0') format('woff'),
+                    url('https://d19npu3b8zepp3.cloudfront.net/assets/fonts/livebook.ttf?1.9.0') format('truetype'),
+                    url('https://d19npu3b8zepp3.cloudfront.net/assets/fonts/livebook.svg?1.9.0') format('svg');
+                    font-weight: normal;
+                    font-style: normal;
+                }
+            </style>
+        </noscript>
+
+        <link rel="stylesheet" href="https://d19npu3b8zepp3.cloudfront.net/bin/css/app.css?09e44846-93c9-4eb7-bbc8-137549fc413f"/>
+    </body>
+</html>
