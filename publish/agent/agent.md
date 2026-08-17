@@ -22,7 +22,7 @@
 - 每个章节都要能追溯到项目中的文件、版本或验证命令。
 - 遇到技术不确定点，先标记待核实，不直接下结论。
 - 开始任何书稿任务前，必须先阅读 `publish/current-book-summary.md`、`publish/book-structure-spec.md`、`publish/book-continuity-protocol.md`、`publish/chapter-map.md` 和 `publish/version-index.md`。
-- 如果目标章节缺少章节锚点、代码版本定位或验证指引，先补这些机制文件，再继续正文写作。
+- 如果目标章节缺少章节锚点标签、代码版本定位或验证指引，先补这些机制文件，再继续正文写作。
 
 ## Output Style
 

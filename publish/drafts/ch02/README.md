@@ -78,7 +78,7 @@ flowchart TD
 
 ## 代码版本定位
 
-本章推荐先切换到 `v04` 对应的主锚点提交：`04746a4`。
+本章推荐先切换到 `v04` 对应的章节标签：`book-ch02-anchor`。
 
 推荐原因：
 
@@ -88,7 +88,7 @@ flowchart TD
 推荐检出命令：
 
 ```bash
-git checkout 04746a4
+git checkout book-ch02-anchor
 ```
 
 切换后优先阅读：
@@ -97,12 +97,12 @@ git checkout 04746a4
 - `agent/router.py`
 - `agent/core.py`
 
-如果希望按结构增长顺序学习，再回看：
+如果希望按结构增长顺序学习，再按下面的章节标签回看：
 
-- `73f29cd`
-- `9aa49a4`
-- `03c0005`
-- `04746a4`
+- `book-ch01-anchor`
+- `book-ch04-anchor`
+- `book-ch05-anchor`
+- `book-ch02-anchor`
 
 最小验证命令：
 

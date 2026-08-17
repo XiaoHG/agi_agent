@@ -90,7 +90,7 @@ flowchart TD
 
 ## 代码版本定位
 
-本章推荐先切换到 `v02` 对应的主锚点提交：`9aa49a4`。
+本章推荐先切换到 `v02` 对应的章节标签：`book-ch04-anchor`。
 
 推荐原因：
 
@@ -100,7 +100,7 @@ flowchart TD
 推荐检出命令：
 
 ```bash
-git checkout 9aa49a4
+git checkout book-ch04-anchor
 ```
 
 切换后优先阅读：

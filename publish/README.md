@@ -18,7 +18,7 @@
 - `assets/`：插图、表格、图示和封面素材。
 - `extensions/`：为书稿 agent 设计的 skills、插件和能力清单。
 - `chapter-map.md`：版本到章节的映射。
-- `version-index.md`：章节锚点、版本、提交、标签与验证索引。
+- `version-index.md`：章节锚点、版本、标签与验证索引。
 - `manuscript-status.md`：当前书稿状态。
 - `current-book-summary.md`：当前书稿整体进度、恢复入口和下一步摘要。
 - `book-structure-spec.md`：书稿完整结构规范，是后续长期执行标准。

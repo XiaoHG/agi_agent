@@ -22,4 +22,4 @@
 - 先完成章节骨架，再逐步扩写。
 - 所有判断必须能回到项目版本或文件证据。
 - 每次开始书稿工作前，先阅读 `publish/current-book-summary.md`、`publish/book-structure-spec.md`、`publish/book-continuity-protocol.md`、`publish/chapter-map.md` 和 `publish/version-index.md`。
-- 如果章节没有锚点提交、代码入口或验证命令，优先补机制，再补正文。
+- 如果章节没有锚点标签、代码入口或验证命令，优先补机制，再补正文。

@@ -70,7 +70,7 @@ flowchart LR
 
 ## 代码版本定位
 
-本章推荐先切换到 `v01` 对应的主锚点提交：`73f29cd`。
+本章推荐先切换到 `v01` 对应的章节标签：`book-ch01-anchor`。
 
 推荐原因：
 
@@ -80,7 +80,7 @@ flowchart LR
 推荐检出命令：
 
 ```bash
-git checkout 73f29cd
+git checkout book-ch01-anchor
 ```
 
 切换后优先阅读：
