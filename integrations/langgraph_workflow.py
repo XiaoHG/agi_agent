@@ -71,50 +71,50 @@ from agent.workflow import (
 class RAGGraphState(TypedDict, total=False):
     """State passed between LangGraph nodes for the RAG workflow."""
 
-    question: str  # 用户问题
-    route: str  # graph 路由结果
-    route_reason: str  # 路由原因
-    planner_status: str  # LLM planner 状态：llm_planned / deterministic_fallback
-    planner_error: str  # planner 失败原因
-    planner_raw_response: str  # planner 原始响应
-    direct_answer: dict[str, Any]  # 顶层直接回答结果
-    route_hint_action: str  # 外层 router action，用于默认 graph runtime
-    route_hint_tool_name: str  # 外层 router tool name
-    route_hint_tool_input: str  # 外层 router tool input
-    selected_tool: str  # 选哪个工具
-    tool_input: dict[str, str]  # 传给 LangChain tool 的输入
-    tool_output: str  # 工具返回结果
-    tool_metadata: dict[str, Any]  # 工具 metadata，供主 Agent trace 继续使用
-    tool_status: str  # 普通工具执行状态，用于 graph 条件边判断
-    tool_error: str  # 普通工具失败原因
-    logical_tool_name: str  # graph 内部执行的逻辑工具名，对应 Agent tool 层
-    skill_run: dict[str, Any]  # skill 执行的结构化 trace
-    skill_status: str  # skill 执行状态，用于 graph 条件边判断
-    subagent_runtime: dict[str, Any]  # subagent runtime session 的结构化 trace
-    recovery_plan: dict[str, Any]  # 失败后的结构化恢复计划
-    tool_call_selection: dict[str, Any]  # tool calling 结构化选择结果
-    tool_call_status: str  # tool calling 执行状态
-    tool_call_error: str  # tool calling 失败原因
-    tool_loop_result: dict[str, Any]  # tool loop 结构化结果
-    tool_loop_steps: list[dict[str, Any]]  # tool loop 步骤
-    tool_loop_observations: list[str]  # tool loop observations
-    tool_loop_seen_calls: list[str]  # tool loop 已见过的工具调用键
-    tool_loop_stop_reason: str  # tool loop 停止原因
-    tool_loop_final_answer: str  # tool loop 最终答案
-    tool_loop_final_answer_source: str  # tool loop 最终答案来源
-    tool_loop_status: str  # tool loop 执行状态
-    tool_loop_error: str  # tool loop 错误原因
-    tool_loop_current_step: int  # 当前 tool loop 轮次
-    tool_loop_max_steps: int  # tool loop 最大轮次
-    workflow_plan: dict[str, Any]  # workflow plan 的 JSON-ready 数据
+    question: str                           # 用户问题
+    route: str                              # graph 路由结果
+    route_reason: str                       # 路由原因
+    planner_status: str                     # LLM planner 状态：llm_planned / deterministic_fallback
+    planner_error: str                      # planner 失败原因
+    planner_raw_response: str               # planner 原始响应
+    direct_answer: dict[str, Any]           # 顶层直接回答结果
+    route_hint_action: str                  # 外层 router action，用于默认 graph runtime
+    route_hint_tool_name: str               # 外层 router tool name
+    route_hint_tool_input: str              # 外层 router tool input
+    selected_tool: str                      # 选哪个工具
+    tool_input: dict[str, str]              # 传给 LangChain tool 的输入
+    tool_output: str                        # 工具返回结果
+    tool_metadata: dict[str, Any]           # 工具 metadata，供主 Agent trace 继续使用
+    tool_status: str                        # 普通工具执行状态，用于 graph 条件边判断
+    tool_error: str                         # 普通工具失败原因
+    logical_tool_name: str                  # graph 内部执行的逻辑工具名，对应 Agent tool 层
+    skill_run: dict[str, Any]               # skill 执行的结构化 trace
+    skill_status: str                       # skill 执行状态，用于 graph 条件边判断
+    subagent_runtime: dict[str, Any]        # subagent runtime session 的结构化 trace
+    recovery_plan: dict[str, Any]           # 失败后的结构化恢复计划
+    tool_call_selection: dict[str, Any]     # tool calling 结构化选择结果
+    tool_call_status: str                   # tool calling 执行状态
+    tool_call_error: str                    # tool calling 失败原因
+    tool_loop_result: dict[str, Any]        # tool loop 结构化结果
+    tool_loop_steps: list[dict[str, Any]]   # tool loop 步骤
+    tool_loop_observations: list[str]       # tool loop observations
+    tool_loop_seen_calls: list[str]         # tool loop 已见过的工具调用键
+    tool_loop_stop_reason: str              # tool loop 停止原因
+    tool_loop_final_answer: str             # tool loop 最终答案
+    tool_loop_final_answer_source: str      # tool loop 最终答案来源
+    tool_loop_status: str                   # tool loop 执行状态
+    tool_loop_error: str                    # tool loop 错误原因
+    tool_loop_current_step: int             # 当前 tool loop 轮次
+    tool_loop_max_steps: int                # tool loop 最大轮次
+    workflow_plan: dict[str, Any]           # workflow plan 的 JSON-ready 数据
     workflow_results: list[dict[str, Any]]  # workflow 已执行 tool result 列表
-    workflow_summary: str  # workflow 的综合说明
-    workflow_current_step: int  # 当前 workflow step 下标
-    workflow_status: str  # workflow 执行状态
-    workflow_error: str  # workflow 失败原因
-    answer: str  # 最终回答
-    error: str  # 错误信息
-    steps: list[str]  # 执行步骤记录（调试用）
+    workflow_summary: str                   # workflow 的综合说明
+    workflow_current_step: int              # 当前 workflow step 下标
+    workflow_status: str                    # workflow 执行状态
+    workflow_error: str                     # workflow 失败原因
+    answer: str                             # 最终回答
+    error: str                              # 错误信息
+    steps: list[str]                        # 执行步骤记录（调试用）
 
 
 def build_rag_graph(

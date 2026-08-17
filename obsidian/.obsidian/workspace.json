@@ -11,17 +11,14 @@
             "id": "68f772bf9f829e79",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "agi_agent_architecture/agi_agent_architecture.canvas",
-                "viewState": {
-                  "x": -1110,
-                  "y": -980,
-                  "zoom": 0
-                }
+                "file": "README.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-layout-dashboard",
-              "title": "agi_agent_architecture"
+              "icon": "lucide-file",
+              "title": "README"
             }
           }
         ]
@@ -97,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "agi_agent_architecture/agi_agent_architecture.canvas",
+                "file": "README.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -107,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "agi_agent_architecture 的反向链接列表"
+              "title": "README 的反向链接列表"
             }
           },
           {
@@ -116,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "agi_agent_architecture/agi_agent_architecture.canvas",
+                "file": "README.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "agi_agent_architecture 的出链列表"
+              "title": "README 的出链列表"
             }
           },
           {
@@ -159,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "agi_agent_architecture/agi_agent_architecture.canvas",
+                "file": "README.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "agi_agent_architecture 的大纲"
+              "title": "README 的大纲"
             }
           }
         ]
@@ -186,56 +183,56 @@
       "bases:新建数据库": false
     }
   },
-  "active": "68f772bf9f829e79",
+  "active": "d84f2a47760a96ff",
   "lastOpenFiles": [
+    "05-出版资料/出版资料/version-index.md",
+    "05-出版资料/出版资料/book-continuity-protocol.md",
+    "05-出版资料/出版资料/drafts/ch04/_2.png",
+    "05-出版资料/出版资料/drafts/ch03/_2.png",
+    "05-出版资料/出版资料/drafts/ch04/_3.png",
+    "05-出版资料/出版资料/drafts/ch03/_1.png",
+    "05-出版资料/出版资料/drafts/ch04/_1.png",
+    "05-出版资料/出版资料/drafts/mermaid-puppeteer-config.json",
+    "05-出版资料/出版资料/drafts/ch04/_3.mmd",
+    "05-出版资料/出版资料/drafts/ch04/_2.mmd",
+    "05-出版资料/出版资料/drafts/ch04/_1.mmd",
+    "05-出版资料/出版资料/drafts/ch03/_2.mmd",
+    "05-出版资料/出版资料/drafts/ch03/_1.mmd",
+    "05-出版资料/出版资料/drafts/ch02/_1_2.png",
+    "05-出版资料/出版资料/drafts/ch02/_1_3.png",
+    "05-出版资料/出版资料/drafts/ch02/_1_22.png",
+    "05-出版资料/出版资料/drafts/ch02/_3_3.png",
+    "05-出版资料/出版资料/drafts/ch02/_3_2.png",
+    "05-出版资料/出版资料/drafts/ch04/README.md",
+    "05-出版资料/出版资料/drafts/ch04",
+    "05-出版资料/出版资料/drafts/prologue/README.md",
+    "05-出版资料/出版资料/drafts/prologue",
+    "05-出版资料/出版资料/drafts/front-05-project-background/README.md",
+    "05-出版资料/出版资料/drafts/front-05-project-background",
+    "05-出版资料/出版资料/drafts/front-04-how-to-use/README.md",
+    "05-出版资料/出版资料/drafts/front-04-how-to-use",
+    "05-出版资料/出版资料/drafts/front-03-target-readers/README.md",
+    "05-出版资料/出版资料/drafts/front-02-author-preface/README.md",
+    "05-出版资料/出版资料/drafts/front-01-book-introduction/README.md",
+    "05-出版资料/出版资料/reference-examples/writing-standards-summary.md",
+    "05-出版资料/出版资料/reference-examples/open-books/ai-agent-book-github-readme.md",
+    "05-出版资料/出版资料/reference-examples/README.md",
+    "05-出版资料/出版资料/book-structure-spec.md",
+    "05-出版资料/出版资料/current-book-summary.md",
+    "05-出版资料/出版资料/drafts/ch03/README.md",
+    "05-出版资料/出版资料/drafts/ch02/README.md",
+    "05-出版资料/出版资料/drafts/ch01/README.md",
+    "agi_agent_architecture/agi_agent_architecture.canvas",
+    "agi_agent_architecture/07-子Agent委派与消息流.md",
+    "agi_agent_architecture/06-质量门禁与CI-ready流程.md",
+    "agi_agent_architecture/04-LangGraph状态机.md",
+    "agi_agent_architecture/05-运行证据与恢复链路.md",
     "agi_agent_architecture/01-系统执行总图.md",
+    "agi_agent_architecture/02-CLI到Runtime时序图.md",
     "13-附件/README.md",
     "05-出版资料/出版资料入口.md",
     "05-出版资料/出版资料/book-outline.md",
-    "agi_agent_architecture/agi_agent_architecture.canvas",
-    "agi_agent_architecture/README.md",
-    "agi_agent_architecture/07-子Agent委派与消息流.md",
-    "agi_agent_architecture/06-质量门禁与CI-ready流程.md",
-    "agi_agent_architecture/05-运行证据与恢复链路.md",
-    "agi_agent_architecture/04-LangGraph状态机.md",
-    "agi_agent_architecture/03-路由与函数决策流.md",
-    "agi_agent_architecture/02-CLI到Runtime时序图.md",
     "agi_agent_architecture.canvas",
-    "agi_agent_architecture",
-    "README.md",
-    "agi_agent_ar.canvas",
-    "04-文档管理/正式文档入口.md",
-    "04-文档管理/91-原始出版文档/book-outline.md",
-    "04-文档管理/项目文档/reviews/unified-agent-runtime-events-recovery-review.md",
-    "04-文档管理/项目文档/reviews/skills-subagent-collaboration-review.md",
-    "04-文档管理/项目文档/reviews/rag-local-search-review.md",
-    "04-文档管理/项目文档/reviews/project-overall-retrospective.md",
-    "04-文档管理/项目文档/reviews/mcp-local-protocol-review.md",
-    "04-文档管理/项目文档/reviews/engineering-evals-observability-review.md",
-    "04-文档管理/项目文档/templates/weekly-review-template.md",
-    "04-文档管理/项目文档/snapshots/work-snapshot-2026-08-05.md",
-    "04-文档管理/项目文档/plans/v4_post-v50-industrial-agent-roadmap.md",
-    "04-文档管理/项目文档/plans/v3_professional-agent-iteration-plan.md",
-    "04-文档管理/项目文档/plans/v2_week1-task-plan.md",
-    "04-文档管理/项目文档/plans/v1_learning-master-plan.md",
-    "04-文档管理/项目文档/templates",
-    "04-文档管理/项目文档/snapshots",
-    "04-文档管理/项目文档/reviews",
-    "04-文档管理/项目文档/references",
-    "04-文档管理/项目文档/plans",
-    "04-文档管理/项目文档",
-    "03-版本管理/版本文档",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter8/gaia-experience/AWorld/aworld/cmd/web/webui/src/pages/xyflow/components/NodeEditor/index.tsx",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter8/gaia-experience/AWorld/aworld/cmd/web/webui/src/pages/xyflow/components/NodeEditor/index.less",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter8/gaia-experience/AWorld/aworld/cmd/web/webui/src/assets/aworld_logo.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter8/gaia-experience/AWorld/aworld/cmd/web/webui/dist/assets/aworld_logo-DnLSZeN8.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter8/gaia-experience/AWorld/aworld/cmd/web/webui/public/aworld_logo.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter8/gaia-experience/AWorld/aworld/cmd/web/webui/dist/aworld_logo.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter8/gaia-experience/AWorld/examples/multi_agents/collaborative/travel/img.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter5/video-edit/validation/runs/exp5-6-real-blender-20260730-053948/frames/negative-review/frame-004.15.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter5/video-edit/validation/runs/exp5-6-real-blender-20260730-053948/frames/negative-review/frame-002.25.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter5/video-edit/validation/runs/exp5-6-real-blender-20260730-053948/frames/negative-review/frame-000.35.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter5/video-edit/validation/runs/exp5-6-real-blender-20260730-053948/frames/fine/frame-025.00.png",
-    "05-出版资料/出版资料/references/ai-agent-book/chapter5/video-edit/validation/runs/exp5-6-real-blender-20260730-053948/frames/fine/frame-024.00.png"
+    "agi_agent_ar.canvas"
   ]
 }

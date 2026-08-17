@@ -82,6 +82,42 @@ Reading order:
    `execute_collaboration_plan()` to understand the full lifecycle.
 """
 
+"""
+1. 用户输入需求
+↓
+2. build_collaboration_plan()
+   生成 CollaborationPlan【项目计划书】
+    ├─ SubagentSpec 挑选参与员工
+    ├─ build_subagent_task_contract 生成每份任务契约
+    └─ build_delegation_record 生成派工单
+↓
+3. execute_collaboration_plan() 模拟执行流程
+   循环每一张派工单：
+    ├─ build_execution_record（模拟员工干活记录）
+    ├─ build_return_record（成果回执）
+    └─ build_handoff_record（员工之间交接单据）
+↓
+4. build_runtime_session()
+   【把上面所有单据，生成通信信封、状态变更流水】
+   组装成 SubagentRuntimeSession【完整项目档案袋】
+↓
+5. 将 runtime_session 挂载进 CollaborationPlan
+
+
+CollaborationPlan【项目总方案】
+├─ assigned_roles → [SubagentSpec（员工档案）]
+├─ contracts → [SubagentTaskContract（任务契约）]
+├─ delegations → [SubagentDelegationRecord（派工单）]
+│       └── 每个Delegation绑定一份Spec + Contract
+├─ executions → [SubagentExecutionRecord（执行底稿）]
+├─ returns → [SubagentReturnRecord（成果回执）]
+├─ handoffs → [SubagentHandoffRecord（交接单）]
+└─ runtime_session → SubagentRuntimeSession【完整运行档案袋】
+        ├─ context_boundary → SubagentContextBoundary（运行信息围栏）
+        ├─ messages → [SubagentMessageEnvelope（通信信封）]
+        └─ transitions → [SubagentStateTransition（状态变更日志）]
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

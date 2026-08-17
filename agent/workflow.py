@@ -14,11 +14,11 @@ from .tools import ToolResult
 class WorkflowStep:
     """One planned step inside a multi-step workflow."""
 
-    title: str  # 步骤标题
-    kind: str  # tool 或 synthesize
-    tool_name: str | None = None  # 工具名
-    tool_input: str | None = None  # 工具输入
-    note: str = ""  # 步骤说明
+    title: str                      # 步骤标题
+    kind: str                       # tool 或 synthesize
+    tool_name: str | None = None    # 工具名
+    tool_input: str | None = None   # 工具输入
+    note: str = ""                  # 步骤说明
 
 
 @dataclass(frozen=True)

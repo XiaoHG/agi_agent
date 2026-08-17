@@ -1,6 +1,5 @@
 {
 	"nodes":[
-		{"id":"system","type":"file","file":"agi_agent_architecture/01-系统执行总图.md","x":-440,"y":-250,"width":1560,"height":1690},
 		{"id":"readme","type":"file","file":"agi_agent_architecture/README.md","x":-50,"y":-1470,"width":780,"height":980},
 		{"id":"overview","type":"text","text":"# agi_agent 执行架构图谱\n\n目标：把当前项目真实代码执行链路整理成可学习、可复盘、可继续迭代的专业架构图。\n\n这张 Canvas 不只是一张总图，而是一个架构图导航板：\n\n- 系统执行总图\n- CLI 到 Runtime 时序图\n- 路由与函数决策流\n- LangGraph 状态机\n- 运行证据与恢复链路\n- 质量门禁与 CI-ready 流程\n- 子 Agent 委派与消息流\n\n主代码链路：\ncli/main.py -> agent/core.py -> agent/router.py -> integrations/langgraph_workflow.py -> agent/tools.py -> events/persistence/replay/release_gate","x":-1560,"y":-1225,"width":900,"height":490},
 		{"id":"code-map","type":"text","text":"# 代码锚点\n\n运行入口\n- cli/main.py\n- cli/eval_runner.py\n- cli/release_gate.py\n\n主编排\n- agent/core.py\n- agent/router.py\n- agent/state.py\n\n默认执行器\n- integrations/langgraph_workflow.py\n\n能力层\n- agent/tools.py\n- rag/\n- mcp/\n- skills/\n- subagent/\n\n工程闭环\n- agent/events.py\n- agent/persistence.py\n- agent/replay.py\n- agent/recovery.py\n- evals/release_gate.py\n- tests/\n- evals/","x":-2000,"y":165,"width":940,"height":875},
@@ -9,7 +8,8 @@
 		{"id":"router","type":"file","file":"agi_agent_architecture/03-路由与函数决策流.md","x":3800,"y":-920,"width":2360,"height":3030},
 		{"id":"quality","type":"file","file":"agi_agent_architecture/06-质量门禁与CI-ready流程.md","x":3800,"y":2440,"width":2360,"height":2000},
 		{"id":"graph","type":"file","file":"agi_agent_architecture/04-LangGraph状态机.md","x":6360,"y":-365,"width":2040,"height":1920},
-		{"id":"subagent","type":"file","file":"agi_agent_architecture/07-子Agent委派与消息流.md","x":6360,"y":1760,"width":2040,"height":1800}
+		{"id":"subagent","type":"file","file":"agi_agent_architecture/07-子Agent委派与消息流.md","x":6360,"y":1760,"width":2040,"height":1800},
+		{"id":"system","type":"file","file":"agi_agent_architecture/01-系统执行总图.md","x":-300,"y":-180,"width":1560,"height":1780}
 	],
 	"edges":[
 		{"id":"e1","fromNode":"overview","fromSide":"right","toNode":"readme","toSide":"left"},

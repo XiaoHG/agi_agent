@@ -23,10 +23,10 @@ import re
 class ToolRoute:
     """Describes how the agent should handle a user request."""
 
-    action: str  # 路由动作，例如 use_tool / direct_answer / workflow
-    tool_name: str | None = None  # 被选中的工具名
-    tool_input: str | None = None  # 传给工具的输入
-    reason: str = ""  # 路由判断原因
+    action: str                     # 路由动作，例如 use_tool / direct_answer / workflow
+    tool_name: str | None = None    # 被选中的工具名
+    tool_input: str | None = None   # 传给工具的输入
+    reason: str = ""                # 路由判断原因
 
 
 FILE_PATTERN = re.compile(
