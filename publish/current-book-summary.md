@@ -39,10 +39,11 @@
 - `publish/drafts/front-04-how-to-use/README.md`
 - `publish/drafts/front-05-project-background/README.md`
 - `publish/drafts/prologue/README.md`
-- `publish/drafts/ch01/README.md`
-- `publish/drafts/ch02/README.md`
-- `publish/drafts/ch03/README.md`
-- `publish/drafts/ch04/README.md`
+- `publish/drafts/ch01/ch01.md`
+- `publish/drafts/ch02/ch02.md`
+- `publish/drafts/ch03/ch03.md`
+- `publish/drafts/ch04/ch04.md`
+- `publish/drafts/ch05/ch05.md`
 
 ## 新的正式书稿结构
 
@@ -85,10 +86,11 @@
 | `publish/drafts/front-02-author-preface/README.md` | 已承接旧“为什么要把这个项目写成一本书”的一部分作用 | 作为作者序继续修订 |
 | `publish/drafts/front-05-project-background/README.md` | 已承接项目来源与学习路线说明 | 作为前置部分继续修订 |
 | `publish/drafts/prologue/README.md` | 已承接“为什么要系统学习 Agent 工程”的过渡职责 | 作为序章继续扩写 |
-| `publish/drafts/ch01/README.md` | 已写成正式正文并补入代码入口、版本定位与图示 | 继续精修引用与表达 |
-| `publish/drafts/ch02/README.md` | 已写成正式正文并补入代码入口、版本定位与图示 | 继续精修结构与术语 |
-| `publish/drafts/ch03/README.md` | 已形成正式正文并补入图示、代码入口与版本定位 | 继续精修证据与引用索引 |
-| `publish/drafts/ch04/README.md` | 已形成正式正文并补入图示、代码入口与版本定位 | 继续精修承接与引用索引 |
+| `publish/drafts/ch01/ch01.md` | 已写成正式正文并补入代码入口、版本定位与图示 | 继续精修引用与表达 |
+| `publish/drafts/ch02/ch02.md` | 已写成正式正文并补入代码入口、版本定位与图示 | 继续精修结构与术语 |
+| `publish/drafts/ch03/ch03.md` | 已形成正式正文并补入图示、代码入口与版本定位 | 继续精修证据与引用索引 |
+| `publish/drafts/ch04/ch04.md` | 已形成正式正文并补入图示、代码入口与版本定位 | 继续精修承接与引用索引 |
+| `publish/drafts/ch05/ch05.md` | 已形成正式正文初稿结构 | 继续扩写正文、补图示与证据索引 |
 
 ## 当前最优先任务
 
@@ -118,13 +120,13 @@
 
 固定规则如下：
 
-1. 正文内容先在 `publish/drafts/chNN/README.md` 完成撰写与修订。
+1. 正文内容先在 `publish/drafts/chNN/chNN.md` 完成撰写与修订。
 2. 当正文内容相对稳定后，再进入 XeLaTeX 样张阶段。
 3. 样张阶段默认使用：
    - `python .codex/skills/publish-xelatex-book-layout/scripts/build_chapter_pdf.py publish/drafts/chNN`
 4. 如需页面检查，追加：
    - `--preview-dir /tmp/chNN_preview`
-5. 章节目录内已经准备好的 `.png` 图，优先替代 Mermaid 进入打印稿。
+5. 章节正文内保留 Mermaid 代码，进入打印稿阶段时由固定脚本自动渲染为图。
 6. 后续任何新章节，只要进入打印稿阶段，都默认遵守这套流程，不再单独约定。
 
 ## 恢复工作顺序

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import shutil
 import subprocess
@@ -41,6 +42,11 @@ def figure_block(chapter_dir: Path, rel_path: str, caption: str) -> str:
     abs_path = (chapter_dir / rel_path).resolve().as_posix()
     if not Path(abs_path).exists():
         raise FileNotFoundError(f"Missing figure asset: {abs_path}")
+    return figure_from_path(Path(abs_path), caption)
+
+
+def figure_from_path(image_path: Path, caption: str) -> str:
+    abs_path = image_path.resolve().as_posix()
     return "\n".join(
         [
             r"\begin{figure}[htbp]",
@@ -52,12 +58,59 @@ def figure_block(chapter_dir: Path, rel_path: str, caption: str) -> str:
     )
 
 
-def parse_markdown(md_path: Path) -> tuple[int | None, str, str]:
+def render_mermaid_block(mermaid_text: str, output_dir: Path) -> Path:
+    if not shutil.which("npx"):
+        raise RuntimeError("Missing `npx`; install Node.js tooling first.")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha1(mermaid_text.encode("utf-8")).hexdigest()[:12]
+    source = output_dir / f"mermaid-{digest}.mmd"
+    output = output_dir / f"mermaid-{digest}.png"
+    source.write_text(mermaid_text, encoding="utf-8")
+    cmd = [
+        "npx",
+        "-y",
+        "@mermaid-js/mermaid-cli",
+        "-i",
+        str(source),
+        "-o",
+        str(output),
+        "-s",
+        "4",
+        "-w",
+        "2400",
+        "-b",
+        "white",
+    ]
+    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    return output
+
+
+def resolve_manuscript_path(chapter_dir: Path) -> Path:
+    candidates = sorted(
+        path
+        for path in chapter_dir.glob("*.md")
+        if path.name != "README.md"
+    )
+    if len(candidates) == 1:
+        return candidates[0]
+    if not candidates:
+        fallback = chapter_dir / "README.md"
+        if fallback.exists():
+            return fallback
+        raise FileNotFoundError(f"Missing chapter manuscript in {chapter_dir}")
+    raise ValueError(
+        f"Expected exactly one non-README markdown manuscript in {chapter_dir}, found: "
+        + ", ".join(path.name for path in candidates)
+    )
+
+
+def parse_markdown(md_path: Path, mermaid_dir: Path) -> tuple[int | None, str, str]:
     lines = md_path.read_text(encoding="utf-8").splitlines()
     body: list[str] = []
     paragraph_buf: list[str] = []
     list_buf: list[str] = []
     code_buf: list[str] = []
+    code_kind: str | None = None
     list_kind: str | None = None
     in_code = False
     chapter_title_full: str | None = None
@@ -84,13 +137,20 @@ def parse_markdown(md_path: Path) -> tuple[int | None, str, str]:
             list_kind = None
 
     def flush_code() -> None:
-        nonlocal code_buf
+        nonlocal code_buf, code_kind
         if code_buf:
-            body.append(r"\begin{codeblock}")
-            body.extend(code_buf)
-            body.append(r"\end{codeblock}")
+            if code_kind == "mermaid":
+                mermaid_text = "\n".join(code_buf).strip()
+                if mermaid_text:
+                    rendered = render_mermaid_block(mermaid_text, mermaid_dir)
+                    body.append(figure_from_path(rendered, "Mermaid 图示"))
+            else:
+                body.append(r"\begin{codeblock}")
+                body.extend(code_buf)
+                body.append(r"\end{codeblock}")
             body.append("")
             code_buf = []
+            code_kind = None
 
     for line in lines:
         stripped = line.strip()
@@ -102,6 +162,7 @@ def parse_markdown(md_path: Path) -> tuple[int | None, str, str]:
                 in_code = False
             else:
                 in_code = True
+                code_kind = stripped[3:].strip().lower() or None
             continue
         if in_code:
             code_buf.append(line.rstrip())
@@ -271,16 +332,13 @@ def main() -> int:
     args = parser.parse_args()
 
     chapter_dir = args.chapter_dir.resolve()
-    md_path = chapter_dir / "README.md"
-    if not md_path.exists():
-        raise FileNotFoundError(f"Missing chapter markdown: {md_path}")
+    md_path = resolve_manuscript_path(chapter_dir)
 
     output = args.output.resolve() if args.output else chapter_dir / f"{chapter_dir.name}.pdf"
-    chapter_no, title, body_tex = parse_markdown(md_path)
-    tex = build_tex(chapter_no, title, body_tex)
-
     with tempfile.TemporaryDirectory() as d:
         tmp = Path(d)
+        chapter_no, title, body_tex = parse_markdown(md_path, tmp / "mermaid")
+        tex = build_tex(chapter_no, title, body_tex)
         tex_path = tmp / "chapter.tex"
         tex_path.write_text(tex, encoding="utf-8")
         cmd = ["/Library/TeX/texbin/xelatex", "-interaction=nonstopmode", "-halt-on-error", str(tex_path)]

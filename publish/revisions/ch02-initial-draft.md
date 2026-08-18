@@ -6,7 +6,7 @@
 
 ## 修订对象
 
-`publish/drafts/ch02/README.md`
+`publish/drafts/ch02/ch02.md`
 
 ## 修订原因
 
@@ -36,7 +36,7 @@
 
 ## 2026-08-17 结构整理补记
 
-- 将第 2 章草稿从扁平文件迁移到 `publish/drafts/ch02/README.md`。
+- 将第 2 章草稿从扁平文件迁移到 `publish/drafts/ch02/ch02.md`。
 - 保持章节主稿路径稳定，便于后续继续扩写和审校。
 
 ## 2026-08-17 参考资料驱动修订补记

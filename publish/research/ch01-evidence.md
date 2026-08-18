@@ -30,4 +30,4 @@
 
 ## 当前主稿
 
-- `publish/drafts/ch01/README.md`
+- `publish/drafts/ch01/ch01.md`

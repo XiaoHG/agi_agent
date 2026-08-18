@@ -66,7 +66,7 @@
 
 每次新增章节或对现有章节进行结构性修订时，至少同步更新以下五个位置：
 
-1. `publish/drafts/chNN/README.md`
+1. `publish/drafts/chNN/chNN.md`
 2. `publish/version-index.md`
 3. `publish/research/chNN-evidence.md` 或对应证据文件
 4. `publish/revisions/chNN-*.md`
@@ -111,7 +111,7 @@
 1. 在 `publish/book-outline.md` 确认章节职责
 2. 在 `publish/chapter-map.md` 补版本映射
 3. 在 `publish/version-index.md` 建立章节锚点
-4. 在 `publish/drafts/chNN/README.md` 建立主稿
+4. 在 `publish/drafts/chNN/chNN.md` 建立主稿
 5. 在 `publish/research/` 建立证据笔记
 6. 在 `publish/revisions/` 建立修订记录
 7. 在 `publish/current-book-summary.md` 更新当前进度与下一步

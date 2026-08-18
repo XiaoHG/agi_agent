@@ -6,7 +6,7 @@
 
 ## 修订对象
 
-`publish/drafts/ch01/README.md`
+`publish/drafts/ch01/ch01.md`
 
 ## 修订原因
 
@@ -39,7 +39,7 @@
 
 ## 2026-08-17 结构整理补记
 
-- 将第 1 章草稿从扁平文件迁移到 `publish/drafts/ch01/README.md`。
+- 将第 1 章草稿从扁平文件迁移到 `publish/drafts/ch01/ch01.md`。
 - 目的不是改正文，而是让后续章节迭代按目录持续维护。
 
 ## 2026-08-17 参考资料驱动修订补记

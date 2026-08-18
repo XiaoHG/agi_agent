@@ -39,19 +39,19 @@
 
 ## 需要重定位的现有内容
 
-- `publish/drafts/ch01/README.md`
+- `publish/drafts/ch01/ch01.md`
   - 目前已形成正式正文
   - 下一步以精修引用、措辞和例证为主
 
-- `publish/drafts/ch02/README.md`
+- `publish/drafts/ch02/ch02.md`
   - 目前已形成正式正文
   - 下一步以精修结构表达和术语一致性为主
 
-- `publish/drafts/ch03/README.md`
+- `publish/drafts/ch03/ch03.md`
   - 目前已形成正式正文
   - 后续重点转向补强引用索引和证据链路
 
-- `publish/drafts/ch04/README.md`
+- `publish/drafts/ch04/ch04.md`
   - 目前已形成正式正文
   - 后续重点转向补强引用索引和后续章节承接
 

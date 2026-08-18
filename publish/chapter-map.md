@@ -69,10 +69,10 @@
 | `publish/drafts/front-04-how-to-use/README.md` | 前置部分 | 阅读与学习方式主稿 |
 | `publish/drafts/front-05-project-background/README.md` | 前置部分 | 项目背景与学习路线主稿 |
 | `publish/drafts/prologue/README.md` | 序章 | 为什么今天要系统学习 Agent 工程 |
-| `publish/drafts/ch01/README.md` | 第 1 章主稿 | Agent 概念边界与执行系统视角 |
-| `publish/drafts/ch02/README.md` | 第 2 章主稿 | 工业级 Agent 的基本结构 |
-| `publish/drafts/ch03/README.md` | 第 3 章主稿 | 最小 Agent 执行闭环 |
-| `publish/drafts/ch04/README.md` | 第 4 章主稿 | 状态、工作流与多步执行 |
+| `publish/drafts/ch01/ch01.md` | 第 1 章主稿 | Agent 概念边界与执行系统视角 |
+| `publish/drafts/ch02/ch02.md` | 第 2 章主稿 | 工业级 Agent 的基本结构 |
+| `publish/drafts/ch03/ch03.md` | 第 3 章主稿 | 最小 Agent 执行闭环 |
+| `publish/drafts/ch04/ch04.md` | 第 4 章主稿 | 状态、工作流与多步执行 |
 
 ## 写作要求
 

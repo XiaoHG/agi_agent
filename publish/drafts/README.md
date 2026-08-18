@@ -15,14 +15,16 @@
 ### 正文部分
 
 - `drafts/prologue/README.md`
-- `drafts/ch01/README.md`
-- `drafts/ch02/README.md`
-- `drafts/ch03/README.md`
-- `drafts/ch04/README.md`
+- `drafts/ch01/ch01.md`
+- `drafts/ch02/ch02.md`
+- `drafts/ch03/ch03.md`
+- `drafts/ch04/ch04.md`
+- `drafts/ch05/ch05.md`
 
 ## 维护规则
 
-- 每个目录下的 `README.md` 作为当前主稿。
+- 每个章节目录中的正式文稿统一使用 `chNN.md` 命名。
+- 每个目录下的 `README.md` 仅作为目录说明页，简要介绍本章资源结构。
 - 前置部分不直接承担核心技术章节的展开。
 - 正文章节按知识结构递进组织，不按项目版本顺序直接排列。
 - 如果后续需要分节扩写，可在对应目录内继续增加子文件。

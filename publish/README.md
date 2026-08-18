@@ -13,7 +13,7 @@
 
 - `agent/`：书稿专属子 agent 定义。
 - `research/`：资料、论据、引用和问题清单。
-- `drafts/`：章节草稿，按 `chNN/README.md` 组织主稿。
+- `drafts/`：章节草稿，按 `chNN/chNN.md` 组织正式主稿，`README.md` 只做目录说明。
 - `revisions/`：审校意见、修改记录、差异说明。
 - `assets/`：插图、表格、图示和封面素材。
 - `extensions/`：为书稿 agent 设计的 skills、插件和能力清单。
@@ -36,20 +36,20 @@
 
 ## 固定排版规范
 
-- 章节正文默认维护在 `publish/drafts/chNN/README.md`。
+- 章节正文默认维护在 `publish/drafts/chNN/chNN.md`。
 - 当章节进入样张输出、专业排版、图示替换或打印质量检查阶段时，固定使用 `publish-xelatex-book-layout` skill。
 - 默认命令：
   - `python .codex/skills/publish-xelatex-book-layout/scripts/build_chapter_pdf.py publish/drafts/chNN`
 - 需要预览页检查时：
   - `python .codex/skills/publish-xelatex-book-layout/scripts/build_chapter_pdf.py publish/drafts/chNN --preview-dir /tmp/chNN_preview`
-- 章节目录中的 `.png` 配图优先级高于可打印稿中的 Mermaid。
+- 章节正文中的 Mermaid 要保留在 Markdown 主稿中，进入 PDF 阶段时再由固定脚本渲染为打印图。
 - 未完成 PDF 与预览页检查前，不应宣称章节已达到出版级排版质量。
 
 ## 当前主稿入口
 
-- 第 1 章：`publish/drafts/ch01/README.md`
-- 第 2 章：`publish/drafts/ch02/README.md`
-- 第 3 章：`publish/drafts/ch03/README.md`（待写）
+- 第 1 章：`publish/drafts/ch01/ch01.md`
+- 第 2 章：`publish/drafts/ch02/ch02.md`
+- 第 3 章：`publish/drafts/ch03/ch03.md`
 
 ## 恢复工作入口
 
