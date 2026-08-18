@@ -73,6 +73,8 @@
 | `publish/drafts/ch02/ch02.md` | 第 2 章主稿 | 工业级 Agent 的基本结构 |
 | `publish/drafts/ch03/ch03.md` | 第 3 章主稿 | 最小 Agent 执行闭环 |
 | `publish/drafts/ch04/ch04.md` | 第 4 章主稿 | 状态、工作流与多步执行 |
+| `publish/drafts/ch05/ch05.md` | 第 5 章主稿 | 知识增强：RAG 如何进入 Agent 主链路 |
+| `publish/drafts/ch06/ch06.md` | 第 6 章主稿 | 工具边界：从本地工具到 MCP 协议 |
 
 ## 写作要求
 

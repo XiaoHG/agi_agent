@@ -35,7 +35,7 @@
 | 第 3 章 最小 Agent 执行闭环 | 最小闭环、工具分支、统一输出 | v01 | `book-ch03-anchor` | 已创建 | `git checkout book-ch03-anchor` | `cli/main.py` `agent/core.py` `agent/router.py` | `pytest tests/test_agent.py -k route` | v01 |
 | 第 4 章 状态、工作流与多步执行 | 状态对象、多步任务、工作流计划 | v02 | `book-ch04-anchor` | 已创建 | `git checkout book-ch04-anchor` | `agent/workflow.py` `agent/state.py` `agent/core.py` | `pytest tests/test_agent.py -k workflow` | v01-v02 |
 | 第 5 章 知识增强：RAG 如何进入 Agent 主链路 | grounded answer、本地检索、知识接入 | v03 | `book-ch05-anchor` | 待创建 | `待创建后执行：git checkout book-ch05-anchor` | `rag/` `agent/core.py` `cli/main.py` | `pytest tests/test_agent.py -k rag` | v03 |
-| 第 6 章 工具边界：从本地工具到 MCP 协议 | 工具标准化、协议边界外化 | v04 | `book-ch06-anchor` | 待创建 | `待创建后执行：git checkout book-ch06-anchor` | `mcp/` `agent/router.py` `agent/core.py` | `pytest tests/test_agent.py -k mcp` | v04 |
+| 第 6 章 工具边界：从本地工具到 MCP 协议 | 工具标准化、协议边界外化 | v04 | `book-ch06-anchor` | 已创建 | `git checkout book-ch06-anchor` | `mcp/` `agent/router.py` `agent/core.py` | `pytest tests/test_mcp.py` | v04 |
 | 第 7 章 能力分层：Skills、Subagent 与角色协作 | 角色拆分、委派、学习协作 | v05 | `book-ch07-anchor` | 待创建 | `待创建后执行：git checkout book-ch07-anchor` | `skills/` `subagent/` `agent/core.py` | `pytest tests/test_agent.py -k subagent` | v05-v07 |
 | 第 8 章 模型参与决策：tool calling 与 tool loop | LLM 决策、工具循环、结果收束 | v15 | `book-ch08-anchor` | 待创建 | `待创建后执行：git checkout book-ch08-anchor` | `agent/core.py` `agent/router.py` `integrations/` | `pytest tests/test_agent.py -k tool` | v15-v17 |
 | 第 9 章 结构化运行时：LangGraph 与图式编排 | 图式工作流、节点边界、运行时结构化 | v12 | `book-ch09-anchor` | 待创建 | `待创建后执行：git checkout book-ch09-anchor` | `integrations/langgraph_workflow.py` `agent/workflow.py` | `pytest tests/test_agent.py -k graph` | v11-v14, v32-v35 |
