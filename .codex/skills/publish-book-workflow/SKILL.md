@@ -20,7 +20,8 @@ Use this skill to turn the project learning process into a structured book-writi
 6. Render the chapter-local PDF and preview pages, then use the preview result as the layout QA baseline.
 7. Record open questions and citation gaps in `publish/research/`.
 8. Log revision notes in `publish/revisions/`.
-9. Keep the schedule aligned with project iteration cadence.
+9. If the chapter is now stable enough for guided reading, create or refresh its chapter anchor git tag and sync the tag into both the manuscript `代码版本定位` section and `publish/version-index.md`.
+10. Keep the schedule aligned with project iteration cadence.
 
 ## Rules
 
@@ -32,6 +33,7 @@ Use this skill to turn the project learning process into a structured book-writi
 - Treat markdown draft and PDF sample as two linked deliverables: content first, layout second.
 - When chapter images already exist, prefer static `.png` figures over inline Mermaid in the printable draft.
 - Do not claim a chapter has reached print-quality layout until the XeLaTeX PDF and preview pages have been checked.
+- Stable chapters must have a real git anchor tag; leaving only a planned tag name is incomplete workflow.
 
 ## Output expectations
 

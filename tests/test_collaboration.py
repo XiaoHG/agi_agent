@@ -43,10 +43,11 @@ class CollaborationTests(unittest.TestCase):
         """Verify that discover project skills."""
         skills = discover_project_skills(Path("."))
 
-        self.assertEqual(len(skills), 2)
+        self.assertGreaterEqual(len(skills), 2)
         names = {skill.name for skill in skills}
         self.assertIn("professional-code-review", names)
         self.assertIn("publish-book-workflow", names)
+        self.assertIn("publish-chapter-full-cycle", names)
         self.assertTrue(any(skill.source == "project" for skill in skills))
         self.assertTrue(any((skill.path or "").endswith(".codex/skills/professional-code-review/SKILL.md") for skill in skills))
 

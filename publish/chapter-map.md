@@ -75,6 +75,7 @@
 | `publish/drafts/ch04/ch04.md` | 第 4 章主稿 | 状态、工作流与多步执行 |
 | `publish/drafts/ch05/ch05.md` | 第 5 章主稿 | 知识增强：RAG 如何进入 Agent 主链路 |
 | `publish/drafts/ch06/ch06.md` | 第 6 章主稿 | 工具边界：从本地工具到 MCP 协议 |
+| `publish/drafts/ch07/ch07.md` | 第 7 章主稿 | 能力分层：Skills、Subagent 与角色协作 |
 
 ## 写作要求
 

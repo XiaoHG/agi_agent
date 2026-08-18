@@ -472,7 +472,13 @@ def _load_json(path: Path) -> dict[str, Any] | None:
 
     if not path.exists():
         return None
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw_text = path.read_text(encoding="utf-8").strip()
+    if not raw_text:
+        return None
+    try:
+        payload = json.loads(raw_text)
+    except json.JSONDecodeError:
+        return None
     return payload if isinstance(payload, dict) else None
 
 

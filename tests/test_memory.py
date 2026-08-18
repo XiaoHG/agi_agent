@@ -86,6 +86,24 @@ class MemoryTests(unittest.TestCase):
             self.assertIn("Task memory", task_text)
             self.assertIn("memory-task", task_text)
 
+    def test_memory_store_ignores_empty_or_invalid_json_records(self) -> None:
+        """Verify that corrupted memory files do not break later runs."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sessions_dir = root / "sessions"
+            tasks_dir = root / "tasks"
+            sessions_dir.mkdir(parents=True, exist_ok=True)
+            tasks_dir.mkdir(parents=True, exist_ok=True)
+            (sessions_dir / "broken.json").write_text("", encoding="utf-8")
+            (tasks_dir / "broken-task.json").write_text("{not-valid-json}", encoding="utf-8")
+
+            store = AgentMemoryStore(root)
+
+            self.assertIsNone(store.load_session("broken"))
+            self.assertIsNone(store.load_task("broken-task"))
+            self.assertEqual(store.list_sessions(), [])
+            self.assertEqual(store.list_tasks(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
