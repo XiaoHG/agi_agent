@@ -303,11 +303,15 @@ def execute_subagent_collaboration(task: str) -> ToolResult:
         "subagent_delegation": plan.to_dict(),
         "subagent_runtime": runtime_session,
     }
-    if plan.status == "failed":
+    if plan.status in {"failed", "blocked"}:
         metadata["recovery_plan"] = {
-            "status": "failed",
-            "failure_type": "delegation_blocked",
-            "reason": "Subagent collaboration failed before all delegated tasks completed.",
+            "status": plan.status,
+            "failure_type": "delegation_blocked" if plan.status == "blocked" else "delegation_failed",
+            "reason": (
+                "Subagent collaboration paused in a blocked inbox state before all delegated tasks completed."
+                if plan.status == "blocked"
+                else "Subagent collaboration failed before all delegated tasks completed."
+            ),
             "next_safe_action": plan.recovery_handoff,
         }
     return ToolResult("execute_subagents", plan.to_text(), metadata)

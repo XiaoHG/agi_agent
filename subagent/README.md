@@ -20,11 +20,11 @@
 
 ## 当前实现
 
-当前阶段已经实现 deterministic collaboration planner + delegation contract + handoff / return / execution trace + runtime session foundation。
+当前阶段已经实现 deterministic collaboration planner + delegation contract + handoff / return / execution trace + runtime session foundation，并在 `v52` 进一步补上 async-ready delegation queue、agent inbox / outbox 和 task claim evidence。
 
 ```text
 subagent/
-  team.py        # SubagentSpec, delegation contract, runtime session, message envelope, state transition
+  team.py        # SubagentSpec, delegation contract, runtime session, message envelope, state transition, queue/inbox/outbox/claim
 ```
 
 运行：
@@ -34,6 +34,8 @@ python -m cli.collaboration_demo --list-subagents
 python -m cli.collaboration_demo --task "Review this code and add tests."
 python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents
 python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents --runtime-json
+python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents --queue-json
+python -m cli.collaboration_demo --task "Implement a blocked offline code change." --execute-subagents --inbox-role coding_agent --outbox-role coding_agent
 python -m cli.main --input "Plan subagent collaboration for a code review." --trace
 
 当前协作计划会同时输出：
@@ -49,4 +51,8 @@ python -m cli.main --input "Plan subagent collaboration for a code review." --tr
 - runtime session
 - message envelopes
 - state transitions
+- queue items
+- inbox entries
+- outbox entries
+- claim records
 ```

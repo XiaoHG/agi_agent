@@ -18,6 +18,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list-subagents", action="store_true", help="list available subagents")
     parser.add_argument("--execute-subagents", action="store_true", help="execute the deterministic subagent collaboration protocol")
     parser.add_argument("--runtime-json", action="store_true", help="print the subagent runtime session as JSON after execution")
+    parser.add_argument("--queue-json", action="store_true", help="print the async delegation queue, inbox, outbox, and claim snapshot as JSON")
+    parser.add_argument("--inbox-role", help="print inbox entries for one role after subagent execution")
+    parser.add_argument("--outbox-role", help="print outbox entries for one role after subagent execution")
     parser.add_argument("--execute-skill", action="store_true", help="execute the selected skill for --task")
     parser.add_argument("--tool-backed", action="store_true", help="execute skill steps with workspace tools")
     parser.add_argument("--skill", help="explicit skill name to inspect or execute")
@@ -56,6 +59,46 @@ def main(argv: list[str] | None = None) -> int:
             if args.runtime_json and plan.runtime_session is not None:
                 print()
                 print(json.dumps(plan.runtime_session.to_dict(), ensure_ascii=False, indent=2))
+            if args.queue_json and plan.runtime_session is not None:
+                print()
+                print(
+                    json.dumps(
+                        {
+                            "queue_items": [item.to_dict() for item in plan.runtime_session.queue_items],
+                            "inbox_entries": [entry.to_dict() for entry in plan.runtime_session.inbox_entries],
+                            "outbox_entries": [entry.to_dict() for entry in plan.runtime_session.outbox_entries],
+                            "claim_records": [record.to_dict() for record in plan.runtime_session.claim_records],
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+            if args.inbox_role and plan.runtime_session is not None:
+                print()
+                print(
+                    json.dumps(
+                        [
+                            entry.to_dict()
+                            for entry in plan.runtime_session.inbox_entries
+                            if entry.role_name == args.inbox_role
+                        ],
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+            if args.outbox_role and plan.runtime_session is not None:
+                print()
+                print(
+                    json.dumps(
+                        [
+                            entry.to_dict()
+                            for entry in plan.runtime_session.outbox_entries
+                            if entry.role_name == args.outbox_role
+                        ],
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
             return 0
 
         if args.execute_skill:

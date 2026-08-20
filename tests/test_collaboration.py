@@ -254,6 +254,11 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(plan.runtime_session.context_boundary.active_role, "parent_agent")
         self.assertGreaterEqual(len(plan.runtime_session.messages), 4)
         self.assertGreaterEqual(len(plan.runtime_session.transitions), 5)
+        self.assertEqual(plan.runtime_session.execution_mode, "deterministic-async-delegation")
+        self.assertEqual(len(plan.runtime_session.queue_items), 2)
+        self.assertEqual(len(plan.runtime_session.inbox_entries), 2)
+        self.assertEqual(len(plan.runtime_session.outbox_entries), 2)
+        self.assertEqual(len(plan.runtime_session.claim_records), 2)
         self.assertEqual(plan.handoffs[0].from_role, "teacher_agent")
         self.assertEqual(plan.handoffs[0].to_role, "coding_agent")
         self.assertIn("Runtime session:", plan.to_text())
@@ -271,6 +276,22 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(plan.runtime_session.active_role, "coding_agent")
         self.assertEqual(plan.runtime_session.transitions[-1].to_state, "failed")
         self.assertIn("teacher_agent", plan.recovery_handoff)
+
+    def test_execute_collaboration_plan_can_block_inside_agent_inbox(self) -> None:
+        """Verify that execute collaboration plan can block and keep inbox evidence."""
+        plan = execute_collaboration_plan("Implement a blocked offline code change.")
+
+        self.assertEqual(plan.status, "blocked")
+        self.assertEqual(plan.executions[-1].status, "blocked")
+        self.assertIsNotNone(plan.runtime_session)
+        assert plan.runtime_session is not None
+        self.assertEqual(plan.runtime_session.status, "blocked")
+        self.assertEqual(plan.runtime_session.active_role, "coding_agent")
+        self.assertEqual(plan.runtime_session.transitions[-1].to_state, "blocked")
+        self.assertEqual(plan.runtime_session.queue_items[-1].status, "blocked")
+        self.assertEqual(plan.runtime_session.inbox_entries[-1].status, "blocked")
+        self.assertEqual(plan.runtime_session.outbox_entries[-1].status, "blocked")
+        self.assertEqual(plan.runtime_session.claim_records[-1].status, "blocked")
 
     def test_build_collaboration_plan_for_teacher_task(self) -> None:
         """Verify that build collaboration plan for teacher task."""
@@ -351,7 +372,7 @@ class CollaborationTests(unittest.TestCase):
 
         self.assertEqual(run.route.tool_name, "execute_subagents")
         self.assertEqual(trace["subagent_delegation"]["status"], "failed")
-        self.assertEqual(trace["tool_result"]["metadata"]["recovery_plan"]["failure_type"], "delegation_blocked")
+        self.assertEqual(trace["tool_result"]["metadata"]["recovery_plan"]["failure_type"], "delegation_failed")
 
     def test_agent_trace_dict_contains_subagent_delegation(self) -> None:
         """Verify that agent trace dict contains subagent delegation."""
@@ -370,7 +391,8 @@ class CollaborationTests(unittest.TestCase):
         trace = agent.to_trace_dict(agent.run("Execute subagent collaboration for a code review."))
 
         self.assertIsNotNone(trace["subagent_runtime"])
-        self.assertEqual(trace["subagent_runtime"]["execution_mode"], "deterministic-runtime-foundation")
+        self.assertEqual(trace["subagent_runtime"]["execution_mode"], "deterministic-async-delegation")
+        self.assertIn("queue_items", trace["subagent_runtime"])
         self.assertIn("transitions", trace["subagent_runtime"])
 
     def test_agent_executes_skill(self) -> None:
@@ -534,6 +556,33 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("\"session_id\":", result.stdout)
         self.assertIn("\"messages\":", result.stdout)
         self.assertIn("\"transitions\":", result.stdout)
+
+    def test_collaboration_demo_prints_queue_and_mailbox_json(self) -> None:
+        """Verify that collaboration demo prints queue, inbox, and outbox json."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "cli.collaboration_demo",
+                "--task",
+                "Implement a blocked offline code change.",
+                "--execute-subagents",
+                "--queue-json",
+                "--inbox-role",
+                "coding_agent",
+                "--outbox-role",
+                "coding_agent",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertIn("\"queue_items\":", result.stdout)
+        self.assertIn("\"inbox_entries\":", result.stdout)
+        self.assertIn("\"outbox_entries\":", result.stdout)
+        self.assertIn("\"claim_records\":", result.stdout)
+        self.assertIn("\"status\": \"blocked\"", result.stdout)
 
 
 if __name__ == "__main__":

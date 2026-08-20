@@ -94,14 +94,21 @@ class RuntimeEventTests(unittest.TestCase):
                     "status": "completed",
                     "messages": [{"message_id": "message-01"}],
                     "transitions": [{"transition_id": "transition-01"}],
+                    "queue_items": [{"queue_item_id": "queue-01"}],
+                    "inbox_entries": [{"inbox_entry_id": "inbox-01"}],
+                    "outbox_entries": [{"outbox_entry_id": "outbox-01"}],
+                    "claim_records": [{"claim_id": "claim-01"}],
                 },
             },
         )
 
         runtime_events = [event for event in events if event.event_type == "delegation_runtime"]
+        queue_events = [event for event in events if event.event_type == "delegation_queue"]
 
         self.assertEqual(len(runtime_events), 1)
         self.assertIn("messages=1", runtime_events[0].detail)
+        self.assertEqual(len(queue_events), 1)
+        self.assertIn("queue=1", queue_events[0].detail)
 
 
 if __name__ == "__main__":

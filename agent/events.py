@@ -122,6 +122,10 @@ def build_runtime_events(
         if isinstance(subagent_runtime, dict):
             messages = subagent_runtime.get("messages", [])
             transitions = subagent_runtime.get("transitions", [])
+            queue_items = subagent_runtime.get("queue_items", [])
+            inbox_entries = subagent_runtime.get("inbox_entries", [])
+            outbox_entries = subagent_runtime.get("outbox_entries", [])
+            claim_records = subagent_runtime.get("claim_records", [])
             events.append(
                 RuntimeEvent(
                     index=len(events) + 1,
@@ -135,6 +139,26 @@ def build_runtime_events(
                     payload=subagent_runtime,
                 )
             )
+            if any(isinstance(items, list) and items for items in (queue_items, inbox_entries, outbox_entries, claim_records)):
+                events.append(
+                    RuntimeEvent(
+                        index=len(events) + 1,
+                        event_type="delegation_queue",
+                        name="async_delegation_queue",
+                        detail=(
+                            f"queue={len(queue_items) if isinstance(queue_items, list) else 0} "
+                            f"inbox={len(inbox_entries) if isinstance(inbox_entries, list) else 0} "
+                            f"outbox={len(outbox_entries) if isinstance(outbox_entries, list) else 0} "
+                            f"claims={len(claim_records) if isinstance(claim_records, list) else 0}"
+                        ),
+                        payload={
+                            "queue_items": queue_items,
+                            "inbox_entries": inbox_entries,
+                            "outbox_entries": outbox_entries,
+                            "claim_records": claim_records,
+                        },
+                    )
+                )
 
     if tool_error:
         events.append(

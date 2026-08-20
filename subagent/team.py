@@ -436,6 +436,118 @@ class SubagentStateTransition:
 
 
 @dataclass(frozen=True)
+class SubagentQueueItem:
+    """One queued delegation task inside the async-ready collaboration runtime."""
+
+    queue_item_id: str     # 队列任务 ID
+    session_id: str        # 所属 runtime session
+    delegation_id: str     # 对应的 delegation 记录
+    from_role: str         # 任务由哪个角色发出
+    to_role: str           # 任务发给哪个子 Agent
+    status: str            # pending / running / blocked / completed / failed
+    summary: str           # 队列任务摘要
+    order: int             # 队列中的顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the queue item as JSON-ready data."""
+
+        return {
+            "queue_item_id": self.queue_item_id,
+            "session_id": self.session_id,
+            "delegation_id": self.delegation_id,
+            "from_role": self.from_role,
+            "to_role": self.to_role,
+            "status": self.status,
+            "summary": self.summary,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
+class SubagentInboxEntry:
+    """One inbox entry visible to a target subagent."""
+
+    inbox_entry_id: str    # inbox 记录 ID
+    session_id: str        # 所属 runtime session
+    role_name: str         # 收件 Agent 角色
+    queue_item_id: str     # 对应队列任务 ID
+    delegation_id: str     # 对应 delegation 记录
+    status: str            # pending / running / blocked / completed / failed
+    summary: str           # inbox 任务摘要
+    order: int             # inbox 中的顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the inbox entry as JSON-ready data."""
+
+        return {
+            "inbox_entry_id": self.inbox_entry_id,
+            "session_id": self.session_id,
+            "role_name": self.role_name,
+            "queue_item_id": self.queue_item_id,
+            "delegation_id": self.delegation_id,
+            "status": self.status,
+            "summary": self.summary,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
+class SubagentOutboxEntry:
+    """One outbound status/result message emitted by a subagent."""
+
+    outbox_entry_id: str   # outbox 记录 ID
+    session_id: str        # 所属 runtime session
+    role_name: str         # 发件 Agent 角色
+    delegation_id: str     # 对应 delegation 记录
+    destination_role: str  # 发给谁
+    status: str            # emitted / completed / failed / blocked
+    summary: str           # outbox 摘要
+    order: int             # outbox 中的顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the outbox entry as JSON-ready data."""
+
+        return {
+            "outbox_entry_id": self.outbox_entry_id,
+            "session_id": self.session_id,
+            "role_name": self.role_name,
+            "delegation_id": self.delegation_id,
+            "destination_role": self.destination_role,
+            "status": self.status,
+            "summary": self.summary,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
+class SubagentClaimRecord:
+    """Structured evidence that a queued task was claimed by one role."""
+
+    claim_id: str          # claim 记录 ID
+    session_id: str        # 所属 runtime session
+    queue_item_id: str     # 被认领的队列任务 ID
+    delegation_id: str     # 对应 delegation 记录
+    role_name: str         # 认领该任务的角色
+    status: str            # claimed / completed / failed / blocked
+    note: str              # claim 说明
+    order: int             # claim 顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the claim record as JSON-ready data."""
+
+        return {
+            "claim_id": self.claim_id,
+            "session_id": self.session_id,
+            "queue_item_id": self.queue_item_id,
+            "delegation_id": self.delegation_id,
+            "role_name": self.role_name,
+            "status": self.status,
+            "note": self.note,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
 class SubagentRuntimeSession:
     """Execution-layer runtime session for one collaboration flow.
 
@@ -456,6 +568,10 @@ class SubagentRuntimeSession:
     context_boundary: SubagentContextBoundary        # 当前上下文边界
     messages: tuple[SubagentMessageEnvelope, ...]    # 会话中的消息封装
     transitions: tuple[SubagentStateTransition, ...] # 会话状态迁移
+    queue_items: tuple[SubagentQueueItem, ...]       # async delegation queue 快照
+    inbox_entries: tuple[SubagentInboxEntry, ...]    # 各子 Agent inbox 快照
+    outbox_entries: tuple[SubagentOutboxEntry, ...]  # 各子 Agent outbox 快照
+    claim_records: tuple[SubagentClaimRecord, ...]   # task claim / complete / fail 记录
 
     def to_dict(self) -> dict[str, Any]:
         """Render the runtime session as JSON-ready data."""
@@ -473,6 +589,10 @@ class SubagentRuntimeSession:
             "context_boundary": self.context_boundary.to_dict(),
             "messages": [message.to_dict() for message in self.messages],
             "transitions": [transition.to_dict() for transition in self.transitions],
+            "queue_items": [item.to_dict() for item in self.queue_items],
+            "inbox_entries": [entry.to_dict() for entry in self.inbox_entries],
+            "outbox_entries": [entry.to_dict() for entry in self.outbox_entries],
+            "claim_records": [record.to_dict() for record in self.claim_records],
         }
 
 
@@ -567,6 +687,10 @@ class CollaborationPlan:
             )
             lines.append(f"  Messages: {len(self.runtime_session.messages)}")
             lines.append(f"  Transitions: {len(self.runtime_session.transitions)}")
+            lines.append(f"  Queue items: {len(self.runtime_session.queue_items)}")
+            lines.append(f"  Inbox entries: {len(self.runtime_session.inbox_entries)}")
+            lines.append(f"  Outbox entries: {len(self.runtime_session.outbox_entries)}")
+            lines.append(f"  Claim records: {len(self.runtime_session.claim_records)}")
         lines.append("Workflow:")
         for index, step in enumerate(self.steps, start=1):
             lines.append(f"{index}. {step}")
@@ -818,6 +942,100 @@ def build_state_transition(
     )
 
 
+def build_queue_item(
+    *,
+    session_id: str,
+    delegation: SubagentDelegationRecord,
+    from_role: str,
+    status: str,
+    order: int,
+) -> SubagentQueueItem:
+    """Build one async-ready delegation queue item."""
+
+    return SubagentQueueItem(
+        queue_item_id=f"queue-{order:02d}",
+        session_id=session_id,
+        delegation_id=delegation.delegation_id,
+        from_role=from_role,
+        to_role=delegation.role.name,
+        status=status,
+        summary=delegation.child_task,
+        order=order,
+    )
+
+
+def build_inbox_entry(
+    *,
+    session_id: str,
+    role_name: str,
+    queue_item_id: str,
+    delegation_id: str,
+    status: str,
+    summary: str,
+    order: int,
+) -> SubagentInboxEntry:
+    """Build one inbox entry for the receiving subagent."""
+
+    return SubagentInboxEntry(
+        inbox_entry_id=f"inbox-{order:02d}",
+        session_id=session_id,
+        role_name=role_name,
+        queue_item_id=queue_item_id,
+        delegation_id=delegation_id,
+        status=status,
+        summary=summary,
+        order=order,
+    )
+
+
+def build_outbox_entry(
+    *,
+    session_id: str,
+    role_name: str,
+    delegation_id: str,
+    destination_role: str,
+    status: str,
+    summary: str,
+    order: int,
+) -> SubagentOutboxEntry:
+    """Build one outbox entry for the sending subagent."""
+
+    return SubagentOutboxEntry(
+        outbox_entry_id=f"outbox-{order:02d}",
+        session_id=session_id,
+        role_name=role_name,
+        delegation_id=delegation_id,
+        destination_role=destination_role,
+        status=status,
+        summary=summary,
+        order=order,
+    )
+
+
+def build_claim_record(
+    *,
+    session_id: str,
+    queue_item_id: str,
+    delegation_id: str,
+    role_name: str,
+    status: str,
+    note: str,
+    order: int,
+) -> SubagentClaimRecord:
+    """Build one task-claim record for the async delegation lifecycle."""
+
+    return SubagentClaimRecord(
+        claim_id=f"claim-{order:02d}",
+        session_id=session_id,
+        queue_item_id=queue_item_id,
+        delegation_id=delegation_id,
+        role_name=role_name,
+        status=status,
+        note=note,
+        order=order,
+    )
+
+
 def build_runtime_session(
     *,
     plan: CollaborationPlan,
@@ -827,7 +1045,7 @@ def build_runtime_session(
     status: str,
     recovery_handoff: str,
 ) -> SubagentRuntimeSession:
-    """Build the v51 runtime session from collaboration execution evidence.
+    """Build the v52 runtime session from collaboration execution evidence.
 
     This function composes the collaboration plan, execution evidence, and
     communication trail into one session object. It is the best place to study
@@ -837,6 +1055,10 @@ def build_runtime_session(
     session_id = f"subagent-session-{len(plan.delegations):02d}"
     messages: list[SubagentMessageEnvelope] = []
     transitions: list[SubagentStateTransition] = []
+    queue_items: list[SubagentQueueItem] = []
+    inbox_entries: list[SubagentInboxEntry] = []
+    outbox_entries: list[SubagentOutboxEntry] = []
+    claim_records: list[SubagentClaimRecord] = []
     current_state = "created"
     message_order = 1
     transition_order = 1
@@ -847,54 +1069,98 @@ def build_runtime_session(
         build_state_transition(
             session_id=session_id,
             from_state=current_state,
-            to_state="planned",
+            to_state="pending",
             actor="parent_agent",
-            reason="Initialized the runtime session from the collaboration plan.",
+            reason="Initialized the async delegation queue from the collaboration plan.",
             order=transition_order,
         )
     )
-    current_state = "planned"
+    current_state = "pending"
     transition_order += 1
 
     for delegation, execution, returned in zip(plan.delegations, executions, returns, strict=True):
+        source_role = "parent_agent" if delegation.order == 1 else plan.delegations[delegation.order - 2].role.name
+        final_queue_status = execution.status if execution.status in {"blocked", "failed"} else "completed"
+        queue_item = build_queue_item(
+            session_id=session_id,
+            delegation=delegation,
+            from_role=source_role,
+            status=final_queue_status,
+            order=delegation.order,
+        )
+        queue_items.append(queue_item)
+        inbox_entries.append(
+            build_inbox_entry(
+                session_id=session_id,
+                role_name=delegation.role.name,
+                queue_item_id=queue_item.queue_item_id,
+                delegation_id=delegation.delegation_id,
+                status=final_queue_status,
+                summary=delegation.child_task,
+                order=delegation.order,
+            )
+        )
+        claim_records.append(
+            build_claim_record(
+                session_id=session_id,
+                queue_item_id=queue_item.queue_item_id,
+                delegation_id=delegation.delegation_id,
+                role_name=delegation.role.name,
+                status="claimed" if execution.status == "completed" else execution.status,
+                note=f"{delegation.role.name} claimed {queue_item.queue_item_id} for execution.",
+                order=delegation.order,
+            )
+        )
         transitions.append(
             build_state_transition(
                 session_id=session_id,
                 from_state=current_state,
-                to_state=f"running_{delegation.role.name}",
+                to_state="running",
                 actor=delegation.role.name,
-                reason=f"Delegation {delegation.delegation_id} entered execution.",
+                reason=f"Delegation {delegation.delegation_id} was claimed by {delegation.role.name}.",
                 order=transition_order,
             )
         )
-        current_state = f"running_{delegation.role.name}"
+        current_state = "running"
         transition_order += 1
         last_role = delegation.role.name
 
         messages.append(
             build_message_envelope(
                 session_id=session_id,
-                from_role="parent_agent" if delegation.order == 1 else plan.delegations[delegation.order - 2].role.name,
+                from_role=source_role,
                 to_role=delegation.role.name,
                 message_type="delegation" if delegation.order == 1 else "handoff",
                 summary=delegation.child_task,
                 referenced_records=(delegation.delegation_id,),
-                status="consumed",
+                status="consumed" if execution.status != "blocked" else "blocked",
                 order=message_order,
             )
         )
         message_order += 1
 
-        if execution.status == "failed":
+        if execution.status in {"failed", "blocked"}:
+            terminal_state = "blocked" if execution.status == "blocked" else "failed"
+            outbox_entries.append(
+                build_outbox_entry(
+                    session_id=session_id,
+                    role_name=delegation.role.name,
+                    delegation_id=delegation.delegation_id,
+                    destination_role="parent_agent",
+                    status=terminal_state,
+                    summary=recovery_handoff,
+                    order=delegation.order,
+                )
+            )
             messages.append(
                 build_message_envelope(
                     session_id=session_id,
                     from_role=delegation.role.name,
                     to_role="parent_agent",
-                    message_type="recovery",
+                    message_type="blocked" if execution.status == "blocked" else "recovery",
                     summary=recovery_handoff,
                     referenced_records=(delegation.delegation_id, returned.return_id),
-                    status="emitted",
+                    status=terminal_state,
                     order=message_order,
                 )
             )
@@ -903,26 +1169,37 @@ def build_runtime_session(
                 build_state_transition(
                     session_id=session_id,
                     from_state=current_state,
-                    to_state="failed",
+                    to_state=terminal_state,
                     actor=delegation.role.name,
                     reason=execution.verification_note,
                     order=transition_order,
                 )
             )
-            current_state = "failed"
+            current_state = terminal_state
             break
 
+        outbox_entries.append(
+            build_outbox_entry(
+                session_id=session_id,
+                role_name=delegation.role.name,
+                delegation_id=delegation.delegation_id,
+                destination_role=returned.next_handoff,
+                status="completed",
+                summary=returned.summary,
+                order=delegation.order,
+            )
+        )
         transitions.append(
             build_state_transition(
                 session_id=session_id,
                 from_state=current_state,
-                to_state=f"returned_{delegation.role.name}",
+                to_state="completed",
                 actor=delegation.role.name,
                 reason=returned.summary,
                 order=transition_order,
             )
         )
-        current_state = f"returned_{delegation.role.name}"
+        current_state = "completed"
         transition_order += 1
 
         messages.append(
@@ -952,10 +1229,10 @@ def build_runtime_session(
         )
         current_state = "completed"
 
-    context_source = plan.contracts[-1] if status == "failed" and plan.contracts else (plan.contracts[-1] if plan.contracts else None)
-    if status == "completed" and plan.contracts:
-        context_source = plan.contracts[-1]
+    context_source = plan.contracts[-1] if plan.contracts else None
     active_role = last_role if status == "failed" else "parent_agent"
+    if status == "blocked":
+        active_role = last_role
     if context_source is None:
         context_boundary = build_context_boundary(
             session_id=session_id,
@@ -982,12 +1259,16 @@ def build_runtime_session(
         child_roles=tuple(role.name for role in plan.assigned_roles),
         active_role=active_role,
         current_delegation_id=current_delegation_id,
-        execution_mode="deterministic-runtime-foundation",
+        execution_mode="deterministic-async-delegation",
         status=status,
         terminal_reason="All delegated tasks completed." if status == "completed" else recovery_handoff,
         context_boundary=context_boundary,
         messages=tuple(messages),
         transitions=tuple(transitions),
+        queue_items=tuple(queue_items),
+        inbox_entries=tuple(inbox_entries),
+        outbox_entries=tuple(outbox_entries),
+        claim_records=tuple(claim_records),
     )
 
 
@@ -1069,6 +1350,7 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
     executions: list[SubagentExecutionRecord] = []
     lowered = user_input.lower()
     failed = "ambiguous" in lowered or "unclear" in lowered or "underspecified" in lowered
+    blocked = "blocked" in lowered or "offline" in lowered or "unavailable" in lowered
 
     for index, delegation in enumerate(plan.delegations, start=1):
         next_role = plan.delegations[index].role.name if index < len(plan.delegations) else "parent_agent"
@@ -1077,6 +1359,11 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
             verification = "Clarified the task boundary and prepared the next handoff."
             recovery = delegation.contract.recovery_handoff
             status = "completed"
+        elif blocked:
+            outputs = ("queued implementation note", "blocked dependency note")
+            verification = "Execution was claimed but is currently blocked in the agent inbox awaiting a safe resume."
+            recovery = "Retry the blocked task from the coding_agent inbox after unblocking the dependency, or hand it back to teacher_agent for replanning."
+            status = "blocked"
         elif failed:
             outputs = ("blocked implementation note",)
             verification = "Implementation was blocked because the request was underspecified."
@@ -1136,6 +1423,28 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
                 returns=tuple(returns),
                 executions=tuple(executions),
                 status="failed",
+                recovery_handoff=recovery,
+                runtime_session=runtime_session,
+            )
+        if status == "blocked":
+            runtime_session = build_runtime_session(
+                plan=plan,
+                handoffs=tuple(handoffs),
+                returns=tuple(returns),
+                executions=tuple(executions),
+                status="blocked",
+                recovery_handoff=recovery,
+            )
+            return CollaborationPlan(
+                objective=plan.objective,
+                assigned_roles=plan.assigned_roles,
+                contracts=plan.contracts,
+                delegations=plan.delegations,
+                steps=plan.steps,
+                handoffs=tuple(handoffs),
+                returns=tuple(returns),
+                executions=tuple(executions),
+                status="blocked",
                 recovery_handoff=recovery,
                 runtime_session=runtime_session,
             )
