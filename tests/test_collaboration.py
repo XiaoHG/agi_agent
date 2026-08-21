@@ -319,6 +319,18 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(plan.runtime_session.approval_requests[0].risk.risk_level if plan.runtime_session else None, "high")
         self.assertEqual(plan.runtime_session.approval_decisions[0].decision if plan.runtime_session else None, "approved")
 
+    def test_execute_collaboration_plan_records_long_horizon_lifecycle(self) -> None:
+        """Verify that execute collaboration plan records long-horizon lifecycle."""
+        plan = execute_collaboration_plan("Pause this long-horizon implementation task after review.")
+
+        self.assertEqual(plan.status, "paused")
+        self.assertIsNotNone(plan.task_lifecycle)
+        self.assertEqual(plan.task_lifecycle.state if plan.task_lifecycle else None, "paused")
+        self.assertGreaterEqual(len(plan.task_lifecycle.milestones if plan.task_lifecycle else ()), 1)
+        self.assertGreaterEqual(len(plan.watchdog_signals), 1)
+        self.assertEqual(plan.runtime_session.task_lifecycle.state if plan.runtime_session and plan.runtime_session.task_lifecycle else None, "paused")
+        self.assertEqual(plan.runtime_session.watchdog_signals[0].signal_type if plan.runtime_session else None, "paused")
+
     def test_build_collaboration_plan_for_teacher_task(self) -> None:
         """Verify that build collaboration plan for teacher task."""
         plan = build_collaboration_plan("Explain RAG architecture.")
@@ -422,6 +434,17 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(trace["subagent_runtime"]["execution_mode"], "deterministic-async-delegation")
         self.assertIn("queue_items", trace["subagent_runtime"])
         self.assertIn("transitions", trace["subagent_runtime"])
+
+    def test_agent_trace_dict_contains_task_lifecycle(self) -> None:
+        """Verify that agent trace dict contains task lifecycle."""
+        agent = WorkspaceAgent(Path("."))
+
+        trace = agent.to_trace_dict(agent.run("Execute subagent collaboration for a pause this long-horizon implementation task after review."))
+
+        self.assertIsNotNone(trace["subagent_runtime"])
+        self.assertEqual(trace["subagent_runtime"]["task_lifecycle"]["state"], "paused")
+        self.assertIn("task_lifecycle", trace["subagent_runtime"])
+        self.assertIn("watchdog_signals", trace["subagent_runtime"])
 
     def test_agent_executes_skill(self) -> None:
         """Verify that agent executes skill."""
@@ -611,6 +634,27 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("\"outbox_entries\":", result.stdout)
         self.assertIn("\"claim_records\":", result.stdout)
         self.assertIn("\"status\": \"blocked\"", result.stdout)
+
+    def test_collaboration_demo_prints_lifecycle_json(self) -> None:
+        """Verify that collaboration demo prints lifecycle json."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "cli.collaboration_demo",
+                "--task",
+                "Pause this long-horizon implementation task after review.",
+                "--execute-subagents",
+                "--lifecycle-json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertIn("\"task_lifecycle\":", result.stdout)
+        self.assertIn("\"watchdog_signals\":", result.stdout)
+        self.assertIn("\"state\": \"paused\"", result.stdout)
 
     def test_collaboration_demo_prints_approval_json(self) -> None:
         """Verify that collaboration demo prints approval json."""

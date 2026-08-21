@@ -8,19 +8,19 @@
 
 ## Last Updated
 
-2026-08-20
+2026-08-21
 
 ## 当前阶段
 
-专业级工业 Agent 新阶段：v53 human approval and risk-control workflow 已完成，本地未提交。
+专业级工业 Agent 新阶段：v54 long-horizon task lifecycle management 已完成，本地未提交。
 
-当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已提交并推送；v50 multi-agent delegation hardening 已提交并推送；v51 real multi-agent runtime foundation 已提交并推送；v52 async delegation queue and agent inbox 已提交并推送；v53 human approval and risk-control workflow 已完成，本地未提交。
+当前状态：v36 runtime event replay 已提交；v37 run replay diff and comparative analysis 已提交；v38 checkpoint-guided recovery and resume 已提交；v39 LLM-first direct answer and intent entry 已提交；v40 standardized MCP execution boundary 已提交；v41 skill permissions, versioning and runtime policy 已提交；v42 multi-agent task delegation and subagent contract 已提交；v43 long-horizon memory and session continuity 已提交；v44 industrial evaluation matrix and failure bench 已提交并推送；v45 release gate and CI readiness 已提交并推送；v46 checkpoint branch resume 已提交并推送；v47 standardized MCP governance 已提交并推送；v48 skills governance and versioning 已提交并推送；v49 production RAG backend hardening 已提交并推送；v50 multi-agent delegation hardening 已提交并推送；v51 real multi-agent runtime foundation 已提交并推送；v52 async delegation queue and agent inbox 已提交并推送；v53 human approval and risk-control workflow 已提交并推送；v54 long-horizon task lifecycle management 已完成，本地未提交。
 
 v29 功能基线提交：
 
 - `597ea59 Add professional RAG vector index`
 
-下一阶段建议：在 `v53` human approval and risk-control workflow 的基础上，进入 `v54`，优先扩展 long-horizon task lifecycle、pause / resume 和 watchdog signal。
+下一阶段建议：在 `v54` long-horizon task lifecycle management 的基础上，进入 `v55`，优先扩展 externalized registry、runtime governance 和 environment-aware policy loading。
 
 ## 当前教师判断
 
@@ -148,7 +148,7 @@ v29 功能基线提交：
 - 发布门禁已开始搭建，但还没有接入远程 CI 平台。
 - LangGraph route 已有 DeepSeek planner 和 deterministic fallback，并已经成为默认主执行器。
 - Subagent 已具备 delegation / handoff / execution / return / recovery 的正式协议，但目前仍是 deterministic execution，不是真实异步多 Agent runtime。
-- Subagent 现在已经具备 runtime session、message envelope、state transition、context boundary、delegation queue、agent inbox / outbox、task claim evidence、risk classification、approval request / decision 和 guarded handoff，但还没有进入长期任务生命周期调度。
+- Subagent 现在已经具备 runtime session、message envelope、state transition、context boundary、delegation queue、agent inbox / outbox、task claim evidence、risk classification、approval request / decision、guarded handoff、task lifecycle 和 watchdog signal，但还没有进入外部化任务调度和治理服务。
 
 ## 当前总目标
 
@@ -173,7 +173,7 @@ LLM / Planner -> LangGraph Runtime -> RAG / MCP / Skills / Subagent -> Trace / R
 1. 复盘 `v53`：`versions/v53_human-approval-and-risk-control-workflow.md`。
 2. 查看对应练习：`docs/v53_human-approval-and-risk-control-workflow-exercises.md`。
 3. 运行验证：`python -m unittest tests.test_collaboration tests.test_events tests.test_langgraph_workflow -v`、`python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents --runtime-json --queue-json`、`python -m cli.collaboration_demo --task "Delete a workspace file and write project file." --execute-subagents --approval-json --approval-decision approved` 和 `python -m cli.main --input "Execute subagent collaboration for a code review." --trace`。
-4. 进入 `v54` 规划，围绕 long-horizon task lifecycle 继续推进。
+4. 进入 `v55` 规划，围绕 externalized registry 和 runtime governance 继续推进。
 
 ## 当前学习重点
 
