@@ -33,3 +33,7 @@ data/private/
 *.index
 chroma/
 lancedb/
+
+# Obsidian local state
+obsidian/.obsidian/graph.json
+obsidian/.obsidian/workspace.json
