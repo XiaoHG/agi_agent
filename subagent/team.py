@@ -68,6 +68,8 @@ mindmap
       claim_records
       approval_requests
       approval_decisions
+      task_lifecycle
+      watchdog_signals
     CollaborationPlan
       assigned_roles
       contracts
@@ -76,6 +78,8 @@ mindmap
       returns
       executions
       runtime_session
+      task_lifecycle
+      watchdog_signals
 ```
 
 Reading order:
@@ -654,6 +658,92 @@ class GuardedHandoffRecord:
 
 
 @dataclass(frozen=True)
+class TaskMilestoneRecord:
+    """A named checkpoint inside one long-horizon task."""
+
+    milestone_id: str           # milestone 记录 ID
+    session_id: str             # 所属 runtime session
+    title: str                  # 里程碑标题
+    status: str                 # planned / reached / blocked / paused / expired / abandoned / completed
+    evidence_summary: str       # 支撑该里程碑状态的摘要
+    order: int                  # 里程碑顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the milestone as JSON-ready data."""
+
+        return {
+            "milestone_id": self.milestone_id,
+            "session_id": self.session_id,
+            "title": self.title,
+            "status": self.status,
+            "evidence_summary": self.evidence_summary,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
+class TaskWatchdogSignal:
+    """A health signal used to keep long-horizon tasks observable."""
+
+    signal_id: str              # watchdog 信号 ID
+    session_id: str             # 所属 runtime session
+    signal_type: str            # healthy / stalled / paused / expired / abandoned
+    severity: str               # low / medium / high
+    summary: str                # 信号摘要
+    recommended_action: str     # 推荐动作
+    order: int                  # 信号顺序
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the watchdog signal as JSON-ready data."""
+
+        return {
+            "signal_id": self.signal_id,
+            "session_id": self.session_id,
+            "signal_type": self.signal_type,
+            "severity": self.severity,
+            "summary": self.summary,
+            "recommended_action": self.recommended_action,
+            "order": self.order,
+        }
+
+
+@dataclass(frozen=True)
+class TaskLifecycleRecord:
+    """Structured lifecycle evidence for one long-horizon task."""
+
+    lifecycle_id: str                 # 生命周期记录 ID
+    session_id: str                   # 所属 runtime session
+    objective: str                    # 关联的长期任务目标
+    state: str                        # created / running / paused / resumed / expired / abandoned / blocked / failed / completed
+    health: str                       # healthy / paused / stalled / expired / abandoned / blocked / failed
+    progress_stage: str               # 当前进展阶段
+    current_milestone: str            # 当前聚焦的里程碑
+    paused_reason: str                # 暂停原因
+    resume_hint: str                  # 恢复提示
+    terminal_reason: str              # 结束原因
+    next_safe_action: str             # 下一步安全动作
+    milestones: tuple[TaskMilestoneRecord, ...]  # 里程碑记录
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the lifecycle record as JSON-ready data."""
+
+        return {
+            "lifecycle_id": self.lifecycle_id,
+            "session_id": self.session_id,
+            "objective": self.objective,
+            "state": self.state,
+            "health": self.health,
+            "progress_stage": self.progress_stage,
+            "current_milestone": self.current_milestone,
+            "paused_reason": self.paused_reason,
+            "resume_hint": self.resume_hint,
+            "terminal_reason": self.terminal_reason,
+            "next_safe_action": self.next_safe_action,
+            "milestones": [milestone.to_dict() for milestone in self.milestones],
+        }
+
+
+@dataclass(frozen=True)
 class SubagentRuntimeSession:
     """Execution-layer runtime session for one collaboration flow.
 
@@ -681,6 +771,8 @@ class SubagentRuntimeSession:
     guarded_handoffs: tuple[GuardedHandoffRecord, ...]  # 经审批保护的交接记录
     approval_requests: tuple[ApprovalRequest, ...]   # 审批请求记录
     approval_decisions: tuple[ApprovalDecision, ...] # 审批决策记录
+    task_lifecycle: TaskLifecycleRecord | None       # 长任务生命周期记录
+    watchdog_signals: tuple[TaskWatchdogSignal, ...]  # 长任务健康信号
 
     def to_dict(self) -> dict[str, Any]:
         """Render the runtime session as JSON-ready data."""
@@ -705,6 +797,8 @@ class SubagentRuntimeSession:
             "guarded_handoffs": [handoff.to_dict() for handoff in self.guarded_handoffs],
             "approval_requests": [request.to_dict() for request in self.approval_requests],
             "approval_decisions": [decision.to_dict() for decision in self.approval_decisions],
+            "task_lifecycle": None if self.task_lifecycle is None else self.task_lifecycle.to_dict(),
+            "watchdog_signals": [signal.to_dict() for signal in self.watchdog_signals],
         }
 
 
@@ -734,6 +828,8 @@ class CollaborationPlan:
     risk: RiskClassification | None = None                  # 当前协作风险分类
     approval_request: ApprovalRequest | None = None         # 当前协作审批请求
     approval_decision: ApprovalDecision | None = None       # 当前协作审批决策
+    task_lifecycle: TaskLifecycleRecord | None = None       # 当前协作生命周期记录
+    watchdog_signals: tuple[TaskWatchdogSignal, ...] = ()   # 当前协作健康信号
     status: str = "planned"                                 # planned / completed / failed
     recovery_handoff: str = ""                              # 整体失败时的恢复动作
     runtime_session: SubagentRuntimeSession | None = None   # 多 Agent runtime session
@@ -754,6 +850,8 @@ class CollaborationPlan:
             "risk": None if self.risk is None else self.risk.to_dict(),
             "approval_request": None if self.approval_request is None else self.approval_request.to_dict(),
             "approval_decision": None if self.approval_decision is None else self.approval_decision.to_dict(),
+            "task_lifecycle": None if self.task_lifecycle is None else self.task_lifecycle.to_dict(),
+            "watchdog_signals": [signal.to_dict() for signal in self.watchdog_signals],
             "status": self.status,
             "recovery_handoff": self.recovery_handoff,
             "runtime_session": None if self.runtime_session is None else self.runtime_session.to_dict(),
@@ -811,6 +909,23 @@ class CollaborationPlan:
                 f"- {self.approval_decision.decision_id} [{self.approval_decision.decision}] "
                 f"{self.approval_decision.reviewer_role}: {self.approval_decision.rationale}"
             )
+        if self.task_lifecycle is not None:
+            lines.append("Task lifecycle:")
+            lines.append(
+                f"- {self.task_lifecycle.lifecycle_id} [{self.task_lifecycle.state}] "
+                f"health={self.task_lifecycle.health} milestone={self.task_lifecycle.current_milestone}"
+            )
+            lines.append(f"  Next safe action: {self.task_lifecycle.next_safe_action}")
+            if self.task_lifecycle.paused_reason:
+                lines.append(f"  Paused reason: {self.task_lifecycle.paused_reason}")
+            if self.task_lifecycle.resume_hint:
+                lines.append(f"  Resume hint: {self.task_lifecycle.resume_hint}")
+        if self.watchdog_signals:
+            lines.append("Watchdog signals:")
+            for signal in self.watchdog_signals:
+                lines.append(
+                    f"- {signal.signal_id} [{signal.signal_type}/{signal.severity}] {signal.summary}"
+                )
         if self.returns:
             lines.append("Returns:")
             for item in self.returns:
@@ -836,6 +951,10 @@ class CollaborationPlan:
             lines.append(f"  Guarded handoffs: {len(self.runtime_session.guarded_handoffs)}")
             lines.append(f"  Approval requests: {len(self.runtime_session.approval_requests)}")
             lines.append(f"  Approval decisions: {len(self.runtime_session.approval_decisions)}")
+            lines.append(
+                f"  Task lifecycle: {None if self.runtime_session.task_lifecycle is None else self.runtime_session.task_lifecycle.state}"
+            )
+            lines.append(f"  Watchdog signals: {len(self.runtime_session.watchdog_signals)}")
         lines.append("Workflow:")
         for index, step in enumerate(self.steps, start=1):
             lines.append(f"{index}. {step}")
@@ -1282,6 +1401,80 @@ def build_guarded_handoff_record(
     )
 
 
+def build_task_milestone_record(
+    *,
+    session_id: str,
+    title: str,
+    status: str,
+    evidence_summary: str,
+    order: int,
+) -> TaskMilestoneRecord:
+    """Build one deterministic long-horizon task milestone record."""
+
+    return TaskMilestoneRecord(
+        milestone_id=f"milestone-{order:02d}",
+        session_id=session_id,
+        title=title,
+        status=status,
+        evidence_summary=evidence_summary,
+        order=order,
+    )
+
+
+def build_task_watchdog_signal(
+    *,
+    session_id: str,
+    signal_type: str,
+    severity: str,
+    summary: str,
+    recommended_action: str,
+    order: int,
+) -> TaskWatchdogSignal:
+    """Build one deterministic watchdog signal for a long-horizon task."""
+
+    return TaskWatchdogSignal(
+        signal_id=f"watchdog-{order:02d}",
+        session_id=session_id,
+        signal_type=signal_type,
+        severity=severity,
+        summary=summary,
+        recommended_action=recommended_action,
+        order=order,
+    )
+
+
+def build_task_lifecycle_record(
+    *,
+    session_id: str,
+    objective: str,
+    state: str,
+    health: str,
+    progress_stage: str,
+    current_milestone: str,
+    paused_reason: str,
+    resume_hint: str,
+    terminal_reason: str,
+    next_safe_action: str,
+    milestones: tuple[TaskMilestoneRecord, ...],
+) -> TaskLifecycleRecord:
+    """Build the task lifecycle record for a long-horizon collaboration."""
+
+    return TaskLifecycleRecord(
+        lifecycle_id=f"lifecycle-{session_id}",
+        session_id=session_id,
+        objective=objective,
+        state=state,
+        health=health,
+        progress_stage=progress_stage,
+        current_milestone=current_milestone,
+        paused_reason=paused_reason,
+        resume_hint=resume_hint,
+        terminal_reason=terminal_reason,
+        next_safe_action=next_safe_action,
+        milestones=milestones,
+    )
+
+
 def build_runtime_session(
     *,
     plan: CollaborationPlan,
@@ -1291,6 +1484,8 @@ def build_runtime_session(
     executions: tuple[SubagentExecutionRecord, ...],
     approval_requests: tuple[ApprovalRequest, ...],
     approval_decisions: tuple[ApprovalDecision, ...],
+    task_lifecycle: TaskLifecycleRecord | None,
+    watchdog_signals: tuple[TaskWatchdogSignal, ...],
     status: str,
     recovery_handoff: str,
 ) -> SubagentRuntimeSession:
@@ -1521,6 +1716,8 @@ def build_runtime_session(
         guarded_handoffs=guarded_handoffs,
         approval_requests=approval_requests,
         approval_decisions=approval_decisions,
+        task_lifecycle=task_lifecycle,
+        watchdog_signals=watchdog_signals,
     )
 
 
@@ -1617,9 +1814,15 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
     guarded_handoffs: list[GuardedHandoffRecord] = []
     returns: list[SubagentReturnRecord] = []
     executions: list[SubagentExecutionRecord] = []
+    milestones: list[TaskMilestoneRecord] = []
+    watchdog_signals: list[TaskWatchdogSignal] = []
     lowered = user_input.lower()
     failed = "ambiguous" in lowered or "unclear" in lowered or "underspecified" in lowered
     blocked = "blocked" in lowered or "offline" in lowered or "unavailable" in lowered
+    lifecycle_requested = any(
+        keyword in lowered
+        for keyword in ("pause", "resume", "expire", "expired", "abandon", "abandoned", "watchdog", "stalled", "timeout")
+    )
     code_task = len(plan.assigned_roles) > 1
     risk = build_risk_classification(user_input)
     target_role = plan.delegations[-1].role.name if plan.delegations else "teacher_agent"
@@ -1695,6 +1898,16 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
             recovery = delegation.contract.recovery_handoff
             status = "completed"
 
+        milestones.append(
+            build_task_milestone_record(
+                session_id=approval_request.session_id,
+                title=f"{delegation.role.name} milestone {index:02d}",
+                status="reached" if status == "completed" else status,
+                evidence_summary=verification,
+                order=index,
+            )
+        )
+
         executions.append(
             build_execution_record(
                 delegation,
@@ -1725,10 +1938,20 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
                         else "The guarded handoff was paused by approval control."
                     ),
                     payload_summary=verification,
-                    order=index,
+                order=index,
+            )
+        )
+        if status == "failed":
+            watchdog_signals.append(
+                build_task_watchdog_signal(
+                    session_id=approval_request.session_id,
+                    signal_type="failed",
+                    severity="high",
+                    summary="Task execution failed before the long-horizon workflow could complete.",
+                    recommended_action=recovery,
+                    order=len(watchdog_signals) + 1,
                 )
             )
-        if status == "failed":
             runtime_session = build_runtime_session(
                 plan=plan,
                 handoffs=tuple(handoffs),
@@ -1737,6 +1960,20 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
                 executions=tuple(executions),
                 approval_requests=(approval_request,),
                 approval_decisions=(approval_decision,),
+                task_lifecycle=build_task_lifecycle_record(
+                    session_id=approval_request.session_id,
+                    objective=plan.objective,
+                    state="failed",
+                    health="failed",
+                    progress_stage="execution",
+                    current_milestone=milestones[-1].title,
+                    paused_reason="",
+                    resume_hint="Resume from the latest checkpoint after clarifying the request.",
+                    terminal_reason=recovery,
+                    next_safe_action=recovery,
+                    milestones=tuple(milestones),
+                ),
+                watchdog_signals=tuple(watchdog_signals),
                 status="failed",
                 recovery_handoff=recovery,
             )
@@ -1753,11 +1990,35 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
                 risk=risk,
                 approval_request=approval_request,
                 approval_decision=approval_decision,
+                task_lifecycle=build_task_lifecycle_record(
+                    session_id=approval_request.session_id,
+                    objective=plan.objective,
+                    state="failed",
+                    health="failed",
+                    progress_stage="execution",
+                    current_milestone=milestones[-1].title,
+                    paused_reason="",
+                    resume_hint="Resume from the latest checkpoint after clarifying the request.",
+                    terminal_reason=recovery,
+                    next_safe_action=recovery,
+                    milestones=tuple(milestones),
+                ),
+                watchdog_signals=tuple(watchdog_signals),
                 status="failed",
                 recovery_handoff=recovery,
                 runtime_session=runtime_session,
             )
         if status == "blocked":
+            watchdog_signals.append(
+                build_task_watchdog_signal(
+                    session_id=approval_request.session_id,
+                    signal_type="stalled",
+                    severity="medium",
+                    summary="The long-horizon task is blocked inside the inbox and needs a safe resume path.",
+                    recommended_action=recovery,
+                    order=len(watchdog_signals) + 1,
+                )
+            )
             runtime_session = build_runtime_session(
                 plan=plan,
                 handoffs=tuple(handoffs),
@@ -1766,6 +2027,20 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
                 executions=tuple(executions),
                 approval_requests=(approval_request,),
                 approval_decisions=(approval_decision,),
+                task_lifecycle=build_task_lifecycle_record(
+                    session_id=approval_request.session_id,
+                    objective=plan.objective,
+                    state="blocked",
+                    health="stalled",
+                    progress_stage="execution",
+                    current_milestone=milestones[-1].title,
+                    paused_reason="The task is blocked in the agent inbox.",
+                    resume_hint="Unblock the dependency, then resume from the last checkpoint.",
+                    terminal_reason=recovery,
+                    next_safe_action=recovery,
+                    milestones=tuple(milestones),
+                ),
+                watchdog_signals=tuple(watchdog_signals),
                 status="blocked",
                 recovery_handoff=recovery,
             )
@@ -1782,10 +2057,135 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
                 risk=risk,
                 approval_request=approval_request,
                 approval_decision=approval_decision,
+                task_lifecycle=build_task_lifecycle_record(
+                    session_id=approval_request.session_id,
+                    objective=plan.objective,
+                    state="blocked",
+                    health="stalled",
+                    progress_stage="execution",
+                    current_milestone=milestones[-1].title,
+                    paused_reason="The task is blocked in the agent inbox.",
+                    resume_hint="Unblock the dependency, then resume from the last checkpoint.",
+                    terminal_reason=recovery,
+                    next_safe_action=recovery,
+                    milestones=tuple(milestones),
+                ),
+                watchdog_signals=tuple(watchdog_signals),
                 status="blocked",
                 recovery_handoff=recovery,
                 runtime_session=runtime_session,
             )
+
+    lifecycle_state = "completed"
+    lifecycle_health = "healthy"
+    lifecycle_stage = "delivery"
+    paused_reason = ""
+    resume_hint = "Use the latest milestone and continue the next pending task."
+    terminal_reason = "All delegated tasks completed."
+    next_safe_action = "Persist the checkpoint and start the next bounded task."
+    if lifecycle_requested and "pause" in lowered:
+        lifecycle_state = "paused"
+        lifecycle_health = "paused"
+        lifecycle_stage = "pause"
+        paused_reason = "The task was deliberately paused for a later resume."
+        resume_hint = "Resume from the latest milestone after confirming the remaining scope."
+        terminal_reason = "The task was paused by request."
+        next_safe_action = "Resume the task from the latest checkpoint."
+        watchdog_signals.append(
+            build_task_watchdog_signal(
+                session_id=approval_request.session_id,
+                signal_type="paused",
+                severity="low",
+                summary="The task is intentionally paused and waiting for a later resume.",
+                recommended_action=resume_hint,
+                order=len(watchdog_signals) + 1,
+            )
+        )
+    elif lifecycle_requested and any(keyword in lowered for keyword in ("resume",)):
+        lifecycle_state = "resumed"
+        lifecycle_health = "healthy"
+        lifecycle_stage = "resume"
+        terminal_reason = "The task was resumed from a paused state."
+        next_safe_action = "Continue the next pending milestone."
+        watchdog_signals.append(
+            build_task_watchdog_signal(
+                session_id=approval_request.session_id,
+                signal_type="healthy",
+                severity="low",
+                summary="The task has resumed and the runtime can continue safely.",
+                recommended_action=next_safe_action,
+                order=len(watchdog_signals) + 1,
+            )
+        )
+    elif lifecycle_requested and any(keyword in lowered for keyword in ("expire", "expired")):
+        lifecycle_state = "expired"
+        lifecycle_health = "expired"
+        lifecycle_stage = "expired"
+        paused_reason = "The task expired before it could reach completion."
+        resume_hint = "Create a fresh task or restart from a narrower scope."
+        terminal_reason = "The task expired while waiting for further progress."
+        next_safe_action = "Abandon the expired task and open a new run if needed."
+        watchdog_signals.append(
+            build_task_watchdog_signal(
+                session_id=approval_request.session_id,
+                signal_type="expired",
+                severity="high",
+                summary="The task expired and should not be resumed without re-planning.",
+                recommended_action=next_safe_action,
+                order=len(watchdog_signals) + 1,
+            )
+        )
+    elif lifecycle_requested and any(keyword in lowered for keyword in ("abandon", "abandoned")):
+        lifecycle_state = "abandoned"
+        lifecycle_health = "abandoned"
+        lifecycle_stage = "abandon"
+        paused_reason = "The task was intentionally abandoned."
+        resume_hint = "Start a new task with a narrower scope."
+        terminal_reason = "The task was abandoned by request."
+        next_safe_action = "Create a new bounded collaboration plan."
+        watchdog_signals.append(
+            build_task_watchdog_signal(
+                session_id=approval_request.session_id,
+                signal_type="abandoned",
+                severity="medium",
+                summary="The task was intentionally abandoned and should not be resumed as-is.",
+                recommended_action=next_safe_action,
+                order=len(watchdog_signals) + 1,
+            )
+        )
+    elif lifecycle_requested and any(keyword in lowered for keyword in ("watchdog", "stalled", "timeout")):
+        lifecycle_state = "paused"
+        lifecycle_health = "stalled"
+        lifecycle_stage = "watchdog"
+        paused_reason = "A watchdog signal detected stalled long-horizon progress."
+        resume_hint = "Inspect the blocked dependency, then resume from the latest checkpoint."
+        terminal_reason = "The watchdog paused the task to preserve safe recovery."
+        next_safe_action = "Inspect the stall cause before resuming."
+        watchdog_signals.append(
+            build_task_watchdog_signal(
+                session_id=approval_request.session_id,
+                signal_type="stalled",
+                severity="high",
+                summary="A watchdog-style stall was detected in the long-horizon task.",
+                recommended_action=next_safe_action,
+                order=len(watchdog_signals) + 1,
+            )
+        )
+
+    task_lifecycle = build_task_lifecycle_record(
+        session_id=approval_request.session_id,
+        objective=plan.objective,
+        state=lifecycle_state,
+        health=lifecycle_health,
+        progress_stage=lifecycle_stage,
+        current_milestone=milestones[-1].title if milestones else "none",
+        paused_reason=paused_reason,
+        resume_hint=resume_hint,
+        terminal_reason=terminal_reason,
+        next_safe_action=next_safe_action,
+        milestones=tuple(milestones),
+    )
+    final_status = lifecycle_state if lifecycle_state in {"paused", "expired", "abandoned"} else "completed"
 
     runtime_session = build_runtime_session(
         plan=plan,
@@ -1795,8 +2195,10 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
         executions=tuple(executions),
         approval_requests=(approval_request,),
         approval_decisions=(approval_decision,),
-        status="completed",
-        recovery_handoff="none",
+        task_lifecycle=task_lifecycle,
+        watchdog_signals=tuple(watchdog_signals),
+        status=final_status,
+        recovery_handoff=next_safe_action if final_status != "completed" else "none",
     )
     return CollaborationPlan(
         objective=plan.objective,
@@ -1811,7 +2213,9 @@ def execute_collaboration_plan(user_input: str, approval_override: str | None = 
         risk=risk,
         approval_request=approval_request,
         approval_decision=approval_decision,
-        status="completed",
-        recovery_handoff="none",
+        task_lifecycle=task_lifecycle,
+        watchdog_signals=tuple(watchdog_signals),
+        status=final_status,
+        recovery_handoff=next_safe_action if final_status != "completed" else "none",
         runtime_session=runtime_session,
     )

@@ -119,6 +119,41 @@ class RuntimeEventTests(unittest.TestCase):
         self.assertEqual(len(queue_events), 1)
         self.assertIn("queue=1", queue_events[0].detail)
 
+    def test_build_runtime_events_includes_task_lifecycle(self) -> None:
+        """Verify that build runtime events includes task lifecycle."""
+        events = build_runtime_events(
+            [AgentStep("Run graph", "route=execute_subagents")],
+            {
+                "subagent_runtime": {
+                    "session_id": "subagent-session-02",
+                    "status": "paused",
+                    "messages": [],
+                    "transitions": [],
+                    "queue_items": [],
+                    "inbox_entries": [],
+                    "outbox_entries": [],
+                    "claim_records": [],
+                    "task_lifecycle": {
+                        "lifecycle_id": "lifecycle-subagent-session-02",
+                        "state": "paused",
+                        "health": "paused",
+                    },
+                    "watchdog_signals": [
+                        {
+                            "signal_id": "watchdog-01",
+                            "signal_type": "paused",
+                            "severity": "low",
+                        }
+                    ],
+                },
+            },
+        )
+
+        event_types = [event.event_type for event in events]
+
+        self.assertIn("task_lifecycle", event_types)
+        self.assertIn("task_watchdog", event_types)
+
 
 if __name__ == "__main__":
     unittest.main()
