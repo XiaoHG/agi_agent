@@ -149,8 +149,6 @@ def build_runtime_events(
             inbox_entries = subagent_runtime.get("inbox_entries", [])
             outbox_entries = subagent_runtime.get("outbox_entries", [])
             claim_records = subagent_runtime.get("claim_records", [])
-            task_lifecycle = subagent_runtime.get("task_lifecycle")
-            watchdog_signals = subagent_runtime.get("watchdog_signals", [])
             events.append(
                 RuntimeEvent(
                     index=len(events) + 1,
@@ -182,29 +180,6 @@ def build_runtime_events(
                             "outbox_entries": outbox_entries,
                             "claim_records": claim_records,
                         },
-                    )
-                )
-            if isinstance(task_lifecycle, dict):
-                events.append(
-                    RuntimeEvent(
-                        index=len(events) + 1,
-                        event_type="task_lifecycle",
-                        name=task_lifecycle.get("lifecycle_id", "task_lifecycle"),
-                        detail=(
-                            f"state={task_lifecycle.get('state', 'unknown')} "
-                            f"health={task_lifecycle.get('health', 'unknown')}"
-                        ),
-                        payload=task_lifecycle,
-                    )
-                )
-            if isinstance(watchdog_signals, list) and watchdog_signals:
-                events.append(
-                    RuntimeEvent(
-                        index=len(events) + 1,
-                        event_type="task_watchdog",
-                        name="watchdog_signals",
-                        detail=f"signals={len(watchdog_signals)}",
-                        payload={"watchdog_signals": watchdog_signals},
                     )
                 )
 

@@ -303,8 +303,7 @@ def execute_subagent_collaboration(task: str) -> ToolResult:
         "subagent_delegation": plan.to_dict(),
         "subagent_runtime": runtime_session,
     }
-    lifecycle_state = None if plan.task_lifecycle is None else plan.task_lifecycle.state
-    if plan.status in {"failed", "blocked"} or lifecycle_state in {"paused", "expired", "abandoned", "resumed"}:
+    if plan.status in {"failed", "blocked"}:
         failure_type = "delegation_failed"
         reason = "Subagent collaboration failed before all delegated tasks completed."
         if plan.approval_decision is not None and plan.approval_decision.decision != "approved":
@@ -313,28 +312,12 @@ def execute_subagent_collaboration(task: str) -> ToolResult:
         elif plan.status == "blocked":
             failure_type = "delegation_blocked"
             reason = "Subagent collaboration paused in a blocked inbox state before all delegated tasks completed."
-        elif lifecycle_state == "paused":
-            failure_type = "task_paused"
-            reason = "Subagent collaboration was intentionally paused for later resume."
-        elif lifecycle_state == "expired":
-            failure_type = "task_expired"
-            reason = "Subagent collaboration expired before completion."
-        elif lifecycle_state == "abandoned":
-            failure_type = "task_abandoned"
-            reason = "Subagent collaboration was abandoned and should not resume as-is."
-        elif lifecycle_state == "resumed":
-            failure_type = "task_resumed"
-            reason = "Subagent collaboration resumed from a paused state."
         metadata["recovery_plan"] = {
             "status": plan.status,
             "failure_type": failure_type,
             "reason": reason,
             "next_safe_action": plan.recovery_handoff,
         }
-    if plan.task_lifecycle is not None:
-        metadata["task_lifecycle"] = plan.task_lifecycle.to_dict()
-    if plan.watchdog_signals:
-        metadata["watchdog_signals"] = [signal.to_dict() for signal in plan.watchdog_signals]
     return ToolResult("execute_subagents", plan.to_text(), metadata)
 
 

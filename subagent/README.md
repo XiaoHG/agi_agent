@@ -20,7 +20,7 @@
 
 ## 当前实现
 
-当前阶段已经实现 deterministic collaboration planner + delegation contract + handoff / return / execution trace + runtime session foundation，并在 `v52` 进一步补上 async-ready delegation queue、agent inbox / outbox 和 task claim evidence，在 `v53` 再补上 risk classification、approval request / decision 和 guarded handoff，在 `v54` 继续补上 long-horizon task lifecycle、milestone record 和 watchdog signal。
+当前阶段已经实现 deterministic collaboration planner + delegation contract + handoff / return / execution trace + runtime session foundation，并在 `v52` 进一步补上 async-ready delegation queue、agent inbox / outbox 和 task claim evidence，在 `v53` 再补上 risk classification、approval request / decision 和 guarded handoff。
 
 ```text
 subagent/
@@ -37,7 +37,6 @@ python -m cli.collaboration_demo --task "Implement a bug fix and test it." --exe
 python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents --queue-json
 python -m cli.collaboration_demo --task "Implement a blocked offline code change." --execute-subagents --inbox-role coding_agent --outbox-role coding_agent
 python -m cli.collaboration_demo --task "Delete a workspace file and write project file." --execute-subagents --approval-json --approval-decision approved
-python -m cli.collaboration_demo --task "Pause this long-horizon implementation task after review." --execute-subagents --lifecycle-json
 python -m cli.main --input "Plan subagent collaboration for a code review." --trace
 
 当前协作计划会同时输出：
@@ -61,6 +60,4 @@ python -m cli.main --input "Plan subagent collaboration for a code review." --tr
 - approval request
 - approval decision
 - guarded handoffs
-- task lifecycle
-- watchdog signals
 ```

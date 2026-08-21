@@ -20,7 +20,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--runtime-json", action="store_true", help="print the subagent runtime session as JSON after execution")
     parser.add_argument("--queue-json", action="store_true", help="print the async delegation queue, inbox, outbox, and claim snapshot as JSON")
     parser.add_argument("--approval-json", action="store_true", help="print the approval request and decision snapshot as JSON")
-    parser.add_argument("--lifecycle-json", action="store_true", help="print the long-horizon task lifecycle snapshot as JSON")
     parser.add_argument(
         "--approval-decision",
         choices=["approved", "rejected", "revise_required"],
@@ -89,20 +88,6 @@ def main(argv: list[str] | None = None) -> int:
                             "approval_request": None if plan.approval_request is None else plan.approval_request.to_dict(),
                             "approval_decision": None if plan.approval_decision is None else plan.approval_decision.to_dict(),
                             "guarded_handoffs": [handoff.to_dict() for handoff in plan.guarded_handoffs],
-                        },
-                        ensure_ascii=False,
-                        indent=2,
-                    )
-                )
-            if args.lifecycle_json and plan.runtime_session is not None:
-                print()
-                print(
-                    json.dumps(
-                        {
-                            "task_lifecycle": None
-                            if plan.task_lifecycle is None
-                            else plan.task_lifecycle.to_dict(),
-                            "watchdog_signals": [signal.to_dict() for signal in plan.watchdog_signals],
                         },
                         ensure_ascii=False,
                         indent=2,
