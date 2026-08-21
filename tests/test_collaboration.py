@@ -259,6 +259,10 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(len(plan.runtime_session.inbox_entries), 2)
         self.assertEqual(len(plan.runtime_session.outbox_entries), 2)
         self.assertEqual(len(plan.runtime_session.claim_records), 2)
+        self.assertIsNotNone(plan.approval_request)
+        self.assertIsNotNone(plan.approval_decision)
+        self.assertEqual(plan.approval_decision.decision if plan.approval_decision else None, "approved")
+        self.assertEqual(len(plan.guarded_handoffs), 1)
         self.assertEqual(plan.handoffs[0].from_role, "teacher_agent")
         self.assertEqual(plan.handoffs[0].to_role, "coding_agent")
         self.assertIn("Runtime session:", plan.to_text())
@@ -292,6 +296,28 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(plan.runtime_session.inbox_entries[-1].status, "blocked")
         self.assertEqual(plan.runtime_session.outbox_entries[-1].status, "blocked")
         self.assertEqual(plan.runtime_session.claim_records[-1].status, "blocked")
+
+    def test_execute_collaboration_plan_blocks_high_risk_without_approval(self) -> None:
+        """Verify that execute collaboration plan blocks high risk work without approval."""
+        plan = execute_collaboration_plan("Delete a workspace file and write project file.")
+
+        self.assertEqual(plan.status, "blocked")
+        self.assertIsNotNone(plan.approval_request)
+        self.assertIsNotNone(plan.approval_decision)
+        self.assertEqual(plan.approval_decision.decision if plan.approval_decision else None, "revise_required")
+        self.assertEqual(len(plan.guarded_handoffs), 1)
+        self.assertEqual(plan.executions[-1].status, "blocked")
+        self.assertEqual(plan.runtime_session.approval_decisions[0].decision if plan.runtime_session else None, "revise_required")
+
+    def test_execute_collaboration_plan_allows_high_risk_with_approval_override(self) -> None:
+        """Verify that execute collaboration plan allows high risk work after approval."""
+        plan = execute_collaboration_plan("Delete a workspace file and write project file.", approval_override="approved")
+
+        self.assertEqual(plan.status, "completed")
+        self.assertEqual(plan.approval_decision.decision if plan.approval_decision else None, "approved")
+        self.assertEqual(plan.guarded_handoffs[0].approval_status, "approved")
+        self.assertEqual(plan.runtime_session.approval_requests[0].risk.risk_level if plan.runtime_session else None, "high")
+        self.assertEqual(plan.runtime_session.approval_decisions[0].decision if plan.runtime_session else None, "approved")
 
     def test_build_collaboration_plan_for_teacher_task(self) -> None:
         """Verify that build collaboration plan for teacher task."""
@@ -362,6 +388,8 @@ class CollaborationTests(unittest.TestCase):
         self.assertIsNotNone(trace["subagent_runtime"])
         self.assertEqual(trace["subagent_runtime"]["status"], "completed")
         self.assertEqual(trace["subagent_delegation"]["status"], "completed")
+        self.assertIsNotNone(trace["subagent_delegation"]["approval_request"])
+        self.assertGreaterEqual(len(trace["subagent_delegation"]["guarded_handoffs"]), 1)
 
     def test_agent_executes_subagent_collaboration_failure_exports_recovery(self) -> None:
         """Verify that agent executes subagent collaboration failure exports recovery."""
@@ -583,6 +611,31 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("\"outbox_entries\":", result.stdout)
         self.assertIn("\"claim_records\":", result.stdout)
         self.assertIn("\"status\": \"blocked\"", result.stdout)
+
+    def test_collaboration_demo_prints_approval_json(self) -> None:
+        """Verify that collaboration demo prints approval json."""
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "cli.collaboration_demo",
+                "--task",
+                "Delete a workspace file and write project file.",
+                "--execute-subagents",
+                "--approval-json",
+                "--approval-decision",
+                "approved",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertIn("\"risk\":", result.stdout)
+        self.assertIn("\"approval_request\":", result.stdout)
+        self.assertIn("\"approval_decision\":", result.stdout)
+        self.assertIn("\"guarded_handoffs\":", result.stdout)
+        self.assertIn("\"decision\": \"approved\"", result.stdout)
 
 
 if __name__ == "__main__":

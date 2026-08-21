@@ -20,11 +20,11 @@
 
 ## 当前实现
 
-当前阶段已经实现 deterministic collaboration planner + delegation contract + handoff / return / execution trace + runtime session foundation，并在 `v52` 进一步补上 async-ready delegation queue、agent inbox / outbox 和 task claim evidence。
+当前阶段已经实现 deterministic collaboration planner + delegation contract + handoff / return / execution trace + runtime session foundation，并在 `v52` 进一步补上 async-ready delegation queue、agent inbox / outbox 和 task claim evidence，在 `v53` 再补上 risk classification、approval request / decision 和 guarded handoff。
 
 ```text
 subagent/
-  team.py        # SubagentSpec, delegation contract, runtime session, message envelope, state transition, queue/inbox/outbox/claim
+  team.py        # SubagentSpec, delegation contract, runtime session, message envelope, state transition, queue/inbox/outbox/claim, risk/approval/guarded handoff
 ```
 
 运行：
@@ -36,6 +36,7 @@ python -m cli.collaboration_demo --task "Implement a bug fix and test it." --exe
 python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents --runtime-json
 python -m cli.collaboration_demo --task "Implement a bug fix and test it." --execute-subagents --queue-json
 python -m cli.collaboration_demo --task "Implement a blocked offline code change." --execute-subagents --inbox-role coding_agent --outbox-role coding_agent
+python -m cli.collaboration_demo --task "Delete a workspace file and write project file." --execute-subagents --approval-json --approval-decision approved
 python -m cli.main --input "Plan subagent collaboration for a code review." --trace
 
 当前协作计划会同时输出：
@@ -55,4 +56,8 @@ python -m cli.main --input "Plan subagent collaboration for a code review." --tr
 - inbox entries
 - outbox entries
 - claim records
+- risk classification
+- approval request
+- approval decision
+- guarded handoffs
 ```

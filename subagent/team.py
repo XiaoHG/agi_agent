@@ -62,6 +62,12 @@ mindmap
       context_boundary
       messages
       transitions
+      queue_items
+      inbox_entries
+      outbox_entries
+      claim_records
+      approval_requests
+      approval_decisions
     CollaborationPlan
       assigned_roles
       contracts
@@ -548,6 +554,106 @@ class SubagentClaimRecord:
 
 
 @dataclass(frozen=True)
+class RiskClassification:
+    """Deterministic risk classification for one collaboration objective."""
+
+    risk_level: str                     # low / medium / high
+    reasons: tuple[str, ...]            # 风险判定原因
+    requires_approval: bool             # 是否需要审批
+    blocked_actions: tuple[str, ...]    # 被阻断的高风险动作
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the risk classification as JSON-ready data."""
+
+        return {
+            "risk_level": self.risk_level,
+            "reasons": list(self.reasons),
+            "requires_approval": self.requires_approval,
+            "blocked_actions": list(self.blocked_actions),
+        }
+
+
+@dataclass(frozen=True)
+class ApprovalRequest:
+    """Structured request asking whether a risky collaboration can proceed."""
+
+    request_id: str             # 审批请求 ID
+    session_id: str             # 所属 runtime session
+    requester_role: str         # 发起审批请求的角色
+    target_role: str            # 需要被保护的执行角色
+    requested_action: str       # 请求审批的动作描述
+    objective: str              # 关联的总目标
+    risk: RiskClassification    # 风险分类结果
+    status: str                 # requested / approved / rejected / revise_required
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the approval request as JSON-ready data."""
+
+        return {
+            "request_id": self.request_id,
+            "session_id": self.session_id,
+            "requester_role": self.requester_role,
+            "target_role": self.target_role,
+            "requested_action": self.requested_action,
+            "objective": self.objective,
+            "risk": self.risk.to_dict(),
+            "status": self.status,
+        }
+
+
+@dataclass(frozen=True)
+class ApprovalDecision:
+    """Structured approval outcome for one risky collaboration step."""
+
+    decision_id: str            # 审批决策 ID
+    request_id: str             # 对应审批请求 ID
+    reviewer_role: str          # 审批者角色
+    decision: str               # approved / rejected / revise_required
+    rationale: str              # 审批理由
+    next_action: str            # 下一步动作
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the approval decision as JSON-ready data."""
+
+        return {
+            "decision_id": self.decision_id,
+            "request_id": self.request_id,
+            "reviewer_role": self.reviewer_role,
+            "decision": self.decision,
+            "rationale": self.rationale,
+            "next_action": self.next_action,
+        }
+
+
+@dataclass(frozen=True)
+class GuardedHandoffRecord:
+    """A handoff that is only allowed after approval has been checked."""
+
+    guarded_handoff_id: str    # 受保护交接 ID
+    from_role: str             # 交出角色
+    to_role: str               # 接收角色
+    approval_status: str       # approved / rejected / revise_required
+    risk_level: str            # 这次交接的风险级别
+    reason: str                # 为什么发生交接
+    payload_summary: str       # 交接内容摘要
+    fallback_action: str       # 审批未通过时的回退动作
+
+    def to_dict(self) -> dict[str, Any]:
+        """Render the guarded handoff as JSON-ready data."""
+
+        return {
+            "guarded_handoff_id": self.guarded_handoff_id,
+            "from_role": self.from_role,
+            "to_role": self.to_role,
+            "approval_status": self.approval_status,
+            "risk_level": self.risk_level,
+            "reason": self.reason,
+            "payload_summary": self.payload_summary,
+            "fallback_action": self.fallback_action,
+        }
+
+
+@dataclass(frozen=True)
 class SubagentRuntimeSession:
     """Execution-layer runtime session for one collaboration flow.
 
@@ -572,6 +678,9 @@ class SubagentRuntimeSession:
     inbox_entries: tuple[SubagentInboxEntry, ...]    # 各子 Agent inbox 快照
     outbox_entries: tuple[SubagentOutboxEntry, ...]  # 各子 Agent outbox 快照
     claim_records: tuple[SubagentClaimRecord, ...]   # task claim / complete / fail 记录
+    guarded_handoffs: tuple[GuardedHandoffRecord, ...]  # 经审批保护的交接记录
+    approval_requests: tuple[ApprovalRequest, ...]   # 审批请求记录
+    approval_decisions: tuple[ApprovalDecision, ...] # 审批决策记录
 
     def to_dict(self) -> dict[str, Any]:
         """Render the runtime session as JSON-ready data."""
@@ -593,6 +702,9 @@ class SubagentRuntimeSession:
             "inbox_entries": [entry.to_dict() for entry in self.inbox_entries],
             "outbox_entries": [entry.to_dict() for entry in self.outbox_entries],
             "claim_records": [record.to_dict() for record in self.claim_records],
+            "guarded_handoffs": [handoff.to_dict() for handoff in self.guarded_handoffs],
+            "approval_requests": [request.to_dict() for request in self.approval_requests],
+            "approval_decisions": [decision.to_dict() for decision in self.approval_decisions],
         }
 
 
@@ -616,11 +728,15 @@ class CollaborationPlan:
     delegations: tuple[SubagentDelegationRecord, ...]       # 结构化子任务委派记录
     steps: tuple[str, ...]                                  # 面向展示的协作步骤说明
     handoffs: tuple[SubagentHandoffRecord, ...] = ()        # 角色之间的交接记录
+    guarded_handoffs: tuple[GuardedHandoffRecord, ...] = () # 经审批保护的交接记录
     returns: tuple[SubagentReturnRecord, ...] = ()          # 子任务回传记录
     executions: tuple[SubagentExecutionRecord, ...] = ()    # 子任务执行轨迹
+    risk: RiskClassification | None = None                  # 当前协作风险分类
+    approval_request: ApprovalRequest | None = None         # 当前协作审批请求
+    approval_decision: ApprovalDecision | None = None       # 当前协作审批决策
     status: str = "planned"                                 # planned / completed / failed
     recovery_handoff: str = ""                              # 整体失败时的恢复动作
-    runtime_session: SubagentRuntimeSession | None = None   # v51 多 Agent runtime session
+    runtime_session: SubagentRuntimeSession | None = None   # 多 Agent runtime session
 
     def to_dict(self) -> dict[str, Any]:
         """Render the collaboration plan as JSON-ready data."""
@@ -632,8 +748,12 @@ class CollaborationPlan:
             "delegations": [delegation.to_dict() for delegation in self.delegations],
             "steps": list(self.steps),
             "handoffs": [handoff.to_dict() for handoff in self.handoffs],
+            "guarded_handoffs": [handoff.to_dict() for handoff in self.guarded_handoffs],
             "returns": [item.to_dict() for item in self.returns],
             "executions": [execution.to_dict() for execution in self.executions],
+            "risk": None if self.risk is None else self.risk.to_dict(),
+            "approval_request": None if self.approval_request is None else self.approval_request.to_dict(),
+            "approval_decision": None if self.approval_decision is None else self.approval_decision.to_dict(),
             "status": self.status,
             "recovery_handoff": self.recovery_handoff,
             "runtime_session": None if self.runtime_session is None else self.runtime_session.to_dict(),
@@ -663,12 +783,34 @@ class CollaborationPlan:
                 lines.append(
                     f"- {handoff.handoff_id} [{handoff.status}] {handoff.from_role} -> {handoff.to_role}: {handoff.reason}"
                 )
+        if self.guarded_handoffs:
+            lines.append("Guarded handoffs:")
+            for handoff in self.guarded_handoffs:
+                lines.append(
+                    f"- {handoff.guarded_handoff_id} [{handoff.approval_status}] {handoff.from_role} -> {handoff.to_role}: "
+                    f"{handoff.reason} (risk={handoff.risk_level})"
+                )
         if self.executions:
             lines.append("Executions:")
             for execution in self.executions:
                 lines.append(
                     f"- {execution.delegation_id} [{execution.status}] {execution.role_name}: {execution.verification_note}"
                 )
+        if self.risk is not None:
+            lines.append("Risk classification:")
+            lines.append(f"- level={self.risk.risk_level} requires_approval={self.risk.requires_approval}")
+        if self.approval_request is not None:
+            lines.append("Approval request:")
+            lines.append(
+                f"- {self.approval_request.request_id} [{self.approval_request.status}] "
+                f"{self.approval_request.requester_role} -> {self.approval_request.target_role}"
+            )
+        if self.approval_decision is not None:
+            lines.append("Approval decision:")
+            lines.append(
+                f"- {self.approval_decision.decision_id} [{self.approval_decision.decision}] "
+                f"{self.approval_decision.reviewer_role}: {self.approval_decision.rationale}"
+            )
         if self.returns:
             lines.append("Returns:")
             for item in self.returns:
@@ -691,6 +833,9 @@ class CollaborationPlan:
             lines.append(f"  Inbox entries: {len(self.runtime_session.inbox_entries)}")
             lines.append(f"  Outbox entries: {len(self.runtime_session.outbox_entries)}")
             lines.append(f"  Claim records: {len(self.runtime_session.claim_records)}")
+            lines.append(f"  Guarded handoffs: {len(self.runtime_session.guarded_handoffs)}")
+            lines.append(f"  Approval requests: {len(self.runtime_session.approval_requests)}")
+            lines.append(f"  Approval decisions: {len(self.runtime_session.approval_decisions)}")
         lines.append("Workflow:")
         for index, step in enumerate(self.steps, start=1):
             lines.append(f"{index}. {step}")
@@ -1036,12 +1181,116 @@ def build_claim_record(
     )
 
 
+def build_risk_classification(user_input: str) -> RiskClassification:
+    """Classify the collaboration objective into a deterministic risk tier."""
+
+    lowered = user_input.lower()
+    reasons: list[str] = []
+    blocked_actions: list[str] = []
+    risk_level = "low"
+
+    if any(keyword in lowered for keyword in ("delete", "remove", "overwrite")):
+        risk_level = "high"
+        reasons.append("The task requests destructive mutation.")
+        blocked_actions.append("destructive workspace mutation")
+    if any(keyword in lowered for keyword in ("write project file", "mcp write", "write file", "publish", "commit")):
+        risk_level = "high"
+        reasons.append("The task requests an external or persistent write action.")
+        blocked_actions.append("unguarded write operation")
+    if any(keyword in lowered for keyword in ("approval", "review", "guarded", "permission")):
+        risk_level = "medium" if risk_level == "low" else risk_level
+        reasons.append("The task references a gated workflow.")
+    if any(keyword in lowered for keyword in ("bug fix", "implement", "test", "code", "refactor")) and risk_level == "low":
+        risk_level = "medium"
+        reasons.append("The task changes code or behavior but stays within the workspace.")
+
+    if not reasons:
+        reasons.append("The task is a bounded learning or explanation request.")
+
+    return RiskClassification(
+        risk_level=risk_level,
+        reasons=tuple(reasons),
+        requires_approval=risk_level == "high",
+        blocked_actions=tuple(blocked_actions),
+    )
+
+
+def build_approval_request(
+    *,
+    session_id: str,
+    requester_role: str,
+    target_role: str,
+    requested_action: str,
+    objective: str,
+    risk: RiskClassification,
+) -> ApprovalRequest:
+    """Build one approval request for a risky collaboration step."""
+
+    return ApprovalRequest(
+        request_id=f"approval-{session_id}",
+        session_id=session_id,
+        requester_role=requester_role,
+        target_role=target_role,
+        requested_action=requested_action,
+        objective=objective,
+        risk=risk,
+        status="requested",
+    )
+
+
+def build_approval_decision(
+    *,
+    request: ApprovalRequest,
+    decision: str,
+    rationale: str,
+    next_action: str,
+) -> ApprovalDecision:
+    """Build one approval decision record."""
+
+    return ApprovalDecision(
+        decision_id=f"decision-{request.session_id}",
+        request_id=request.request_id,
+        reviewer_role="teacher_agent",
+        decision=decision,
+        rationale=rationale,
+        next_action=next_action,
+    )
+
+
+def build_guarded_handoff_record(
+    *,
+    from_role: str,
+    to_role: str,
+    approval_status: str,
+    risk_level: str,
+    reason: str,
+    payload_summary: str,
+    fallback_action: str,
+    order: int,
+) -> GuardedHandoffRecord:
+    """Build one approval-guarded handoff record."""
+
+    return GuardedHandoffRecord(
+        guarded_handoff_id=f"guarded-handoff-{order:02d}",
+        from_role=from_role,
+        to_role=to_role,
+        approval_status=approval_status,
+        risk_level=risk_level,
+        reason=reason,
+        payload_summary=payload_summary,
+        fallback_action=fallback_action,
+    )
+
+
 def build_runtime_session(
     *,
     plan: CollaborationPlan,
     handoffs: tuple[SubagentHandoffRecord, ...],
+    guarded_handoffs: tuple[GuardedHandoffRecord, ...],
     returns: tuple[SubagentReturnRecord, ...],
     executions: tuple[SubagentExecutionRecord, ...],
+    approval_requests: tuple[ApprovalRequest, ...],
+    approval_decisions: tuple[ApprovalDecision, ...],
     status: str,
     recovery_handoff: str,
 ) -> SubagentRuntimeSession:
@@ -1269,6 +1518,9 @@ def build_runtime_session(
         inbox_entries=tuple(inbox_entries),
         outbox_entries=tuple(outbox_entries),
         claim_records=tuple(claim_records),
+        guarded_handoffs=guarded_handoffs,
+        approval_requests=approval_requests,
+        approval_decisions=approval_decisions,
     )
 
 
@@ -1306,7 +1558,23 @@ def build_collaboration_plan(user_input: str) -> CollaborationPlan:
 
     roles = get_default_subagents()
     lowered = user_input.lower()
-    code_task = any(keyword in lowered for keyword in ("implement", "fix", "test", "code", "bug", "review"))
+    code_task = any(
+        keyword in lowered
+        for keyword in (
+            "implement",
+            "fix",
+            "test",
+            "code",
+            "bug",
+            "review",
+            "delete",
+            "remove",
+            "overwrite",
+            "write",
+            "publish",
+            "commit",
+        )
+    )
 
     if code_task:
         selected_roles = roles
@@ -1336,7 +1604,7 @@ def build_collaboration_plan(user_input: str) -> CollaborationPlan:
     )
 
 
-def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
+def execute_collaboration_plan(user_input: str, approval_override: str | None = None) -> CollaborationPlan:
     """Execute the deterministic collaboration plan and return structured evidence.
 
     The execution is still simulated, but the evidence objects are real. That
@@ -1346,11 +1614,58 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
 
     plan = build_collaboration_plan(user_input)
     handoffs: list[SubagentHandoffRecord] = []
+    guarded_handoffs: list[GuardedHandoffRecord] = []
     returns: list[SubagentReturnRecord] = []
     executions: list[SubagentExecutionRecord] = []
     lowered = user_input.lower()
     failed = "ambiguous" in lowered or "unclear" in lowered or "underspecified" in lowered
     blocked = "blocked" in lowered or "offline" in lowered or "unavailable" in lowered
+    code_task = len(plan.assigned_roles) > 1
+    risk = build_risk_classification(user_input)
+    target_role = plan.delegations[-1].role.name if plan.delegations else "teacher_agent"
+    approval_request = build_approval_request(
+        session_id=f"subagent-session-{len(plan.delegations):02d}",
+        requester_role="parent_agent",
+        target_role=target_role,
+        requested_action=f"Allow guarded handoff to {target_role}",
+        objective=plan.objective,
+        risk=risk,
+    )
+    if approval_override in {"approved", "rejected", "revise_required"}:
+        approval_decision_name = approval_override
+    elif risk.requires_approval:
+        approval_decision_name = "revise_required"
+    else:
+        approval_decision_name = "approved"
+    approval_rationale = (
+        "The objective is safe to proceed after review."
+        if approval_decision_name == "approved"
+        else "The objective is high risk and must be revised before the guarded handoff can continue."
+    )
+    approval_decision = build_approval_decision(
+        request=approval_request,
+        decision=approval_decision_name,
+        rationale=approval_rationale,
+        next_action=(
+            "Continue the guarded handoff."
+            if approval_decision_name == "approved"
+            else "Revise the objective and resubmit for approval."
+        ),
+    )
+    approved = approval_decision.decision == "approved"
+    if plan.delegations and len(plan.delegations) > 1:
+        guarded_handoffs.append(
+            build_guarded_handoff_record(
+                from_role=plan.delegations[0].role.name,
+                to_role=plan.delegations[1].role.name,
+                approval_status=approval_decision.decision,
+                risk_level=risk.risk_level,
+                reason="Guarded handoff from review role to implementation role.",
+                payload_summary=plan.delegations[1].child_task,
+                fallback_action=approval_decision.next_action,
+                order=1,
+            )
+        )
 
     for index, delegation in enumerate(plan.delegations, start=1):
         next_role = plan.delegations[index].role.name if index < len(plan.delegations) else "parent_agent"
@@ -1359,6 +1674,11 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
             verification = "Clarified the task boundary and prepared the next handoff."
             recovery = delegation.contract.recovery_handoff
             status = "completed"
+        elif not approved:
+            outputs = ("approval gate blocked",)
+            verification = approval_decision.rationale
+            recovery = approval_decision.next_action
+            status = "blocked"
         elif blocked:
             outputs = ("queued implementation note", "blocked dependency note")
             verification = "Execution was claimed but is currently blocked in the agent inbox awaiting a safe resume."
@@ -1399,7 +1719,11 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
                 build_handoff_record(
                     delegation.role.name,
                     next_role,
-                    reason=f"{delegation.role.name} completed its bounded responsibility.",
+                    reason=(
+                        f"{delegation.role.name} completed its bounded responsibility."
+                        if approved or delegation.role.name == "teacher_agent"
+                        else "The guarded handoff was paused by approval control."
+                    ),
                     payload_summary=verification,
                     order=index,
                 )
@@ -1408,8 +1732,11 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
             runtime_session = build_runtime_session(
                 plan=plan,
                 handoffs=tuple(handoffs),
+                guarded_handoffs=tuple(guarded_handoffs),
                 returns=tuple(returns),
                 executions=tuple(executions),
+                approval_requests=(approval_request,),
+                approval_decisions=(approval_decision,),
                 status="failed",
                 recovery_handoff=recovery,
             )
@@ -1420,8 +1747,12 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
                 delegations=plan.delegations,
                 steps=plan.steps,
                 handoffs=tuple(handoffs),
+                guarded_handoffs=tuple(guarded_handoffs),
                 returns=tuple(returns),
                 executions=tuple(executions),
+                risk=risk,
+                approval_request=approval_request,
+                approval_decision=approval_decision,
                 status="failed",
                 recovery_handoff=recovery,
                 runtime_session=runtime_session,
@@ -1430,8 +1761,11 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
             runtime_session = build_runtime_session(
                 plan=plan,
                 handoffs=tuple(handoffs),
+                guarded_handoffs=tuple(guarded_handoffs),
                 returns=tuple(returns),
                 executions=tuple(executions),
+                approval_requests=(approval_request,),
+                approval_decisions=(approval_decision,),
                 status="blocked",
                 recovery_handoff=recovery,
             )
@@ -1442,8 +1776,12 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
                 delegations=plan.delegations,
                 steps=plan.steps,
                 handoffs=tuple(handoffs),
+                guarded_handoffs=tuple(guarded_handoffs),
                 returns=tuple(returns),
                 executions=tuple(executions),
+                risk=risk,
+                approval_request=approval_request,
+                approval_decision=approval_decision,
                 status="blocked",
                 recovery_handoff=recovery,
                 runtime_session=runtime_session,
@@ -1452,8 +1790,11 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
     runtime_session = build_runtime_session(
         plan=plan,
         handoffs=tuple(handoffs),
+        guarded_handoffs=tuple(guarded_handoffs),
         returns=tuple(returns),
         executions=tuple(executions),
+        approval_requests=(approval_request,),
+        approval_decisions=(approval_decision,),
         status="completed",
         recovery_handoff="none",
     )
@@ -1464,8 +1805,12 @@ def execute_collaboration_plan(user_input: str) -> CollaborationPlan:
         delegations=plan.delegations,
         steps=plan.steps,
         handoffs=tuple(handoffs),
+        guarded_handoffs=tuple(guarded_handoffs),
         returns=tuple(returns),
         executions=tuple(executions),
+        risk=risk,
+        approval_request=approval_request,
+        approval_decision=approval_decision,
         status="completed",
         recovery_handoff="none",
         runtime_session=runtime_session,

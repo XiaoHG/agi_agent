@@ -374,6 +374,8 @@ class LangGraphWorkflowTests(unittest.TestCase):
             self.assertGreaterEqual(len(result["subagent_runtime"]["transitions"]), 1)
             self.assertGreaterEqual(len(result["subagent_runtime"]["queue_items"]), 1)
             self.assertGreaterEqual(len(result["subagent_runtime"]["claim_records"]), 1)
+            self.assertGreaterEqual(len(result["subagent_runtime"]["approval_requests"]), 1)
+            self.assertGreaterEqual(len(result["subagent_runtime"]["guarded_handoffs"]), 1)
 
     def test_rag_graph_keeps_skill_run_trace(self) -> None:
         """Verify that rag graph keeps skill run trace."""

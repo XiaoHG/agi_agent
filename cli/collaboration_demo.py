@@ -19,6 +19,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--execute-subagents", action="store_true", help="execute the deterministic subagent collaboration protocol")
     parser.add_argument("--runtime-json", action="store_true", help="print the subagent runtime session as JSON after execution")
     parser.add_argument("--queue-json", action="store_true", help="print the async delegation queue, inbox, outbox, and claim snapshot as JSON")
+    parser.add_argument("--approval-json", action="store_true", help="print the approval request and decision snapshot as JSON")
+    parser.add_argument(
+        "--approval-decision",
+        choices=["approved", "rejected", "revise_required"],
+        help="override the deterministic approval decision for collaboration execution",
+    )
     parser.add_argument("--inbox-role", help="print inbox entries for one role after subagent execution")
     parser.add_argument("--outbox-role", help="print outbox entries for one role after subagent execution")
     parser.add_argument("--execute-skill", action="store_true", help="execute the selected skill for --task")
@@ -54,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.task:
         if args.execute_subagents:
-            plan = execute_collaboration_plan(args.task)
+            plan = execute_collaboration_plan(args.task, approval_override=args.approval_decision)
             print(plan.to_text())
             if args.runtime_json and plan.runtime_session is not None:
                 print()
@@ -68,6 +74,20 @@ def main(argv: list[str] | None = None) -> int:
                             "inbox_entries": [entry.to_dict() for entry in plan.runtime_session.inbox_entries],
                             "outbox_entries": [entry.to_dict() for entry in plan.runtime_session.outbox_entries],
                             "claim_records": [record.to_dict() for record in plan.runtime_session.claim_records],
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                )
+            if args.approval_json and plan.runtime_session is not None:
+                print()
+                print(
+                    json.dumps(
+                        {
+                            "risk": None if plan.risk is None else plan.risk.to_dict(),
+                            "approval_request": None if plan.approval_request is None else plan.approval_request.to_dict(),
+                            "approval_decision": None if plan.approval_decision is None else plan.approval_decision.to_dict(),
+                            "guarded_handoffs": [handoff.to_dict() for handoff in plan.guarded_handoffs],
                         },
                         ensure_ascii=False,
                         indent=2,

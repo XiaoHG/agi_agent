@@ -304,14 +304,18 @@ def execute_subagent_collaboration(task: str) -> ToolResult:
         "subagent_runtime": runtime_session,
     }
     if plan.status in {"failed", "blocked"}:
+        failure_type = "delegation_failed"
+        reason = "Subagent collaboration failed before all delegated tasks completed."
+        if plan.approval_decision is not None and plan.approval_decision.decision != "approved":
+            failure_type = "approval_blocked"
+            reason = "Subagent collaboration was blocked by approval control before the guarded handoff could continue."
+        elif plan.status == "blocked":
+            failure_type = "delegation_blocked"
+            reason = "Subagent collaboration paused in a blocked inbox state before all delegated tasks completed."
         metadata["recovery_plan"] = {
             "status": plan.status,
-            "failure_type": "delegation_blocked" if plan.status == "blocked" else "delegation_failed",
-            "reason": (
-                "Subagent collaboration paused in a blocked inbox state before all delegated tasks completed."
-                if plan.status == "blocked"
-                else "Subagent collaboration failed before all delegated tasks completed."
-            ),
+            "failure_type": failure_type,
+            "reason": reason,
             "next_safe_action": plan.recovery_handoff,
         }
     return ToolResult("execute_subagents", plan.to_text(), metadata)

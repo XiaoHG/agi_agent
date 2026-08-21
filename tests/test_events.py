@@ -75,6 +75,14 @@ class RuntimeEventTests(unittest.TestCase):
                     "status": "completed",
                     "delegations": [{"role": {"name": "teacher_agent"}}, {"role": {"name": "coding_agent"}}],
                     "executions": [{"role_name": "teacher_agent"}, {"role_name": "coding_agent"}],
+                    "approval_request": {
+                        "request_id": "approval-subagent-session-02",
+                        "status": "requested",
+                    },
+                    "approval_decision": {
+                        "decision_id": "decision-subagent-session-02",
+                        "decision": "approved",
+                    },
                 },
             },
         )
@@ -83,6 +91,7 @@ class RuntimeEventTests(unittest.TestCase):
 
         self.assertIn("delegation", event_types)
         self.assertIn("delegation_execution", event_types)
+        self.assertIn("approval_workflow", event_types)
 
     def test_build_runtime_events_includes_delegation_runtime(self) -> None:
         """Verify that build runtime events includes delegation runtime."""

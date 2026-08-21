@@ -107,6 +107,29 @@ def build_runtime_events(
                     payload=delegation,
                 )
             )
+            approval_request = delegation.get("approval_request")
+            approval_decision = delegation.get("approval_decision")
+            if isinstance(approval_request, dict) or isinstance(approval_decision, dict):
+                events.append(
+                    RuntimeEvent(
+                        index=len(events) + 1,
+                        event_type="approval_workflow",
+                        name=(
+                            approval_request.get("request_id", "approval_request")
+                            if isinstance(approval_request, dict)
+                            else "approval_request"
+                        ),
+                        detail=(
+                            f"decision={approval_decision.get('decision', 'unknown')}"
+                            if isinstance(approval_decision, dict)
+                            else "decision=pending"
+                        ),
+                        payload={
+                            "approval_request": approval_request,
+                            "approval_decision": approval_decision,
+                        },
+                    )
+                )
             executions = delegation.get("executions", [])
             if isinstance(executions, list) and executions:
                 events.append(
