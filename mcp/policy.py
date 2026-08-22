@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 
 from .schema import (
     DESTRUCTIVE_PERMISSION,
@@ -50,6 +51,43 @@ def build_default_mcp_governance_policy() -> MCPGovernancePolicy:
     """Return the default governance policy for MCP request validation."""
 
     return MCPGovernancePolicy()
+
+
+def build_environment_mcp_policy(env: dict[str, str] | None = None) -> MCPPermissionPolicy:
+    """Return a permission policy derived from environment variables."""
+
+    resolved_env = env or os.environ
+    profile = resolved_env.get("AGI_AGENT_MCP_POLICY_PROFILE", "default").strip() or "default"
+    if profile == "read-only":
+        return MCPPermissionPolicy(
+            allow_read_only=True,
+            allow_write=False,
+            allow_network=False,
+            allow_destructive=False,
+        )
+    if profile == "write-enabled":
+        return MCPPermissionPolicy(
+            allow_read_only=True,
+            allow_write=True,
+            allow_network=False,
+            allow_destructive=False,
+        )
+    if profile == "open":
+        return MCPPermissionPolicy(
+            allow_read_only=True,
+            allow_write=True,
+            allow_network=True,
+            allow_destructive=False,
+        )
+    return build_default_mcp_policy()
+
+
+def build_environment_mcp_governance_policy(env: dict[str, str] | None = None) -> MCPGovernancePolicy:
+    """Return a governance policy derived from environment variables."""
+
+    resolved_env = env or os.environ
+    profile = resolved_env.get("AGI_AGENT_MCP_GOVERNANCE_PROFILE", "v2").strip() or "v2"
+    return MCPGovernancePolicy(protocol_version=profile)
 
 
 def evaluate_mcp_tool_permission(spec: MCPToolSpec, policy: MCPPermissionPolicy) -> MCPPermissionDecision:

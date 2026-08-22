@@ -13,6 +13,7 @@ from .policy import (
     evaluate_skill_runtime_policy,
     validate_skill_governance,
 )
+from .registry import build_skill_registry_sources, load_external_skill_specs
 
 
 PROJECT_SKILLS_DIR = Path(".codex/skills")
@@ -127,6 +128,8 @@ def get_available_skills(root: Path = Path(".")) -> list[SkillSpec]:
     merged: dict[str, SkillSpec] = {}
     for skill in get_builtin_skills():
         merged[_normalize_skill_token(skill.name)] = skill
+    for skill in load_external_skill_specs(root):
+        merged[_normalize_skill_token(skill.name)] = skill
     for skill in discover_project_skills(root):
         merged[_normalize_skill_token(skill.name)] = skill
     return list(merged.values())
@@ -140,6 +143,11 @@ def describe_skills(
     """Render the merged skill catalog."""
 
     parts = ["Available skills:"]
+    registry_sources = build_skill_registry_sources(root)
+    parts.append("Registry sources:")
+    for source in registry_sources:
+        loaded = ", ".join(source.loaded_skill_names) if source.loaded_skill_names else "<none>"
+        parts.append(f"- {source.name}: {loaded}")
     if policy is not None:
         parts.append(policy.describe())
     resolved_governance_policy = governance_policy or build_default_skill_governance_policy()

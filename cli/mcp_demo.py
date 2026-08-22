@@ -6,7 +6,14 @@ import argparse
 import json
 from pathlib import Path
 
-from mcp import MCPPermissionPolicy, call_mcp_tool, call_mcp_tool_exchange, call_mcp_tool_response, list_mcp_tools
+from mcp import (
+    MCPPermissionPolicy,
+    build_environment_mcp_policy,
+    call_mcp_tool,
+    call_mcp_tool_exchange,
+    call_mcp_tool_response,
+    list_mcp_tools,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -29,7 +36,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     root = Path(args.root)
-    policy = MCPPermissionPolicy(allow_read_only=True, allow_write=args.allow_write)
+    env_policy = build_environment_mcp_policy()
+    policy = MCPPermissionPolicy(
+        allow_read_only=env_policy.allow_read_only,
+        allow_write=args.allow_write or env_policy.allow_write,
+        allow_network=env_policy.allow_network,
+        allow_destructive=env_policy.allow_destructive,
+    )
 
     if args.list_tools:
         print(list_mcp_tools(root))

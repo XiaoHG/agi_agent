@@ -1,0 +1,18 @@
+{
+  "tools": [
+    {
+      "name": "workspace_ping",
+      "description": "Return a simple status message for external catalog validation.",
+      "permission_level": "read_only",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "response_template": "workspace_ping acknowledged: {arguments[message]}"
+    }
+  ]
+}

@@ -81,6 +81,8 @@ python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hel
 - 必须满足工具 schema 的必填参数
 - 默认拒绝多余参数
 - 校验失败先阻断，再进入权限判断
+- external catalog loading
+- environment-aware policy loading
 
 运行：
 
@@ -92,3 +94,7 @@ python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hel
 python -m cli.mcp_demo --tool write_project_file --path notes.txt --content "hello mcp" --allow-write
 python -m cli.main --input "List MCP tools." --trace
 ```
+
+外部 catalog 示例：
+
+- `configs/mcp-catalog.json`

@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from skills import SkillRuntimePolicy, describe_skills, execute_skill, select_skill
+from skills import SkillRuntimePolicy, build_environment_skill_runtime_policy, describe_skills, execute_skill, select_skill
 from subagent import build_collaboration_plan, describe_subagents, execute_collaboration_plan
 
 
@@ -176,12 +176,14 @@ def _build_skill_policy(args: argparse.Namespace) -> SkillRuntimePolicy:
             allowed_skill_names=tuple(args.allow_skill),
             denied_skill_names=tuple(args.deny_skill),
         )
+    policy = build_environment_skill_runtime_policy()
     return SkillRuntimePolicy(
-        policy_name="default",
-        allow_builtin=True,
-        allow_project=True,
+        policy_name=policy.policy_name,
+        allow_builtin=policy.allow_builtin,
+        allow_project=policy.allow_project,
         allowed_skill_names=tuple(args.allow_skill),
         denied_skill_names=tuple(args.deny_skill),
+        minimum_versions=policy.minimum_versions,
     )
 
 

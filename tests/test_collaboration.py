@@ -1,9 +1,13 @@
 """Tests for skills and subagent collaboration."""
 
 from pathlib import Path
+import json
+import os
 import subprocess  # 验证 CLI demo 能真实运行
 import sys  # 使用当前 Python 解释器执行模块
 import unittest  # Python 官方测试框架
+import tempfile
+from unittest.mock import patch
 
 from agent import WorkspaceAgent, route_intent
 from skills import (
@@ -58,6 +62,36 @@ class CollaborationTests(unittest.TestCase):
         self.assertIn("code_review", names)
         self.assertIn("professional-code-review", names)
 
+    def test_get_available_skills_loads_external_registry(self) -> None:
+        """Verify that get available skills loads external registry entries."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            registry_path = root / "skill-registry.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "skills": [
+                            {
+                                "name": "external-release-note",
+                                "version": "v2",
+                                "purpose": "Draft a release note.",
+                                "steps": ["Inspect", "Summarize", "Review"],
+                                "output_format": "Release note",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.dict(os.environ, {"AGI_AGENT_SKILL_REGISTRY_PATH": str(registry_path)}):
+                names = {skill.name for skill in get_available_skills(root)}
+                external_sources = [skill for skill in get_available_skills(root) if skill.source == "external"]
+
+            self.assertIn("external-release-note", names)
+            self.assertTrue(external_sources)
+            self.assertEqual(external_sources[0].name, "external-release-note")
+
     def test_select_code_review_skill(self) -> None:
         """Verify that select code review skill."""
         skill = select_skill("Review this code and add tests.")
@@ -85,8 +119,17 @@ class CollaborationTests(unittest.TestCase):
         self.assertTrue(run.governance_validation.valid if run.governance_validation else False)
         self.assertEqual(run.governance_policy.protocol_version, "v2")
         self.assertEqual(run.governance_audit[0]["stage"], "registry")
+        self.assertEqual(run.governance_audit[1]["stage"], "registry_resolution")
         self.assertEqual(len(run.steps), len(run.skill.steps))
         self.assertIn("Executed skill 'code_review'", run.final_output)
+
+    def test_execute_skill_uses_environment_policy_profile(self) -> None:
+        """Verify that execute skill uses environment policy profile."""
+        with patch.dict(os.environ, {"AGI_AGENT_SKILL_POLICY_PROFILE": "project-only"}):
+            run = execute_skill("Review current changes before commit.", root=Path("."), skill_name="professional-code-review")
+
+        self.assertEqual(run.status, "completed")
+        self.assertEqual(run.policy.policy_name, "project-only")
 
     def test_build_skill_steps_marks_tool_backed_steps(self) -> None:
         """Verify that build skill steps marks tool backed steps."""
@@ -124,7 +167,8 @@ class CollaborationTests(unittest.TestCase):
         self.assertEqual(payload["status"], "completed")
         self.assertEqual(payload["governance_policy"]["protocol_version"], "v2")
         self.assertTrue(payload["governance_validation"]["valid"])
-        self.assertEqual(payload["governance_audit"][1]["stage"], "validation")
+        self.assertIn({"stage": "registry_resolution", "status": "ok", "registry_profile": "default", "governance_profile": "v2"}, payload["governance_audit"])
+        self.assertIn({"stage": "validation", "status": "ok", "reason": "Skill registry entry passed governance validation."}, payload["governance_audit"])
         self.assertEqual(payload["tool_backed_steps"], 3)
         self.assertEqual(payload["steps"][0]["tool_name"], "list_dir")
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import os
 import re
 from typing import TYPE_CHECKING
 
@@ -126,10 +127,32 @@ def build_default_skill_runtime_policy() -> SkillRuntimePolicy:
     return SkillRuntimePolicy()
 
 
+def build_environment_skill_runtime_policy(env: dict[str, str] | None = None) -> SkillRuntimePolicy:
+    """Return a runtime policy derived from environment variables."""
+
+    resolved_env = env or os.environ
+    profile = resolved_env.get("AGI_AGENT_SKILL_POLICY_PROFILE", "default").strip() or "default"
+    if profile == "builtin-only":
+        return SkillRuntimePolicy(policy_name=profile, allow_builtin=True, allow_project=False)
+    if profile == "project-only":
+        return SkillRuntimePolicy(policy_name=profile, allow_builtin=False, allow_project=True)
+    if profile == "locked-down":
+        return SkillRuntimePolicy(policy_name=profile, allow_builtin=False, allow_project=False)
+    return SkillRuntimePolicy(policy_name=profile)
+
+
 def build_default_skill_governance_policy() -> SkillGovernancePolicy:
     """Return the default governance policy for skill registry validation."""
 
     return SkillGovernancePolicy()
+
+
+def build_environment_skill_governance_policy(env: dict[str, str] | None = None) -> SkillGovernancePolicy:
+    """Return a governance policy derived from environment variables."""
+
+    resolved_env = env or os.environ
+    profile = resolved_env.get("AGI_AGENT_SKILL_GOVERNANCE_PROFILE", "v2").strip() or "v2"
+    return SkillGovernancePolicy(protocol_version=profile)
 
 
 def evaluate_skill_runtime_policy(skill: SkillSpec, policy: SkillRuntimePolicy | None = None) -> SkillPolicyDecision:

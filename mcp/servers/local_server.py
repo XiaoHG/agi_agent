@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from mcp.catalog import CatalogedMCPTool, load_external_mcp_catalog
 from mcp.schema import MCPRequest, MCPResponse, MCPToolSpec, READ_ONLY_PERMISSION, WRITE_PERMISSION
 
 
@@ -13,11 +14,12 @@ class LocalMCPServer:
     def __init__(self, workspace_root: Path | str = ".") -> None:
         """Initialize the instance state needed by this object."""
         self.workspace_root = Path(workspace_root).resolve()  # 固定服务端工作区
+        self._external_tools: list[CatalogedMCPTool] = load_external_mcp_catalog(self.workspace_root)
 
     def list_tools(self) -> list[MCPToolSpec]:
         """Return tool descriptions available on this local server."""
 
-        return [
+        builtin_tools = [
             MCPToolSpec(
                 name="workspace_summary",
                 description="Summarize the workspace root and top-level entries.",
@@ -48,6 +50,7 @@ class LocalMCPServer:
                 permission_level=WRITE_PERMISSION,
             ),
         ]
+        return [*builtin_tools, *(tool.spec for tool in self._external_tools)]
 
     def get_tool_spec(self, tool_name: str) -> MCPToolSpec | None:
         """Return one registered tool spec by name."""
@@ -66,6 +69,9 @@ class LocalMCPServer:
             return self._read_project_file(request)
         if request.tool_name == "write_project_file":
             return self._write_project_file(request)
+        external_tool = next((tool for tool in self._external_tools if tool.spec.name == request.tool_name), None)
+        if external_tool is not None:
+            return self._call_external_tool(request, external_tool)
         return MCPResponse(request.tool_name, f"Unknown MCP tool: {request.tool_name}", is_error=True)
 
     def _workspace_summary(self) -> str:
@@ -118,4 +124,18 @@ class LocalMCPServer:
         return MCPResponse(
             request.tool_name,
             f"[write_project_file] {raw_path}\nWrote {len(content.encode('utf-8'))} bytes.",
+        )
+
+    def _call_external_tool(self, request: MCPRequest, tool: CatalogedMCPTool) -> MCPResponse:
+        """Render a catalog-backed external tool response."""
+
+        template = tool.response_template or "External MCP tool '{tool_name}' is registered but has no local execution handler."
+        content = template.format(tool_name=request.tool_name, arguments=request.arguments, workspace=self.workspace_root)
+        return MCPResponse(
+            request.tool_name,
+            content,
+            metadata={
+                "catalog_source": tool.source_path,
+                "external_catalog": tool.to_dict(),
+            },
         )

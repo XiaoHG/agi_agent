@@ -1,16 +1,20 @@
 """Tests for the local MCP learning layer."""
 
 from pathlib import Path
+import json
+import os
 import subprocess
 import sys
 import tempfile  # 临时工作区，隔离测试文件
 import unittest  # Python 官方测试框架
+from unittest.mock import patch
 
 from agent import WorkspaceAgent, route_intent
 from mcp import (
     LocalMCPClient,
     LocalMCPServer,
     MCPPermissionPolicy,
+    MCPRequest,
     call_mcp_tool,
     call_mcp_tool_exchange,
     call_mcp_tool_response,
@@ -51,6 +55,40 @@ class LocalMCPTests(unittest.TestCase):
         self.assertIn("write_project_file", names)
         write_tool = next(tool for tool in tools if tool.name == "write_project_file")
         self.assertEqual(write_tool.permission_level, "write")
+
+    def test_server_loads_external_catalog(self) -> None:
+        """Verify that server loads external catalog tools."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            catalog_path = root / "mcp-catalog.json"
+            catalog_path.write_text(
+                json.dumps(
+                    {
+                        "tools": [
+                            {
+                                "name": "workspace_ping",
+                                "description": "Return a status message.",
+                                "permission_level": "read_only",
+                                "input_schema": {
+                                    "type": "object",
+                                    "properties": {"message": {"type": "string"}},
+                                },
+                                "response_template": "workspace_ping acknowledged: {arguments[message]}",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.dict(os.environ, {"AGI_AGENT_MCP_CATALOG_PATH": str(catalog_path)}):
+                server = LocalMCPServer(root)
+                tools = server.list_tools()
+                names = {tool.name for tool in tools}
+                response = server.call_tool(MCPRequest("workspace_ping", {"message": "ok"}))
+
+        self.assertIn("workspace_ping", names)
+        self.assertIn("acknowledged", response.content)
 
     def test_client_calls_workspace_summary(self) -> None:
         """Verify that client calls workspace summary."""
@@ -110,7 +148,8 @@ class LocalMCPTests(unittest.TestCase):
         self.assertIn("Request validation failed", record.response.content)
         self.assertFalse(record.request_validation.valid)
         self.assertGreaterEqual(len(record.governance_audit), 2)
-        self.assertEqual(record.governance_audit[1]["stage"], "validation")
+        self.assertTrue(any(entry["stage"] == "validation" for entry in record.governance_audit))
+        self.assertTrue(any(entry["stage"] == "lookup" for entry in record.governance_audit))
 
     def test_route_to_mcp_tools(self) -> None:
         """Verify that route to mcp tools."""
@@ -192,6 +231,20 @@ class LocalMCPTests(unittest.TestCase):
             self.assertTrue(response.is_error)
             self.assertIn("Permission denied", response.content)
             self.assertEqual(response.metadata["permission_decision"]["allowed"], False)
+
+    def test_adapter_uses_environment_mcp_policy_profile(self) -> None:
+        """Verify that adapter uses environment MCP policy profile."""
+        with patch.dict(os.environ, {"AGI_AGENT_MCP_POLICY_PROFILE": "write-enabled"}):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                response = call_mcp_tool_response(
+                    root,
+                    "write_project_file",
+                    {"path": "notes.txt", "content": "hello mcp"},
+                )
+
+        self.assertFalse(response.is_error)
+        self.assertIn("Wrote", response.content)
 
     def test_adapter_allows_write_tool_with_explicit_policy(self) -> None:
         """Verify that adapter allows write tool with explicit policy."""

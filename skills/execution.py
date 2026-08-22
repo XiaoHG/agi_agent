@@ -12,6 +12,8 @@ from .policy import (
     SkillGovernanceValidation,
     SkillPolicyDecision,
     SkillRuntimePolicy,
+    build_environment_skill_governance_policy,
+    build_environment_skill_runtime_policy,
     build_default_skill_governance_policy,
     build_default_skill_runtime_policy,
     evaluate_skill_runtime_policy,
@@ -201,8 +203,8 @@ def execute_skill(
 ) -> SkillRun:
     """Select and execute one built-in or project skill with optional tool-backed steps."""
 
-    resolved_policy = policy or build_default_skill_runtime_policy()
-    resolved_governance_policy = governance_policy or build_default_skill_governance_policy()
+    resolved_policy = policy or build_environment_skill_runtime_policy()
+    resolved_governance_policy = governance_policy or build_environment_skill_governance_policy()
     skill = select_skill(task, root=root, skill_name=skill_name)
     step_specs = build_skill_steps(skill, task)
     executable_tools = tuple(step.tool_name for step in step_specs if step.tool_name)
@@ -212,7 +214,20 @@ def execute_skill(
         policy=resolved_governance_policy,
     )
     governance_audit: list[dict[str, object]] = [
-        {"stage": "registry", "status": "ok", "skill_name": skill.name, "skill_version": skill.version},
+        {
+            "stage": "registry",
+            "status": "ok",
+            "skill_name": skill.name,
+            "skill_version": skill.version,
+            "registry_source": skill.source,
+            "registry_path": skill.path,
+        },
+        {
+            "stage": "registry_resolution",
+            "status": "ok",
+            "registry_profile": resolved_policy.policy_name,
+            "governance_profile": resolved_governance_policy.protocol_version,
+        },
         {
             "stage": "validation",
             "status": "ok" if governance_validation.valid else "error",

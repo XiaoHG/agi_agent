@@ -1,0 +1,17 @@
+{
+  "skills": [
+    {
+      "name": "external-release-note",
+      "version": "v1",
+      "purpose": "Draft a concise release note from the current project state.",
+      "steps": [
+        "Inspect the current project snapshot.",
+        "Summarize the most important changes.",
+        "List risks, verification notes, and next actions."
+      ],
+      "output_format": "Release note with summary, risks, verification, and next actions.",
+      "aliases": ["release-note"],
+      "declared_tools": ["search_docs", "read_file"]
+    }
+  ]
+}

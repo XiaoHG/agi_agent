@@ -7,6 +7,8 @@ from pathlib import Path
 from mcp.clients.local_client import LocalMCPClient
 from mcp.policy import (
     MCPGovernancePolicy,
+    build_environment_mcp_governance_policy,
+    build_environment_mcp_policy,
     build_default_mcp_governance_policy,
     build_default_mcp_policy,
     evaluate_mcp_tool_permission,
@@ -66,10 +68,18 @@ def call_mcp_tool_exchange(
 
     client = _build_client(root)
     spec = client.get_tool_spec(tool_name)
-    resolved_policy = policy or build_default_mcp_policy()
-    resolved_governance_policy = governance_policy or build_default_mcp_governance_policy()
+    resolved_policy = policy or build_environment_mcp_policy()
+    resolved_governance_policy = governance_policy or build_environment_mcp_governance_policy()
     request = MCPRequest(tool_name=tool_name, arguments=arguments or {})
-    audit_trail: list[dict[str, object]] = []
+    audit_trail: list[dict[str, object]] = [
+        {
+            "stage": "registry_resolution",
+            "status": "ok",
+            "catalog_source": "local+external",
+            "policy_profile": resolved_policy.to_dict(),
+            "governance_profile": resolved_governance_policy.to_dict(),
+        }
+    ]
     if spec is None:
         response = MCPResponse(tool_name, f"Unknown MCP tool: {tool_name}", is_error=True)
         decision = _build_unknown_tool_decision(tool_name)
@@ -89,12 +99,25 @@ def call_mcp_tool_exchange(
                 valid=False,
                 reason=f"Unknown MCP tool: {tool_name}",
             ),
-            governance_audit=[{"stage": "lookup", "status": "error", "reason": "unknown tool"}],
+            governance_audit=[
+                *audit_trail,
+                {"stage": "lookup", "status": "error", "reason": "unknown tool"},
+            ],
             error=error,
             protocol_version=resolved_governance_policy.protocol_version,
         )
 
     audit_trail.append({"stage": "lookup", "status": "ok", "tool_name": spec.name})
+    audit_trail.append(
+        {
+            "stage": "policy_resolution",
+            "status": "ok",
+            "tool_name": spec.name,
+            "permission_level": spec.permission_level,
+            "policy_profile": resolved_policy.to_dict(),
+            "governance_profile": resolved_governance_policy.to_dict(),
+        }
+    )
     validation = validate_mcp_request(spec, request, resolved_governance_policy)
     audit_trail.append({"stage": "validation", "status": "ok" if validation.valid else "error", "reason": validation.reason})
     if not validation.valid:

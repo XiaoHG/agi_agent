@@ -44,6 +44,8 @@ skills/
 - runtime policy
 - registry governance validation
 - governance audit trail
+- external registry loading
+- environment-aware policy loading
 
 运行：
 
@@ -52,3 +54,7 @@ python -m cli.collaboration_demo --list-skills
 python -m cli.collaboration_demo --task "Review this code and add tests."
 python -m cli.main --input "List available skills." --trace
 ```
+
+外部 registry 示例：
+
+- `configs/skill-registry.json`
